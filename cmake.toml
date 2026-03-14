@@ -1,0 +1,70 @@
+# Reference: https://build-cpp.github.io/cmkr/cmake-toml
+# to build:
+# > cmake -B build
+# > cmake --build build --config Release
+[project]
+name = "stalker2-uevr"
+cmake-before=""" 
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+"""
+cmake-after = """
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+
+set(ASMJIT_STATIC ON CACHE BOOL "" FORCE)
+
+if ("${CMAKE_BUILD_TYPE}" MATCHES "Release")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
+
+    # Statically compile runtime
+    string(REGEX REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    string(REGEX REPLACE "/MD" "/MT" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+    string(REGEX REPLACE "/MD" "/MT" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+
+    message(NOTICE "Building in Release mode")
+endif()
+
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+"""
+
+# used by kananlib and safetyhook
+[fetch-content.bddisasm]
+git = "https://github.com/bitdefender/bddisasm"
+tag = "v1.34.10"
+
+# used by kananlib
+[fetch-content.spdlog]
+git = "https://github.com/gabime/spdlog"
+tag = "76fb40d95455f249bd70824ecfcae7a8f0930fa3"
+
+
+[target.glm_static]
+type = "static"
+sources = ["dependencies/glm/glm/**.cpp"]
+include-directories = ["dependencies/glm"]
+
+[fetch-content.kananlib]
+git = "https://github.com/cursey/kananlib"
+tag = "153b177593a97042a57608b36d4253fa5e982914"
+
+[target.stalker2_uevr]
+type = "shared"
+sources = ["src/**.c", "src/**.cpp"]
+headers = ["src/**.h", "src/**.hpp"]
+include-directories = ["include"]
+compile-features = ["cxx_std_23"]
+link-libraries = [
+	"kananlib",
+	"glm_static"
+]
+cmake-after = """
+add_custom_command(TARGET stalker2_uevr POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$ENV{APPDATA}/UnrealVRMod/Stalker2-Win64-Shipping/plugins"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:stalker2_uevr>"
+        "$ENV{APPDATA}/UnrealVRMod/Stalker2-Win64-Shipping/plugins/$<TARGET_FILE_NAME:stalker2_uevr>"
+    COMMENT "Copying DLL to UnrealVRMod directory"
+)
+"""

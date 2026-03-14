@@ -1,0 +1,22 @@
+{
+    "hide": false,
+    "hide_legacy": false,
+    "path": [
+        "Acknowledged Pawn",
+        "Properties",
+        "Mesh",
+        "Properties",
+        "AnimScriptInstance",
+        "Properties",
+        "WeaponData",
+        "Properties",
+        "AimingData"
+    ],
+    "properties": [
+        {
+            "data": 0,
+            "name": "bAiming"
+        }
+    ],
+    "type": "properties"
+}

@@ -1,0 +1,693 @@
+local utils = require("common.utils")
+local uevrUtils = require("libs/uevr_utils")
+
+local GameStateManager = {
+    -- State tracking
+    inMenu = false,
+    isInventoryPDA = false,
+    lastWorldTime = -1,
+    worldTimeTick = 0,
+    initialized = false,
+    last_level = nil,
+    StaticMeshC = nil,
+    isReloading = false,
+    isTwoHanding = false,
+    isDetectorEquipped = false,
+    isMontageAttached = false,
+    isClimbing = false,
+    isConversation = false,
+    isGuitarEquipped = false,
+    isWeaponModMontageActive = false,
+    isInCutscene = false,
+    isWildcardMontageActive = false,
+    isAnimMontagePlaying = false, -- Specifically for "AnimMontage" in name
+    isGrenadeThrowMontageActive = false, -- Set by Entry.lua montage callback
+    isAiming = false, -- New state to track ADS
+    -- Cache for conversation camera optimization
+    lastPawnAddress = nil,
+    cachedConversationCamera = nil,
+    -- Tick counters for throttling
+    climbingTick = 0,
+    inventoryTick = 0,
+    guitarTick = 0,
+    montageTick = 0,
+    convTick = 0,
+    cutsceneTick = 0,
+    aimTick = 0,
+    -- API reference
+    api = nil
+}
+
+-- Initialize the GameStateManager
+function GameStateManager:Init()
+    self.api = uevr.api
+    self.inMenu = false
+    self.isInventoryPDA = false
+    self.lastWorldTime = 0
+    self.worldTimeTick = 0
+    self.last_level = nil
+    self.isDetectorEquipped = false
+    self.isMontageAttached = false
+    self.isClimbing = false
+    self.isConversation = false
+    self.isGuitarEquipped = false
+    self.isInCutscene = false
+    self.isGrenadeThrowMontageActive = false
+    self.isWildcardMontageActive = false
+    self.isAiming = false
+    self.lastPawnAddress = nil
+    self.cachedConversationCamera = nil
+    self.climbingTick = 0
+    self.inventoryTick = 0
+    self.guitarTick = 0
+    self.montageTick = 0
+    self.convTick = 0
+    self.cutsceneTick = 0
+    self.aimTick = 0
+    self.lastWorldTime = -1  -- sentinel: avoids false menu detection before world time is valid
+    self.conversationEndTicks = 0
+    self.weaponCache = {} -- Cache for weapon details (Name, Scope)
+    self.initialized = true
+    self.StaticMeshC = utils.find_required_object("Class /Script/Engine.StaticMeshComponent")
+    -- print("GameStateManager initialized")
+end
+
+-- Get Cached Weapon Info (Name, Scope)
+function GameStateManager:GetWeaponCache(weaponMesh)
+    if not weaponMesh then return nil end
+    local address = weaponMesh:get_address()
+    
+    -- Ensure info table exists
+    if not self.weaponCache[address] then
+        self.weaponCache[address] = {}
+        
+        -- 1. Get Name (Only needs to happen once per weapon mesh address)
+        if weaponMesh.SkeletalMesh then
+             self.weaponCache[address].name = uevrUtils.getShortName(weaponMesh.SkeletalMesh)
+        else
+            local owner = weaponMesh:GetOwner()
+            if owner then
+                self.weaponCache[address].name = uevrUtils.getShortName(owner)
+            end
+        end
+        -- 2. Cache Two-Handed Status
+        self.weaponCache[address].isTwoHanded = true -- default
+        if weaponMesh.AnimScriptInstance then
+            local cl = weaponMesh.AnimScriptInstance:get_class()
+            if cl then
+                local className = cl:get_full_name()
+                if className and string.find(className, "/Weapons/pt/", 1, true) then
+                    self.weaponCache[address].isTwoHanded = false
+                end
+            end
+        end
+    end
+    
+    -- 3. Dynamically Update Scope (MUST check every time because attachments swap dynamically)
+    local current_scope = self:get_scope_mesh(weaponMesh)
+    self.weaponCache[address].scope = current_scope
+
+    return self.weaponCache[address]
+end
+
+-- Reset the GameStateManager state
+function GameStateManager:Reset()
+    self:Init()
+    self.climbingTick = 0
+    -- print("GameStateManager reset")
+end
+
+-- Update function to be called on engine tick
+function GameStateManager:Update()
+    self:CheckMenuState()
+    self:CheckInventoryPDAState()
+    self:CheckClimbingState()
+    self:CheckConversationState()
+    self:CheckGuitarState()
+    self:CheckAimingState() -- Check ADS state
+    -- Throttled: Only re-check isInCutscene every 10 ticks (~100ms)
+    self.cutsceneTick = self.cutsceneTick + 1
+    if self.cutsceneTick % 10 == 0 then
+        self.isInCutscene = uevrUtils.isInCutscene()
+    end
+
+    -- Failsafe: Cleanup wildcard state if no montage is playing
+    -- Throttled to every 10 ticks to avoid per-frame string allocs
+    self.montageTick = self.montageTick + 1
+    if (self.isWildcardMontageActive or self.isAnimMontagePlaying) and self.montageTick % 10 == 0 then
+        local p = self:GetLocalPawn()
+        local currentMontage = (p and p.GetCurrentMontage) and p:GetCurrentMontage() or nil
+
+        if not currentMontage then
+            self.isWildcardMontageActive = false
+            self.isAnimMontagePlaying = false
+        else
+            local mName = uevrUtils.getShortName(currentMontage)
+            if mName and string.find(string.lower(mName), "animmontage") then
+                self.isAnimMontagePlaying = true
+            else
+                self.isAnimMontagePlaying = false
+            end
+        end
+    end
+end
+
+-- Check if the player is in a menu
+function GameStateManager:CheckMenuState()
+    local worldTime = self:GetWorldTime()
+
+    if worldTime == self.lastWorldTime then
+        self.worldTimeTick = self.worldTimeTick + 1
+        if self.worldTimeTick >= 50 then
+            self.inMenu = true
+        end
+    else
+        self.inMenu = false
+        self.worldTimeTick = 0
+    end
+
+    self.lastWorldTime = worldTime
+end
+
+-- Check if player is in inventory or PDA
+-- Optimized: Runs every 2 ticks (approx 20ms) to ensure instantaneous detection
+function GameStateManager:CheckInventoryPDAState()
+    self.inventoryTick = self.inventoryTick + 1
+    if self.inventoryTick % 2 ~= 0 then
+        return -- Skip check, maintain previous state
+    end
+
+    -- Guard: throwables (bolt, knife, grenades) use both hands during equip/throw
+    -- animations, which trips bHasItemInHands+bIsUsesLeftHand+bIsUsesRightHand
+    -- simultaneously — a false-positive inventory detection.
+    local weaponMesh = self:GetEquippedWeapon()
+    if weaponMesh then
+        local wInfo = self:GetWeaponCache(weaponMesh)
+        if wInfo and wInfo.name then
+            local lname = string.lower(wInfo.name)
+            if lname:find("bolt") or lname:find("knife") or
+               lname:find("sk_f1") or lname:find("sk_rgd") or
+               lname:find("grenade") then
+                self.isInventoryPDA = false
+                return
+            end
+        end
+    end
+
+    local pawn = self:GetLocalPawn()
+    if pawn and pawn.Mesh and pawn.Mesh.AnimScriptInstance and
+       pawn.Mesh.AnimScriptInstance.HandItemData then
+        local check1 = pawn.Mesh.AnimScriptInstance.HandItemData.bHasItemInHands
+        local check2 = pawn.Mesh.AnimScriptInstance.HandItemData.bIsUsesLeftHand
+        local check3 = pawn.Mesh.AnimScriptInstance.HandItemData.bIsUsesRightHand
+        if check1 and check2 and check3 then
+            self.isInventoryPDA = true
+        else
+            self.isInventoryPDA = false
+        end
+    end
+end
+ 
+-- Check if player is aiming (ADS)
+-- Throttled to every 3 ticks: ADS transitions are input-driven (slow), sub-frame precision not needed
+function GameStateManager:CheckAimingState()
+    self.aimTick = self.aimTick + 1
+    if self.aimTick % 3 ~= 0 then return end
+    local pawn = self:GetLocalPawn()
+    if pawn and pawn.Mesh and pawn.Mesh.AnimScriptInstance and 
+       pawn.Mesh.AnimScriptInstance.WeaponData and 
+       pawn.Mesh.AnimScriptInstance.WeaponData.AimingData then
+        self.isAiming = pawn.Mesh.AnimScriptInstance.WeaponData.AimingData.bAiming or false
+    else
+        self.isAiming = false
+    end
+end
+
+-- Check if player is climbing a ladder
+-- Optimized: Runs every 10 ticks (approx 100ms)
+function GameStateManager:CheckClimbingState()
+    self.climbingTick = self.climbingTick + 1
+    if self.climbingTick % 10 ~= 0 then
+        return -- Skip check, maintain previous state
+    end
+
+    self.isClimbing = false
+    local pawn = self:GetLocalPawn()
+    if pawn and pawn.Mesh and pawn.Mesh.AnimScriptInstance then
+        local animInstance = pawn.Mesh.AnimScriptInstance
+        
+        -- Attempt to access ClimbingData via reflection
+        local climbingData = animInstance["ClimbingData"]
+        if climbingData then
+            -- bAnimClimbStarted is a boolean property in this struct
+            if climbingData["bAnimClimbStarted"] == true then
+                self.isClimbing = true
+            end
+        end
+    end
+end
+
+-- Check if guitar is equipped
+-- Throttled to every 30 ticks (~300ms): guitar equip/unequip is slow, sub-frame precision not needed
+function GameStateManager:CheckGuitarState()
+    self.guitarTick = self.guitarTick + 1
+    if self.guitarTick % 30 ~= 0 then return end
+    -- 1. Check standard weapon path
+    local weaponMesh = self:GetEquippedWeapon()
+    if weaponMesh then
+        local wInfo = self:GetWeaponCache(weaponMesh)
+        if wInfo and wInfo.name and string.find(string.lower(wInfo.name), "guitar") then
+            -- if not self.isGuitarEquipped then print("[GameState] Guitar detected via WeaponData") end
+            self.isGuitarEquipped = true
+            return
+        end
+    end
+
+    -- 2. Check "In Hands" mesh (Detectors, Guitars, etc)
+    local handMesh = self:GetWeaponInHandsMesh()
+    if handMesh then
+        local wInfo = self:GetWeaponCache(handMesh)
+        if wInfo and wInfo.name and string.find(string.lower(wInfo.name), "guitar") then
+            -- if not self.isGuitarEquipped then print("[GameState] Guitar detected via HandItemData") end
+            self.isGuitarEquipped = true
+            return
+        end
+    end
+    
+    -- 3. Check for "Guitar" component path (fallback)
+    local pawn = self:GetLocalPawn()
+    if pawn then
+        -- Collect all potential meshes
+        local components = {}
+        if pawn.Mesh then table.insert(components, pawn.Mesh) end
+        
+        -- Add all child components of Mesh and Root
+        local pMesh = pawn.Mesh
+        if pMesh and pMesh.AttachChildren then
+            for _, child in ipairs(pMesh.AttachChildren) do table.insert(components, child) end
+        end
+        local pRoot = pawn.RootComponent
+        if pRoot and pRoot.AttachChildren then
+            for _, child in ipairs(pRoot.AttachChildren) do table.insert(components, child) end
+        end
+        
+        -- Scan names AND asset paths
+        for _, comp in ipairs(components) do
+            local name = comp:get_fname():to_string()
+            local lowerName = string.lower(name)
+            
+            -- Check 1: Component name contains "guitar" or "WeaponInHandsMesh"
+            local isPotentiallyGuitar = string.find(lowerName, "guitar") or string.find(lowerName, "weaponinhandsmesh")
+            
+            if isPotentiallyGuitar then
+                -- Check 2: Verify underlying asset path for "guitar"
+                local assetPath = ""
+                if comp.SkeletalMesh then
+                    assetPath = string.lower(comp.SkeletalMesh:get_full_name())
+                elseif comp.StaticMesh then
+                    assetPath = string.lower(comp.StaticMesh:get_full_name())
+                end
+
+                if string.find(assetPath, "guitar") then
+                    -- if not self.isGuitarEquipped then print("[GameState] Guitar detected via Asset Path: " .. assetPath .. " (Comp: " .. name .. ")") end
+                    self.isGuitarEquipped = true
+                    return
+                end
+            end
+        end
+
+        -- 3. Check Attached Actors
+        -- (This is a bit more expensive/complex in LuaVR/UEVR sometimes)
+        -- But let's try searching children for Actor wrappers if they exist
+    end
+
+    if self.isGuitarEquipped then print("[GameState] Guitar lost") end
+    self.isGuitarEquipped = false
+end
+
+-- Check if player is in a conversation (zoomed FOV)
+-- Optimized with caching to avoid per-frame component scanning
+-- Throttled to every 5 ticks (~50ms): fast enough to feel instant, reduces FOV bridge calls
+function GameStateManager:CheckConversationState()
+    -- Config guard FIRST: ensures isConversation is always reset when feature is disabled,
+    -- even on skipped ticks (prevents aim method getting stuck in wrong state)
+    if not Config.enableConversationFix then
+        self.isConversation = false
+        return
+    end
+    self.convTick = self.convTick + 1
+    if self.convTick % 5 ~= 0 then return end
+
+    -- Skip FOV check when a throwable is equipped — bolt/knife/grenade trajectory
+    -- view zooms the camera below the conversation threshold, causing a false positive
+    -- that pushes aim back to Game (0) right after PDA/menu restoration sets it to HMD (1).
+    local throwableMesh = self:GetEquippedWeapon()
+    if throwableMesh then
+        local tInfo = self:GetWeaponCache(throwableMesh)
+        if tInfo and tInfo.name then
+            local n = string.lower(tInfo.name)
+            if n:find("bolt") or n:find("knife") or n:find("sk_f1") or n:find("sk_rgd") or n:find("grenade") then
+                self.isConversation = false
+                self.conversationEndTicks = 31
+                return
+            end
+        end
+    end
+
+    local pawn = self:GetLocalPawn()
+    if not pawn then
+        self.isConversation = false
+        self.cachedConversationCamera = nil
+        self.lastPawnAddress = nil
+        return
+    end
+
+    -- Check if pawn identity changed (respawn, load, etc.)
+    local pawnAddress = pawn:get_address()
+    if pawnAddress ~= self.lastPawnAddress then
+        self.cachedConversationCamera = nil
+        self.lastPawnAddress = pawnAddress
+        self.conversationEndTicks = 0
+        -- print("[UEVR] Pawn changed, invalidated conversation camera cache")
+    end
+
+    -- 1. Try PlayerCameraManager (Recommended for UE5)
+    local playerController = pawn.Controller
+    if playerController ~= nil then
+        local cameraManager = playerController.PlayerCameraManager
+        if cameraManager ~= nil then
+             local fov = cameraManager.FOVAngle
+             if fov and type(fov) == "number" and fov > 0 then
+                 local threshold = Config.conversationFOVThreshold or 71.0
+                 -- IGNORE FOV drop if player is aiming (ADS)
+                 if self.isAiming then 
+                     self.isConversation = false
+                     self.conversationEndTicks = 31 -- reset end ticks
+                     return
+                 end
+                 -- IGNORE FOV drop during grenade throw (arming zooms camera below threshold)
+                 if self.isGrenadeThrowMontageActive then
+                     self.isConversation = false
+                     self.conversationEndTicks = 31
+                     return
+                 end
+
+                 if fov < threshold then
+                     self.isConversation = true
+                     self.conversationEndTicks = 0
+                 else
+                     -- Hysteresis: wait ~0.5s before assuming conversation ended
+                     self.conversationEndTicks = (self.conversationEndTicks or 0) + 1
+                     if self.conversationEndTicks > 30 then
+                         self.isConversation = false
+                     end
+                 end
+                 return -- Using PCM is usually sufficient and more reliable
+             end
+        end
+    end
+
+    -- 2. Fallback: Try Cached Camera
+    if self.cachedConversationCamera then
+        local fov = self.cachedConversationCamera["FieldOfView"]
+        if fov and type(fov) == "number" then
+            local threshold = Config.conversationFOVThreshold or 71.0
+            if fov < threshold then
+                self.isConversation = true
+                self.conversationEndTicks = 0
+            else
+                self.conversationEndTicks = (self.conversationEndTicks or 0) + 1
+                if self.conversationEndTicks > 30 then
+                    self.isConversation = false
+                end
+            end
+            return -- Success, skip scan
+        else
+            -- Cache invalid (component destroyed?), force rescan
+            self.cachedConversationCamera = nil
+        end
+    end
+    
+    -- 3. Scan for Camera (if cache empty or invalid)
+    if pawn.Mesh then
+        -- Helper to check a component and populate cache if found
+        local function checkComp(comp)
+            if not comp then return false end
+            local name = comp:get_fname():to_string()
+            
+            if string.find(name, "Camera") then
+                 local fov = comp["FieldOfView"]
+                 if fov and type(fov) == "number" then
+                     -- Found a valid camera, cache it!
+                     self.cachedConversationCamera = comp
+                     
+                     local threshold = Config.conversationFOVThreshold or 71.0
+                     -- print("Found Camera: " .. name .. " | FOV: " .. tostring(fov) .. " | Thresh: " .. tostring(threshold))
+                     if fov < threshold then
+                         return true
+                     end
+                 end
+            end
+            return false
+        end
+
+        local foundCamera = false
+
+        -- Scan RootComponent Children
+        if pawn.RootComponent and pawn.RootComponent.AttachChildren then
+            for _, child in ipairs(pawn.RootComponent.AttachChildren) do
+                if checkComp(child) then
+                    self.isConversation = true
+                    foundCamera = true
+                    return
+                end
+            end
+        end
+        
+        -- Scan Mesh Attach Children
+        if not foundCamera and pawn.Mesh and pawn.Mesh.AttachChildren then
+             for _, child in ipairs(pawn.Mesh.AttachChildren) do
+                if checkComp(child) then
+                    self.isConversation = true
+                    foundCamera = true
+                    return
+                end
+            end
+        end
+        
+        -- Direct Reflection fallback
+        if not foundCamera then
+             local camComp = pawn["Camera"]
+             if checkComp(camComp) then
+                 self.isConversation = true
+                 return
+             end
+        end
+    end
+    
+    self.isConversation = false
+end
+
+
+function GameStateManager:is_scope_active(pawn)
+    if not pawn then return false end
+    local optical_scope = pawn.PlayerOpticScopeComponent
+    if not optical_scope then return false end
+    local scope_active = optical_scope:read_byte(0xA8, 1)
+    if scope_active > 0 then
+        return true
+    end
+    return false
+end
+
+function GameStateManager:get_scope_mesh(parent_mesh)
+    if not parent_mesh then return nil end
+
+    local child_components = parent_mesh.AttachChildren
+    if not child_components then return nil end
+
+    -- Single-pass: prefer component with OpticCutoutSocket, fall back to first scope found
+    local fallback = nil
+    for _, component in ipairs(child_components) do
+        if component:is_a(self.StaticMeshC) and string.find(component:get_fname():to_string(), "scope") then
+            if component:DoesSocketExist("OpticCutoutSocket") then
+                return component  -- best match, return immediately
+            elseif not fallback then
+                fallback = component  -- keep first scope as fallback
+            end
+        end
+    end
+    return fallback
+end
+
+function GameStateManager:get_all_scope_meshes(parent_mesh)
+    local scope_meshes = {}
+    if not parent_mesh then return scope_meshes end
+
+    local child_components = parent_mesh.AttachChildren
+    if not child_components then return scope_meshes end
+
+    for _, component in ipairs(child_components) do
+        if component:is_a(self.StaticMeshC) and string.find(component:get_fname():to_string(), "scope") then
+            table.insert(scope_meshes, component)
+        end
+    end
+
+    return scope_meshes
+end
+
+function GameStateManager:get_weapon_attachment_mesh(pawn)
+    if not pawn then return nil end
+    
+    local potential_components = {}
+    
+    -- Add RootComponent children
+    if pawn.RootComponent and pawn.RootComponent.AttachChildren then
+         for _, comp in ipairs(pawn.RootComponent.AttachChildren) do
+             table.insert(potential_components, comp)
+         end
+    end
+    
+    -- Add Mesh children (likely where the silencer is)
+    if pawn.Mesh and pawn.Mesh.AttachChildren then
+         for _, comp in ipairs(pawn.Mesh.AttachChildren) do
+             table.insert(potential_components, comp)
+         end
+    end
+    
+    -- Search all collected components
+    for _, component in ipairs(potential_components) do
+        local compName = component:get_fname():to_string()
+        -- print("[Debug Scan] Checking Component: " .. compName)
+        
+        -- Check 1: Name based (Stronger for these transient meshes)
+        if string.find(compName, "WeaponAttachment") and 
+           (string.find(compName, "silen") or string.find(compName, "sight") or string.find(compName, "scope")) then
+            print("[Debug] Found Attachment Mesh by Name: " .. compName)
+            return component
+        end
+
+        -- Check 2: Socket based (Fallback)
+        if component:is_a(self.StaticMeshC) and component.AttachSocketName then
+             local socketName = component.AttachSocketName:to_string()
+             -- print("[Debug Scan] .. Socket: " .. socketName) 
+             if socketName == "jnt_l_weapon" then
+                 print("[Debug] Found Attachment Mesh by Socket: " .. compName)
+                 return component
+             end
+        end
+    end
+    -- print("[Debug] No matching attachment mesh found in " .. #potential_components .. " candidates.")
+    return nil
+end
+
+-- Get current world time
+function GameStateManager:GetWorldTime()
+    local engine = self.api:get_engine()
+    if engine and engine.GameViewport and engine.GameViewport.World and
+       engine.GameViewport.World.GameState then
+        return engine.GameViewport.World.GameState.ReplicatedWorldTimeSeconds
+    end
+    return 0
+end
+
+-- Get local player pawn
+function GameStateManager:GetLocalPawn()
+    return self.api:get_local_pawn(0)
+end
+
+function GameStateManager:IsLevelChanged(engine)
+    local viewport = engine.GameViewport
+    if viewport then
+        local world = viewport.World
+        if world then
+            local level = world.PersistentLevel
+            if self.last_level ~= level then
+                self.last_level = level
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- Send a key press (down or up)
+function GameStateManager:SendKeyPress(key_value, key_up)
+    local key_up_string = "down"
+    if key_up == true then
+        key_up_string = "up"
+    end
+
+    -- Specialized handling for Reload: Pulse the key once to the game, but keep state for hand attachment
+    if key_value == 'R' then
+        if not key_up then
+            -- Trigger once (Pulse)
+            self.api:dispatch_custom_event(key_value, "down")
+            self.api:dispatch_custom_event(key_value, "up")
+            self.isReloading = true
+        else
+            -- Release internal state only
+            self.isReloading = false
+        end
+        return -- Handled
+    end
+
+    self.api:dispatch_custom_event(key_value, key_up_string)
+end
+
+-- Send key down
+function GameStateManager:SendKeyDown(key_value)
+    self:SendKeyPress(key_value, false)
+end
+
+-- Send key up
+function GameStateManager:SendKeyUp(key_value)
+    self:SendKeyPress(key_value, true)
+end
+
+-- Get current equipped weapon
+function GameStateManager:GetEquippedWeapon()
+    local pawn = self:GetLocalPawn()
+    if not pawn then return nil end
+    local sk_mesh = pawn.Mesh
+    if not sk_mesh then return nil end
+    local anim_instance = sk_mesh.AnimScriptInstance
+    if not anim_instance then return nil end
+    -- Guard WeaponData: can be nil during cutscenes, death, or level transitions
+    local weapon_data = anim_instance.WeaponData
+    if not weapon_data then return nil end
+    local weapon_mesh = weapon_data.WeaponMesh
+    return weapon_mesh
+end
+
+-- Get current weapon in hands mesh (for items like guitar/detector)
+function GameStateManager:GetWeaponInHandsMesh()
+    local pawn = self:GetLocalPawn()
+    if not pawn then return nil end
+    local sk_mesh = pawn.Mesh
+    if not sk_mesh then return nil end
+    local anim_instance = sk_mesh.AnimScriptInstance
+    if not anim_instance then return nil end
+    
+    -- ItemMesh in HandItemData struct
+    if anim_instance.HandItemData and anim_instance.HandItemData.WeaponMesh then
+        return anim_instance.HandItemData.WeaponMesh
+    end
+    return nil
+end
+
+-- Get game engine
+function GameStateManager:GetEngine()
+    return self.api:get_engine()
+end
+
+-- Create a new instance
+function GameStateManager:new()
+    local instance = {}
+    setmetatable(instance, self)
+    self.__index = self
+    instance:Init()
+    return instance
+end
+
+return GameStateManager

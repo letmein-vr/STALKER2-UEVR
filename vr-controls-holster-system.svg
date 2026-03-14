@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 800 600">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f0f0f0"/>
+  
+  <!-- Player silhouette -->
+  <g>
+    <!-- Body -->
+    <path d="M400 150 L400 350 M350 200 L450 200 M350 200 L320 300 M450 200 L480 300 M400 350 L370 500 M400 350 L430 500" 
+          stroke="#333" stroke-width="5" fill="none"/>
+    <!-- Head -->
+    <circle cx="400" cy="130" r="30" fill="#333"/>
+  </g>
+
+  <!-- Controllers -->
+  <g id="leftController" opacity="0.7">
+    <rect x="320" y="300" width="30" height="50" rx="5" fill="#0066cc"/>
+    <text x="335" y="330" text-anchor="middle" fill="white" font-family="Arial" font-size="12">L</text>
+  </g>
+  
+  <g id="rightController" opacity="0.7">
+    <rect x="480" y="300" width="30" height="50" rx="5" fill="#cc0000"/>
+    <text x="495" y="330" text-anchor="middle" fill="white" font-family="Arial" font-size="12">R</text>
+  </g>
+  
+  <!-- Holster Zones -->
+  <g>
+    <!-- Right Shoulder Zone -->
+    <circle id="rightShoulderZone" cx="450" cy="180" r="20" fill="#cc0000" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="450" y="180" text-anchor="middle" fill="white" font-family="Arial" font-size="10">P1</text>
+    
+    <!-- Left Shoulder Zone -->
+    <circle id="leftShoulderZone" cx="350" cy="180" r="20" fill="#cc0000" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+    </circle>
+    <text x="350" y="180" text-anchor="middle" fill="white" font-family="Arial" font-size="10">P2</text>
+    
+    <!-- Right Hip Zone -->
+    <circle id="rightHipZone" cx="430" cy="350" r="20" fill="#cc0000" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" begin="1s" repeatCount="indefinite"/>
+    </circle>
+    <text x="430" y="350" text-anchor="middle" fill="white" font-family="Arial" font-size="10">SD</text>
+    
+    <!-- Left Lower Zone -->
+    <circle id="leftLowerZone" cx="370" cy="350" r="20" fill="#cc0000" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" begin="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <text x="370" y="350" text-anchor="middle" fill="white" font-family="Arial" font-size="10">M</text>
+    
+    <!-- Left Chest Zone -->
+    <circle id="leftChestZone" cx="370" cy="220" r="20" fill="#cc0000" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" begin="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="370" y="220" text-anchor="middle" fill="white" font-family="Arial" font-size="10">N</text>
+    
+    <!-- Right Chest Zone -->
+    <circle id="rightChestZone" cx="430" cy="220" r="20" fill="#cc0000" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" begin="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <text x="430" y="220" text-anchor="middle" fill="white" font-family="Arial" font-size="10">G</text>
+    
+    <!-- Head Zone -->
+    <circle id="headZone" cx="400" cy="100" r="20" fill="#cc0000" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" begin="3s" repeatCount="indefinite"/>
+    </circle>
+    <text x="400" y="100" text-anchor="middle" fill="white" font-family="Arial" font-size="10">F</text>
+  </g>
+  
+  <!-- Right controller animation to a zone -->
+  <animateMotion xlink:href="#rightController" dur="5s" repeatCount="indefinite" 
+                 path="M0,0 L80,-120 L-80,-120 L30,0 L-30,0 L0,-80 L0,0" fill="freeze"/>
+  
+  <!-- Legend -->
+  <g transform="translate(50, 470)">
+    <text x="0" y="0" font-family="Arial" font-size="16" font-weight="bold">Holster Zones (Right Grip):</text>
+    <text x="0" y="25" font-family="Arial" font-size="12">P1: Primary Weapon | P2: 2nd Primary | SD: Sidearm | M: Melee</text>
+    <text x="0" y="45" font-family="Arial" font-size="12">N: Nail | G: Grenade | F: Flashlight Toggle</text>
+    
+    <text x="0" y="75" font-family="Arial" font-size="16" font-weight="bold">Inventory Zones (Left Grip):</text>
+    <text x="0" y="100" font-family="Arial" font-size="12">Left Shoulder: Open Inventory | Right Shoulder: QuickSlot</text>
+    <text x="0" y="120" font-family="Arial" font-size="12">Left Chest: Scanner | Right Chest: PDA | Head: Flashlight Toggle</text>
+  </g>
+</svg>

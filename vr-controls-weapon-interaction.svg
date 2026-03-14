@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg"  xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 800 600">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f0f0f0"/>
+  
+  <!-- Weapon being held by right hand -->
+  <g id="weaponGroup">
+    <rect id="weapon" x="380" y="300" width="150" height="30" rx="2" fill="#555"/>
+    
+    <!-- Interaction zones -->
+    <circle id="reloadZone" cx="435" cy="340" r="20" fill="#0066cc" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="435" y="340" text-anchor="middle" fill="white" font-family="Arial" font-size="10">R</text>
+    
+    <circle id="flashlightZone" cx="490" cy="285" r="20" fill="#0066cc" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" begin="1s" repeatCount="indefinite"/>
+    </circle>
+    <text x="490" y="285" text-anchor="middle" fill="white" font-family="Arial" font-size="10">F</text>
+    
+    <circle id="fireModeZone" cx="435" cy="280" r="20" fill="#0066cc" opacity="0.5">
+      <animate attributeName="opacity" values="0.5;0.8;0.5" dur="2s" begin="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="435" y="280" text-anchor="middle" fill="white" font-family="Arial" font-size="10">FM</text>
+  </g>
+  
+  <!-- Controllers -->
+  <rect id="rightController" x="480" y="300" width="30" height="50" rx="5" fill="#cc0000"/>
+  <text x="495" y="330" text-anchor="middle" fill="white" font-family="Arial" font-size="12">R</text>
+  
+  <g id="leftController">
+    <rect x="320" y="300" width="30" height="50" rx="5" fill="#0066cc"/>
+    <text x="335" y="330" text-anchor="middle" fill="white" font-family="Arial" font-size="12">L</text>
+  </g>
+  
+  <!-- Left controller animation to each zone -->
+  <animateMotion xlink:href="#leftController" dur="6s" repeatCount="indefinite" 
+                path="M0,0 L115,40 L0,0 L170,-15 L0,0 L115,-20 L0,0" fill="freeze"/>
+  
+  <!-- Legend -->
+  <g transform="translate(50, 470)">
+    <text x="0" y="0" font-family="Arial" font-size="16" font-weight="bold">Weapon Interaction Zones:</text>
+    <text x="0" y="25" font-family="Arial" font-size="12">L Grip + Underneath Weapon: Reload</text>
+    <text x="0" y="45" font-family="Arial" font-size="12">L Thumb + Front of Weapon: Toggle Flashlight</text>
+    <text x="0" y="65" font-family="Arial" font-size="12">L Trigger + Above Weapon: Fire Mode Switch</text>
+    
+    <text x="0" y="95" font-family="Arial" font-size="16" font-weight="bold">Button Layout Changes:</text>
+    <text x="0" y="120" font-family="Arial" font-size="12">R Stick Up: Jump | R Stick Down: Crouch | L Grip: Sprint</text>
+  </g>
+</svg>
