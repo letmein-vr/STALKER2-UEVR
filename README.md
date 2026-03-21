@@ -70,7 +70,8 @@ Perform actions by physically reaching to different parts of your body and squee
 
 * **VR Hands:** Player knockdowns can cause hands to disappear; reset scripts to fix.
 * **Holographic Scopes:** Original reticule and scope glass removed, replaced with custom red dot due to upscaling graphical issues.
+* **Laser Sights:** These are not accurate/aligned properly.
 * **Upscaling Glitch:** Upscaling may cause flickering or screen squashing.
-    * **Fix:** Set `r.TemporalAA.Upsampling = 0` in UEVR Cvars, turn on the Flashlight, and restart.
+    * **Fix:** Set `r.TemporalAA.Upsampling = 0` in UEVR Cvars, or turn on the Flashlight, or restart.
 * **Pre-rendered Cutscenes:** These stay on a 2D screen that follows your head movement.
 * **Aim Assist:** Manually **DISABLE** this in game settings every time you load a save.
