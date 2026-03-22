@@ -4,7 +4,7 @@ Welcome to the Zone, Stalker! This mod transforms Stalker 2 into an immersive VR
 
 ## **⚠️ IMPORTANT ⚠️**
 
-STRALKER 2 STEAM VERSION 1.6 REQUIRED! UEVR will crash on any later version of the game!
+STALKER 2 STEAM VERSION 1.6 REQUIRED! UEVR will crash on any later version of the game!
 
 LATEST UEVR NIGHTLY REQUIRED!
 
