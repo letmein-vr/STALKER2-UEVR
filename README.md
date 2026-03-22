@@ -1,14 +1,14 @@
-☢️ **Stalker 2 UEVR Mod - Player Guide** ☢️
+# ☢️ **Stalker 2 UEVR Mod - Player Guide** ☢️
 
 Welcome to the Zone, Stalker! This mod transforms Stalker 2 into an immersive VR experience, and is built on the fantastic original mod by Mutar!
 
-**⚠️ IMPORTANT ⚠️**
+## **⚠️ IMPORTANT ⚠️**
 
 STRALKER 2 STEAM VERSION 1.6 REQUIRED! UEVR will crash on any later version of the game!
 
 LATEST UEVR NIGHTLY REQUIRED!
 
-**Credits**
+### **Credits**
 Thanks and credits to: Mutar, jbusfield, gwizdek, Holydh and Pande4360
 
 ---
