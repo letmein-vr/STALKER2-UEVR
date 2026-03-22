@@ -1,10 +1,10 @@
-# ☢️ **Stalker 2 UEVR Mod - Player Guide** ☢️
+# ☢️ **S.T.A.L.K.E.R. 2: Heart of Chornobyl UEVR Mod - Player Guide** ☢️
 
 Welcome to the Zone, Stalker! This mod transforms Stalker 2 into an immersive VR experience, and is built on the fantastic original mod by Mutar!
 
 ## **⚠️ IMPORTANT ⚠️**
 
-STALKER 2 STEAM VERSION 1.6 REQUIRED! UEVR will crash on any later version of the game!
+S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.6 REQUIRED! UEVR will crash on any later version of the game!
 
 LATEST UEVR NIGHTLY REQUIRED!
 
