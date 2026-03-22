@@ -1,4 +1,4 @@
-☢️ # Stalker 2 UEVR Mod - Player Guide ☢️
+☢️ **Stalker 2 UEVR Mod - Player Guide** ☢️
 
 Welcome to the Zone, Stalker! This mod transforms Stalker 2 into an immersive VR experience, and is built on the fantastic original mod by Mutar!
 
@@ -66,7 +66,7 @@ Perform actions by physically reaching to different parts of your body and squee
 
 ---
 
-## ⚠️ KNOWN ISSUES
+## ⚠️ KNOWN ISSUES ⚠️
 
 * **VR Hands:** Player knockdowns can cause hands to disappear; reset scripts to fix.
 * **Holographic Scopes:** Original reticule and scope glass removed, replaced with custom red dot due to upscaling graphical issues.
