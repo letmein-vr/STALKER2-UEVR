@@ -168,6 +168,10 @@
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147105840",
             "label": "AnimMontage_2147105840"
         },
+        "AnimMontage_2147153837": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147153837",
+            "label": "AnimMontage_2147153837"
+        },
         "AnimMontage_2147178875": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147178875",
             "label": "AnimMontage_2147178875"
@@ -231,6 +235,14 @@
         "AnimMontage_2147217678": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147217678",
             "label": "AnimMontage_2147217678"
+        },
+        "AnimMontage_2147236942": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147236942",
+            "label": "AnimMontage_2147236942"
+        },
+        "AnimMontage_2147239416": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147239416",
+            "label": "AnimMontage_2147239416"
         },
         "AnimMontage_2147249732": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147249732",
@@ -316,6 +328,10 @@
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147318329",
             "label": "AnimMontage_2147318329"
         },
+        "AnimMontage_2147321901": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147321901",
+            "label": "AnimMontage_2147321901"
+        },
         "AnimMontage_2147333838": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147333838",
             "label": "AnimMontage_2147333838"
@@ -380,6 +396,10 @@
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147398547",
             "label": "AnimMontage_2147398547"
         },
+        "AnimMontage_2147398677": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147398677",
+            "label": "AnimMontage_2147398677"
+        },
         "AnimMontage_2147400187": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147400187",
             "label": "AnimMontage_2147400187"
@@ -436,9 +456,21 @@
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147431004",
             "label": "AnimMontage_2147431004"
         },
+        "AnimMontage_2147431782": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147431782",
+            "label": "AnimMontage_2147431782"
+        },
+        "AnimMontage_2147432048": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147432048",
+            "label": "AnimMontage_2147432048"
+        },
         "AnimMontage_2147432237": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147432237",
             "label": "AnimMontage_2147432237"
+        },
+        "AnimMontage_2147433039": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147433039",
+            "label": "AnimMontage_2147433039"
         },
         "AnimMontage_2147437205": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147437205",
@@ -460,9 +492,45 @@
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
         },
+        "AnimMontage_2147438056": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147438056",
+            "label": "AnimMontage_2147438056"
+        },
         "AnimMontage_2147439457": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147439457",
             "label": "AnimMontage_2147439457"
+        },
+        "AnimMontage_2147440316": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147440316",
+            "label": "AnimMontage_2147440316"
+        },
+        "AnimMontage_2147440821": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147440821",
+            "label": "AnimMontage_2147440821"
+        },
+        "AnimMontage_2147441089": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147441089",
+            "label": "AnimMontage_2147441089"
+        },
+        "AnimMontage_2147441184": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147441184",
+            "label": "AnimMontage_2147441184"
+        },
+        "AnimMontage_2147441628": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147441628",
+            "label": "AnimMontage_2147441628"
+        },
+        "AnimMontage_2147442365": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147442365",
+            "label": "AnimMontage_2147442365"
+        },
+        "AnimMontage_2147442788": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147442788",
+            "label": "AnimMontage_2147442788"
+        },
+        "AnimMontage_2147443166": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147443166",
+            "label": "AnimMontage_2147443166"
         },
         "AnimMontage_2147456097": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147456097",
@@ -2315,6 +2383,26 @@
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
         },
+        "MG_fp_cartridge_panel_install_Player": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/QueCartridgePanel/MG_fp_cartridge_panel_install_Player.MG_fp_cartridge_panel_install_Player",
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 1,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_cartridge_panel_install_Player",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
+        },
         "MG_fp_common_burer_attack_drag_weapon": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/drag_weapon/Montages/MG_fp_common_burer_attack_drag_weapon.MG_fp_common_burer_attack_drag_weapon",
             "label": "MG_fp_common_burer_attack_drag_weapon"
@@ -2638,6 +2726,10 @@
         "MG_fp_dialogue_arm_swing_right": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Dialog_animations/AnimMontage/MG_fp_dialogue_arm_swing_right.MG_fp_dialogue_arm_swing_right",
             "label": "MG_fp_dialogue_arm_swing_right"
+        },
+        "MG_fp_dialogue_bothhands_statement": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Dialog_animations/AnimMontage/MG_fp_dialogue_bothhands_statement.MG_fp_dialogue_bothhands_statement",
+            "label": "MG_fp_dialogue_bothhands_statement"
         },
         "MG_fp_dialogue_drinkvodka": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Dialog_animations/AnimMontage/MG_fp_dialogue_drinkvodka.MG_fp_dialogue_drinkvodka",
@@ -4135,6 +4227,10 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload.MG_fp_kharod_reload",
             "label": "MG_fp_kharod_reload"
         },
+        "MG_fp_kharod_reload_GrenLaunch": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_GrenLaunch.MG_fp_kharod_reload_GrenLaunch",
+            "label": "MG_fp_kharod_reload_GrenLaunch"
+        },
         "MG_fp_kharod_reload_increased_BuckLaunch": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_increased_BuckLaunch.MG_fp_kharod_reload_increased_BuckLaunch",
             "handsWhenActive": 1,
@@ -4163,13 +4259,25 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_paired.MG_fp_kharod_reload_paired",
             "label": "MG_fp_kharod_reload_paired"
         },
+        "MG_fp_kharod_reload_paired_Grenlaunch": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_paired_Grenlaunch.MG_fp_kharod_reload_paired_Grenlaunch",
+            "label": "MG_fp_kharod_reload_paired_Grenlaunch"
+        },
         "MG_fp_kharod_reload_paired_aux": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_paired_aux.MG_fp_kharod_reload_paired_aux",
             "label": "MG_fp_kharod_reload_paired_aux"
         },
+        "MG_fp_kharod_reload_paired_aux_Grenlaunch": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_paired_aux_Grenlaunch.MG_fp_kharod_reload_paired_aux_Grenlaunch",
+            "label": "MG_fp_kharod_reload_paired_aux_Grenlaunch"
+        },
         "MG_fp_kharod_reload_paired_aux_tactical": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_paired_aux_tactical.MG_fp_kharod_reload_paired_aux_tactical",
             "label": "MG_fp_kharod_reload_paired_aux_tactical"
+        },
+        "MG_fp_kharod_reload_paired_aux_tactical_Grenlaunch": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_paired_aux_tactical_Grenlaunch.MG_fp_kharod_reload_paired_aux_tactical_Grenlaunch",
+            "label": "MG_fp_kharod_reload_paired_aux_tactical_Grenlaunch"
         },
         "MG_fp_kharod_reload_paired_tactical": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Reload/MG_fp_kharod_reload_paired_tactical.MG_fp_kharod_reload_paired_tactical",

@@ -15,5 +15,8 @@
     "pawnBodyWhenActive": 1,
     "pawnBodyWhenActivePriority": "0",
     "rightArmWhenActive": 1,
-    "rightArmWhenActivePriority": "0"
+    "rightArmWhenActivePriority": "0",
+    "uevr_pawn_hidePawnForearmBones": false,
+    "uevr_pawn_pawnForearmLeft": "jnt_l_fore_arm",
+    "uevr_pawn_pawnForearmRight": "jnt_r_fore_arm"
 }

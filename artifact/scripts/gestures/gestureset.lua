@@ -44,9 +44,14 @@ function GestureSet:ResetGesture(gesture, visited)
     gesture:Reset()
 end
 
+-- Module-level reusable table for visited tracking — avoids 90 GC allocations/sec
+local _visited_cache = {}
+
 -- Update all gestures in the graph (depth-first)
 function GestureSet:Update(context)
-    local visited = {}
+    -- Clear the reusable visited table (faster than new allocation, no GC pressure)
+    for k in pairs(_visited_cache) do _visited_cache[k] = nil end
+    local visited = _visited_cache
     
     -- Update all root gestures (which will cascade to dependencies)
     for _, gesture in ipairs(self.rootGestures) do

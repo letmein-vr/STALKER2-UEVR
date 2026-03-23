@@ -54,6 +54,7 @@ local function loadProfile(name)
             offset = {X = Config.detectorOffset.X, Y = Config.detectorOffset.Y, Z = Config.detectorOffset.Z},
             rotation = {Pitch = Config.detectorRotation.Pitch, Yaw = Config.detectorRotation.Yaw, Roll = Config.detectorRotation.Roll}
         }
+        Config:markDirty()
         Config:save()
     end
 end

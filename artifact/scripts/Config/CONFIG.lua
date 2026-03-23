@@ -281,7 +281,13 @@ function Config:load()
 	end
 end
 
+function Config:markDirty()
+	self._dirty = true
+end
+
 function Config:save()
+	if not self._dirty then return end  -- skip encode if nothing changed
+	self._dirty = false
 	local t = get_config_fields(self)
 	pcall(function()
 		json.dump_file(configFilePath, t, 4)
@@ -293,6 +299,7 @@ Config:load()
 -- Migration: Force update threshold if it's the old default (75.0 or 80.0) which is too high
 if Config.conversationFOVThreshold == 80.0 or Config.conversationFOVThreshold == 55.0 or Config.conversationFOVThreshold == 75.0 then
     Config.conversationFOVThreshold = 71.0
+    Config:markDirty()
     Config:save()
     print("[Config] Migrated conversationFOVThreshold to 71.0")
 end

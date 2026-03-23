@@ -25,7 +25,6 @@ local zoneDebug = require("stalker2.zone_debug")
 local hands = require("libs/hands")
 local pawnModule = require("libs/pawn")
 local inputModule = require("libs/input")
-local inputModule = require("libs/input")
 local uevrUtils = require("libs/uevr_utils")
 require("MontageWildcard") -- Wildcard logic for AnimMontage visibility defaults
 local controllers = require("libs/controllers")
@@ -225,7 +224,6 @@ local currentWeaponName = nil
 local weaponCheckTimer = 0
 local lastSupportHandState = false
 local lastClimbingState = false
-local lastConversationState = false
 local currentScopeName = nil
 local lastScopeMesh = nil
 local lastTwoHandingState = false
@@ -300,28 +298,25 @@ local function isConsumptionMontage(montageName)
     return montageName and consumptionMontages[montageName] == true
 end
 
+
+-- Module-level set for O(1) pistol lookup — avoids allocating a new table on every call
+local pistolWeapons = {
+    ["sk_pm"]  = true,
+    ["sk_apb"] = true,
+    ["sk_udp"] = true,
+}
+
 -- Helper to check if current weapon is a pistol
 local function isPistolWeapon(weaponName)
     if not weaponName then return false end
-    
-    -- List of pistol weapon identifiers
-    local pistols = {
-        "SK_pm",
-        "SK_apb",
-        "SK_udp"
-    }
-    
-    for _, pistolName in ipairs(pistols) do
-        if weaponName == pistolName then
-            return true
-        end
-    end
-    
-    return false
+    return pistolWeapons[string.lower(weaponName)] == true
 end
 
 
 local activeWeaponModMontage = nil
+local modMeshScanTick = 0      -- throttles the initial mod-mesh search
+local modMeshCleanupTick = 0   -- throttles the per-tick cleanup child-walk
+local EMPTY_CONTEXT = {}        -- reusable empty context for GestureSet:Update (avoids 90 allocs/sec)
 
 -- Variables for Attachment Simulation
 local lastCleanAttachmentName = nil
@@ -330,10 +325,8 @@ local simulatedAttachmentOriginalParent = nil
 local simulatedAttachmentOriginalSocket = nil
 
 -- Global variables for attachment simulation
-local detectedAttachments = {} 
-local selectedAttachmentValues = {} 
-local selectedAttachmentIndex = 1
-local selectedAttachmentValues = {} 
+local detectedAttachments = {}
+local selectedAttachmentValues = {}
 local selectedAttachmentIndex = 1
 local currentSimulationPose = nil
 local showAllAttachments = false
@@ -615,6 +608,7 @@ local function saveWeaponProfile()
             scopeProf.scopeBrightness = Config.scopeBrightnessAmplifier
         end
         
+        Config:markDirty()
         Config:save()
     end
 end
@@ -865,7 +859,8 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 uevr.params.vr.set_mod_value("VR_AimMethod", "1")
             end
 
-            local currentWeaponMesh = gameState:GetEquippedWeapon()
+            -- Use the weapon already resolved this tick by gameState:Update() — avoids a redundant C++ bridge call
+            local currentWeaponMesh = gameState._frameWeapon
             local weaponChanged = currentWeaponMesh ~= lastWeaponMesh
             local wInfo = nil
             local currentScopeMesh = nil
@@ -1071,7 +1066,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             end
             
             if not gameState.isInventoryPDA and not gameState.inMenu then
-                currentPreset:Update({})
+                currentPreset:Update(EMPTY_CONTEXT)
                 
                 -- X-Button to R-Key mapping
                 if XINPUT_GAMEPAD_X then
@@ -1245,8 +1240,11 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 -- Handles race condition where montage starts before specific mod flag is set
                 if isWeaponModMontageActive then
                     if not hasAttachedModMesh then
+                        -- Throttle: scan every 3 ticks (~33ms at 90Hz) to avoid 90Hz AttachChildren walks
+                        modMeshScanTick = modMeshScanTick + 1
+                        if modMeshScanTick % 3 ~= 0 then goto modMeshScanDone end
                         local pawn = gameState:GetLocalPawn()
-                        -- print("[Debug] Continuous Check: Searching for Mod Mesh...") 
+                        -- print("[Debug] Continuous Check: Searching for Mod Mesh...")
                         local modMesh = gameState:get_weapon_attachment_mesh(pawn)
                         if modMesh then
                             local leftHandComp = hands.getHandComponent(0) -- 0 is Left Hand
@@ -1284,10 +1282,12 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                                 uevrUtils.set_component_relative_transform(modMesh, Config.weaponModMeshOffset, Config.weaponModMeshRotation)
                             end
                         end
+                        ::modMeshScanDone::
                     elseif attachedModMesh and not isSimulatingAttachment then
                          -- NEW ATTACHMENT DETECTION CLEANUP (with delay)
-                         -- The game creates a NEW attachment mesh on the weapon, rather than re-parenting
-                         -- We add a delay to let the VR hand animation play out first
+                         -- Throttle: child-walk every 10 ticks (~111ms). Delay requires >0.5s anyway.
+                         modMeshCleanupTick = modMeshCleanupTick + 1
+                         if modMeshCleanupTick % 10 == 0 then
                          if UEVR_UObjectHook.exists(attachedModMesh) then
                              local currentWeaponMesh = gameState:GetEquippedWeapon()
                              if currentWeaponMesh and currentWeaponMesh.AttachChildren then
@@ -1338,6 +1338,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                              currentAttachmentName = nil
                              attachedModMeshTime = nil
                          end
+                         end -- throttle gate (modMeshCleanupTick % 10)
                     end
                 elseif hasAttachedModMesh then
                      -- Cleanup: Montage ended, but flag is still true. Destroy the mesh!
@@ -1489,12 +1490,11 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 end)
 
 uevr.sdk.callbacks.on_xinput_get_state(function(retval, user_index, state)
+    -- X <-> B swap (applied unconditionally before any guards)
     if state ~= nil and Config.swapXandB then
         local buttons = state.Gamepad.wButtons
         local hasX = (buttons & 0x4000) ~= 0 -- XINPUT_GAMEPAD_X
         local hasB = (buttons & 0x2000) ~= 0 -- XINPUT_GAMEPAD_B
-        
-        -- Swap them
         if hasX then
             buttons = buttons & ~0x4000
             buttons = buttons | 0x2000
@@ -1507,59 +1507,40 @@ uevr.sdk.callbacks.on_xinput_get_state(function(retval, user_index, state)
 
     if gameState.inMenu or gameState.isInventoryPDA then return end
 
+    -- Mag reload input check
     local dpawn = uevr.api:get_local_pawn(0)
     if dpawn then
         magReload.check_reload_input(state, dpawn)
     end
-end)
 
-
-
-uevr.sdk.callbacks.on_xinput_get_state(
-    function(retval, user_index, state)
-        if not gameState.isInventoryPDA and not gameState.inMenu then
-            -- Scope Brightness Control
-            -- Require Left Controller Thumb Rest Touch
-            -- Using OpenXR action handle
-            local isModifierPressed = false
-            if vr.is_using_controllers() and vr.is_openxr() then
-                 local leftControllerSource = vr.get_left_joystick_source()
-                 if vr.is_action_active(thumbrestLeftHandle, leftControllerSource) then
-                     isModifierPressed = true
-                 end
-            end
-            
-            if gameState:is_scope_active(gameState:GetLocalPawn()) and isModifierPressed then
-                local ry = state.Gamepad.sThumbRY
-                if math.abs(ry) > 4000 then
-                     -- Adjust Brightness
-                     local delta = (ry / 32768.0) * 0.02  -- Reduced from 0.05 for less sensitivity
-                     Config.scopeBrightnessAmplifier = math.max(0.0, math.min(3.0, Config.scopeBrightnessAmplifier + delta))
-                     
-                     -- Apply immediately
-                     if scopeController then
-                         scopeController:SetScopeBrightness(Config.scopeBrightnessAmplifier)
-                     end
-                     
-                     -- Consume Input (Prevent looking up/down)
-                     state.Gamepad.sThumbRY = 0
-                     
-                     -- Note: ThumbRest is an OpenXR action, not a button bit, so we don't need to mask it out from wButtons.
-                     -- However, checking it might be redundant if the user mapped it to something else, but typically it is independent.
-                     
-                     brightnessDirty = true
-                end
-            elseif brightnessDirty then
-                 -- Stick/Button released, save changes
-                 saveWeaponProfile()
-                 brightnessDirty = false
-                 print("Scope Brightness Saved: " .. tostring(Config.scopeBrightnessAmplifier))
-            end
-
-            gamepadState:Update(state)
+    -- Scope Brightness Control (Left Thumbrest modifier + right stick Y)
+    local isModifierPressed = false
+    if vr.is_using_controllers() and vr.is_openxr() then
+        local leftControllerSource = vr.get_left_joystick_source()
+        if vr.is_action_active(thumbrestLeftHandle, leftControllerSource) then
+            isModifierPressed = true
         end
     end
-)
+
+    if gameState:is_scope_active(gameState:GetLocalPawn()) and isModifierPressed then
+        local ry = state.Gamepad.sThumbRY
+        if math.abs(ry) > 4000 then
+            local delta = (ry / 32768.0) * 0.02
+            Config.scopeBrightnessAmplifier = math.max(0.0, math.min(3.0, Config.scopeBrightnessAmplifier + delta))
+            if scopeController then
+                scopeController:SetScopeBrightness(Config.scopeBrightnessAmplifier)
+            end
+            state.Gamepad.sThumbRY = 0
+            brightnessDirty = true
+        end
+    elseif brightnessDirty then
+        saveWeaponProfile()
+        brightnessDirty = false
+        print("Scope Brightness Saved: " .. tostring(Config.scopeBrightnessAmplifier))
+    end
+
+    gamepadState:Update(state)
+end)
 
 uevr.sdk.callbacks.on_script_reset(function()
     print("Resetting")
@@ -2137,6 +2118,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
                     prof.offset = {X = Config.weaponModMeshOffset.X, Y = Config.weaponModMeshOffset.Y, Z = Config.weaponModMeshOffset.Z}
                     prof.rotation = {Pitch = Config.weaponModMeshRotation.Pitch, Yaw = Config.weaponModMeshRotation.Yaw, Roll = Config.weaponModMeshRotation.Roll}
                     prof.cleanupDelay = Config.weaponModCleanupDelay
+                    Config:markDirty()
                     Config:save()
                 end
             end
@@ -2144,6 +2126,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
             if modDelayChanged and currentAttachmentName then
                 if not Config.attachmentProfiles[currentAttachmentName] then Config.attachmentProfiles[currentAttachmentName] = {} end
                 Config.attachmentProfiles[currentAttachmentName].cleanupDelay = Config.weaponModCleanupDelay
+                Config:markDirty()
                 Config:save()
             end
             imgui.tree_pop()
@@ -2391,6 +2374,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
                         local prof = Config.detectorProfiles[currentDetName]
                         prof.offset = {X = Config.detectorOffset.X, Y = Config.detectorOffset.Y, Z = Config.detectorOffset.Z}
                         prof.rotation = {Pitch = Config.detectorRotation.Pitch, Yaw = Config.detectorRotation.Yaw, Roll = Config.detectorRotation.Roll}
+                        Config:markDirty()
                         Config:save()
                     end
                 end
@@ -2414,6 +2398,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
 
     if changed then
         updateConfig(Config)
+        Config:markDirty()
         Config:save()
     end
 end)
@@ -2428,38 +2413,32 @@ end)
 local rendererStabilizerComponent = nil
 
 function spawnRendererStabilizer()
-    if rendererStabilizerComponent ~= nil then return end -- guard: already spawned this session
+    if rendererStabilizerComponent ~= nil then return end  -- already alive this session
     local p = uevr.api:get_local_pawn(0)
     if p == nil then return end
 
     local ok, result = pcall(function()
+        -- create_component_of_class with parent=p calls AddComponentByClass internally,
+        -- which registers the component as a child of the pawn actor.
+        -- manualAttachment=true means UE does NOT auto-attach it further.
+        -- We do NOT call K2_AttachToComponent to p.Mesh afterwards — that second
+        -- attachment was creating ghost PointLightComponents when it raced against
+        -- the Mesh not yet being ready. Attaching to the pawn root is sufficient.
         local comp = uevrUtils.create_component_of_class(
             "Class /Script/Engine.PointLightComponent",
-            true,   -- manualAttachment
+            true,   -- manualAttachment (no additional auto-attach)
             nil,    -- relativeTransform (default)
             false,  -- deferredFinish
-            p       -- parent = the player pawn actor
+            p       -- parent = player pawn actor
         )
         if comp == nil then
             print("[RendererStabilizer] ERROR: create_component_of_class returned nil")
             return nil
         end
-        comp:SetIntensity(0.5)   -- Bright enough not to be culled by threshold
-        comp:SetLightColor(uevrUtils.linear_color(0.01, 0.01, 0.01, 1.0)) -- very dark grey so it doesn't wash out the scene
-        comp:SetAttenuationRadius(100000.0) -- Massive radius to ensure it encompasses the camera and doesn't get distance culled
+        comp:SetIntensity(0.001)   -- near-zero: invisible but non-zero so UE won't cull it
+        comp:SetAttenuationRadius(100000.0)
         comp:SetCastShadows(false)
         comp:SetVisibility(true)
-        -- Explicitly reparent to pawn.Mesh so it appears under Mesh.AttachChildren
-        if p.Mesh ~= nil then
-            comp:K2_AttachToComponent(
-                p.Mesh,
-                uevrUtils.fname_from_string("None"), -- no specific socket
-                0, -- EAttachmentRule::KeepRelative (location)
-                0, -- EAttachmentRule::KeepRelative (rotation)
-                0, -- EAttachmentRule::KeepRelative (scale)
-                false -- weldSimulatedBodies
-            )
-        end
         print("[RendererStabilizer] Spawned fake PointLightComponent successfully (Radius 100k)")
         return comp
     end)
@@ -2473,10 +2452,13 @@ end
 
 function destroyRendererStabilizer()
     if rendererStabilizerComponent ~= nil then
-        pcall(function()
-            uevrUtils.destroyComponent(rendererStabilizerComponent, false)
-        end)
+        -- Nil the reference FIRST so any failure in the destroy call below
+        -- does not leave a stale non-nil pointer that blocks future spawns.
+        local comp = rendererStabilizerComponent
         rendererStabilizerComponent = nil
+        pcall(function()
+            uevrUtils.destroyComponent(comp, false)
+        end)
         print("[RendererStabilizer] Destroyed fake PointLightComponent")
     end
 end

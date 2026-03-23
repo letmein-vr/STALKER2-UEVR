@@ -801,16 +801,13 @@ function ScopeController:apply_transparency_fix(mesh, min_material_index)
 end
 
 
-function ScopeController:update_scope_state(pawn)
+function ScopeController:update_scope_state(pawn, weapon_mesh)
     -- Robust Time-Based Heartbeat (Runs once per second)
     local current_time = os.clock()
     if not self.last_scan_time or (current_time - self.last_scan_time > 1.0) then
          self.last_scan_time = current_time
-         -- print("DEBUG: ScopeController HB (Time: " .. tostring(current_time) .. ")")
-         
-         local weapon_mesh = GameState:GetEquippedWeapon()
+         -- Use weapon_mesh passed from Update() to avoid a redundant GetEquippedWeapon() call
          if weapon_mesh then
-             -- print("DEBUG: Periodic Scan on: " .. weapon_mesh:get_fname():to_string())
              self:attach_components_to_weapon(weapon_mesh) 
          end
     end
@@ -1002,8 +999,12 @@ function ScopeController:Update(engine)
             self:get_or_create_reticule_component(weapon_mesh)
             
             if self.reticule_mesh_component then
-                self.reticule_mesh_component:SetVisibility(true)
-                self.reticule_mesh_component:SetHiddenInGame(false)
+                -- Dirty-check: only call C++ bridge when visibility state changes
+                if self.reticule_visible ~= true then
+                    self.reticule_mesh_component:SetVisibility(true)
+                    self.reticule_mesh_component:SetHiddenInGame(false)
+                    self.reticule_visible = true
+                end
                 
                 -- Status verification (Parallax Info)
                 if self.scopeInternalTick % 120 == 0 then
@@ -1019,7 +1020,10 @@ function ScopeController:Update(engine)
         else
             -- Hide if not a reflex sight
             if self.reticule_mesh_component then
-                self.reticule_mesh_component:SetVisibility(false)
+                if self.reticule_visible ~= false then
+                    self.reticule_mesh_component:SetVisibility(false)
+                    self.reticule_visible = false
+                end
             end
         end
         -- Continuous Material Fix Retry (Fixes glitch on first equip OR after settings change)
@@ -1062,7 +1066,8 @@ function ScopeController:Update(engine)
             self:destroy_reticule_actor()    -- Kill the ball immediately
         end
     end
-    self:update_scope_state(c_pawn)
+    -- Pass the already-fetched weapon_mesh down to avoid a second GetEquippedWeapon() call
+    self:update_scope_state(c_pawn, weapon_mesh)
 end
 
 function ScopeController:Reset()

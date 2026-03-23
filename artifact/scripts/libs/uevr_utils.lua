@@ -2218,6 +2218,7 @@ function M.spawn_actor(transform, collisionMethod, owner, tag)
 	local worldContext = viewport.World
 	if worldContext == nil then
 		print("World is nil")
+		return nil
 	end
 
 	if transform == nil then

@@ -11,7 +11,7 @@ local montage = require('libs/montage')
 local pawn = require('libs/pawn')
 local ui = require('libs/ui')
 
-local isDeveloperMode = false
+local isDeveloperMode = true
 
 montage.init(isDeveloperMode)
 pawn.init(isDeveloperMode)

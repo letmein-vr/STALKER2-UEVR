@@ -119,6 +119,12 @@ end
 
 -- Update function to be called on engine tick
 function GameStateManager:Update()
+    -- Resolve pawn and weapon ONCE per tick and cache them.
+    -- All sub-functions read self._framePawn / self._frameWeapon instead of
+    -- making their own C++ bridge calls, halving total round-trips per tick.
+    self._framePawn   = self:GetLocalPawn()
+    self._frameWeapon = self:GetEquippedWeapon()
+
     self:CheckMenuState()
     self:CheckInventoryPDAState()
     self:CheckClimbingState()
@@ -135,7 +141,7 @@ function GameStateManager:Update()
     -- Throttled to every 10 ticks to avoid per-frame string allocs
     self.montageTick = self.montageTick + 1
     if (self.isWildcardMontageActive or self.isAnimMontagePlaying) and self.montageTick % 10 == 0 then
-        local p = self:GetLocalPawn()
+        local p = self._framePawn  -- use cached pawn
         local currentMontage = (p and p.GetCurrentMontage) and p:GetCurrentMontage() or nil
 
         if not currentMontage then
@@ -177,24 +183,17 @@ function GameStateManager:CheckInventoryPDAState()
         return -- Skip check, maintain previous state
     end
 
-    -- Guard: throwables (bolt, knife, grenades) use both hands during equip/throw
-    -- animations, which trips bHasItemInHands+bIsUsesLeftHand+bIsUsesRightHand
-    -- simultaneously — a false-positive inventory detection.
-    local weaponMesh = self:GetEquippedWeapon()
+    -- Guard: any equipped weapon — including throwables (bolt, knife, grenades) and
+    -- real weapons (rifles, pistols, etc.) — trips bHasItemInHands+bIsUsesLeftHand+
+    -- bIsUsesRightHand simultaneously, producing a false-positive inventory detection.
+    -- Weapons are never PDAs, so bail out whenever anything is equipped.
+    local weaponMesh = self._frameWeapon  -- use cached weapon (resolved once in Update)
     if weaponMesh then
-        local wInfo = self:GetWeaponCache(weaponMesh)
-        if wInfo and wInfo.name then
-            local lname = string.lower(wInfo.name)
-            if lname:find("bolt") or lname:find("knife") or
-               lname:find("sk_f1") or lname:find("sk_rgd") or
-               lname:find("grenade") then
-                self.isInventoryPDA = false
-                return
-            end
-        end
+        self.isInventoryPDA = false
+        return
     end
 
-    local pawn = self:GetLocalPawn()
+    local pawn = self._framePawn  -- use cached pawn
     if pawn and pawn.Mesh and pawn.Mesh.AnimScriptInstance and
        pawn.Mesh.AnimScriptInstance.HandItemData then
         local check1 = pawn.Mesh.AnimScriptInstance.HandItemData.bHasItemInHands
@@ -213,7 +212,7 @@ end
 function GameStateManager:CheckAimingState()
     self.aimTick = self.aimTick + 1
     if self.aimTick % 3 ~= 0 then return end
-    local pawn = self:GetLocalPawn()
+    local pawn = self._framePawn  -- use cached pawn
     if pawn and pawn.Mesh and pawn.Mesh.AnimScriptInstance and 
        pawn.Mesh.AnimScriptInstance.WeaponData and 
        pawn.Mesh.AnimScriptInstance.WeaponData.AimingData then
@@ -232,7 +231,7 @@ function GameStateManager:CheckClimbingState()
     end
 
     self.isClimbing = false
-    local pawn = self:GetLocalPawn()
+    local pawn = self._framePawn  -- use cached pawn
     if pawn and pawn.Mesh and pawn.Mesh.AnimScriptInstance then
         local animInstance = pawn.Mesh.AnimScriptInstance
         
@@ -252,8 +251,8 @@ end
 function GameStateManager:CheckGuitarState()
     self.guitarTick = self.guitarTick + 1
     if self.guitarTick % 30 ~= 0 then return end
-    -- 1. Check standard weapon path
-    local weaponMesh = self:GetEquippedWeapon()
+    -- 1. Check standard weapon path (uses cached weapon)
+    local weaponMesh = self._frameWeapon
     if weaponMesh then
         local wInfo = self:GetWeaponCache(weaponMesh)
         if wInfo and wInfo.name and string.find(string.lower(wInfo.name), "guitar") then
@@ -263,8 +262,8 @@ function GameStateManager:CheckGuitarState()
         end
     end
 
-    -- 2. Check "In Hands" mesh (Detectors, Guitars, etc)
-    local handMesh = self:GetWeaponInHandsMesh()
+    -- 2. Check "In Hands" mesh (Detectors, Guitars, etc) — pass cached pawn to avoid re-fetch
+    local handMesh = self:GetWeaponInHandsMesh(self._framePawn)
     if handMesh then
         local wInfo = self:GetWeaponCache(handMesh)
         if wInfo and wInfo.name and string.find(string.lower(wInfo.name), "guitar") then
@@ -275,7 +274,7 @@ function GameStateManager:CheckGuitarState()
     end
     
     -- 3. Check for "Guitar" component path (fallback)
-    local pawn = self:GetLocalPawn()
+    local pawn = self._framePawn  -- use cached pawn
     if pawn then
         -- Collect all potential meshes
         local components = {}
@@ -338,10 +337,9 @@ function GameStateManager:CheckConversationState()
     self.convTick = self.convTick + 1
     if self.convTick % 5 ~= 0 then return end
 
-    -- Skip FOV check when a throwable is equipped — bolt/knife/grenade trajectory
-    -- view zooms the camera below the conversation threshold, causing a false positive
-    -- that pushes aim back to Game (0) right after PDA/menu restoration sets it to HMD (1).
-    local throwableMesh = self:GetEquippedWeapon()
+    -- Use frame-cached weapon/pawn resolved once at the top of Update() to avoid
+    -- redundant C++ bridge calls (GetEquippedWeapon calls GetLocalPawn internally).
+    local throwableMesh = self._frameWeapon
     if throwableMesh then
         local tInfo = self:GetWeaponCache(throwableMesh)
         if tInfo and tInfo.name then
@@ -354,13 +352,14 @@ function GameStateManager:CheckConversationState()
         end
     end
 
-    local pawn = self:GetLocalPawn()
+    local pawn = self._framePawn
     if not pawn then
         self.isConversation = false
         self.cachedConversationCamera = nil
         self.lastPawnAddress = nil
         return
     end
+
 
     -- Check if pawn identity changed (respawn, load, etc.)
     local pawnAddress = pawn:get_address()
@@ -538,46 +537,43 @@ end
 
 function GameStateManager:get_weapon_attachment_mesh(pawn)
     if not pawn then return nil end
-    
-    local potential_components = {}
-    
-    -- Add RootComponent children
-    if pawn.RootComponent and pawn.RootComponent.AttachChildren then
-         for _, comp in ipairs(pawn.RootComponent.AttachChildren) do
-             table.insert(potential_components, comp)
-         end
-    end
-    
-    -- Add Mesh children (likely where the silencer is)
-    if pawn.Mesh and pawn.Mesh.AttachChildren then
-         for _, comp in ipairs(pawn.Mesh.AttachChildren) do
-             table.insert(potential_components, comp)
-         end
-    end
-    
-    -- Search all collected components
-    for _, component in ipairs(potential_components) do
+
+    -- Inline helper: check one component against attachment name/socket criteria
+    local function checkComp(component)
         local compName = component:get_fname():to_string()
-        -- print("[Debug Scan] Checking Component: " .. compName)
-        
-        -- Check 1: Name based (Stronger for these transient meshes)
-        if string.find(compName, "WeaponAttachment") and 
+        -- Check 1: Name-based (transient silencer/sight meshes carry WeaponAttachment in name)
+        if string.find(compName, "WeaponAttachment") and
            (string.find(compName, "silen") or string.find(compName, "sight") or string.find(compName, "scope")) then
             print("[Debug] Found Attachment Mesh by Name: " .. compName)
             return component
         end
-
-        -- Check 2: Socket based (Fallback)
+        -- Check 2: Socket-based fallback
         if component:is_a(self.StaticMeshC) and component.AttachSocketName then
-             local socketName = component.AttachSocketName:to_string()
-             -- print("[Debug Scan] .. Socket: " .. socketName) 
-             if socketName == "jnt_l_weapon" then
-                 print("[Debug] Found Attachment Mesh by Socket: " .. compName)
-                 return component
-             end
+            local socketName = component.AttachSocketName:to_string()
+            if socketName == "jnt_l_weapon" then
+                print("[Debug] Found Attachment Mesh by Socket: " .. compName)
+                return component
+            end
+        end
+        return nil
+    end
+
+    -- Scan RootComponent children directly (no intermediate table)
+    if pawn.RootComponent and pawn.RootComponent.AttachChildren then
+        for _, comp in ipairs(pawn.RootComponent.AttachChildren) do
+            local result = checkComp(comp)
+            if result then return result end
         end
     end
-    -- print("[Debug] No matching attachment mesh found in " .. #potential_components .. " candidates.")
+
+    -- Scan Mesh children directly
+    if pawn.Mesh and pawn.Mesh.AttachChildren then
+        for _, comp in ipairs(pawn.Mesh.AttachChildren) do
+            local result = checkComp(comp)
+            if result then return result end
+        end
+    end
+
     return nil
 end
 
@@ -661,8 +657,9 @@ function GameStateManager:GetEquippedWeapon()
 end
 
 -- Get current weapon in hands mesh (for items like guitar/detector)
-function GameStateManager:GetWeaponInHandsMesh()
-    local pawn = self:GetLocalPawn()
+-- Optional cachedPawn: pass self._framePawn to avoid a redundant GetLocalPawn() bridge call
+function GameStateManager:GetWeaponInHandsMesh(cachedPawn)
+    local pawn = cachedPawn or self:GetLocalPawn()
     if not pawn then return nil end
     local sk_mesh = pawn.Mesh
     if not sk_mesh then return nil end
@@ -674,6 +671,7 @@ function GameStateManager:GetWeaponInHandsMesh()
         return anim_instance.HandItemData.WeaponMesh
     end
     return nil
+
 end
 
 -- Get game engine
