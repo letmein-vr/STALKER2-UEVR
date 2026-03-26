@@ -2227,7 +2227,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
             
             -- Brightness
             local rb = currentProf.brightness or Config.redDotBrightness or 150.0
-            local bChanged, nB = imgui.slider_float("Red Dot Brightness", rb, 10.0, 500.0)
+            local bChanged, nB = imgui.slider_float("Red Dot Brightness", rb, 10.0, 2000.0)
             if bChanged then
                 if currentScopeName then
                     if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
@@ -2281,6 +2281,23 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
             if (oxChanged or oyChanged or ozChanged) and scopeController and scopeController.UpdateReticulePosition then
                 scopeController:UpdateReticulePosition(currentScopeName)
             end
+
+            imgui.separator()
+
+            -- Aperture Radius
+            local ra = currentProf.apertureRadius or Config.redDotApertureRadius or 5.0
+            local arChanged, nAR = imgui.slider_float("Aperture Radius (Glass Size)", ra, 0.5, 30.0, "%.1f")
+            if arChanged then
+                if currentScopeName then
+                    if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
+                    Config.redDotProfiles[currentScopeName].apertureRadius = nAR
+                else
+                    Config.redDotApertureRadius = nAR
+                end
+                changed = true
+                saveWeaponProfile()
+            end
+            imgui.text("Controls how far off-axis the eye can be before the dot disappears.")
 
             imgui.tree_pop()
         end

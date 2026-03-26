@@ -504,11 +504,17 @@ function GameStateManager:get_scope_mesh(parent_mesh)
 
     local child_components = parent_mesh.AttachChildren
     if not child_components then return nil end
+    
+    local sm_class = self.StaticMeshC
+    if not sm_class then
+        local utils = require("common.utils")
+        sm_class = utils.find_required_object("Class /Script/Engine.StaticMeshComponent")
+    end
 
     -- Single-pass: prefer component with OpticCutoutSocket, fall back to first scope found
     local fallback = nil
     for _, component in ipairs(child_components) do
-        if component:is_a(self.StaticMeshC) and string.find(component:get_fname():to_string(), "scope") then
+        if sm_class and component:is_a(sm_class) and string.find(component:get_fname():to_string(), "scope") then
             if component:DoesSocketExist("OpticCutoutSocket") then
                 return component  -- best match, return immediately
             elseif not fallback then
@@ -525,9 +531,15 @@ function GameStateManager:get_all_scope_meshes(parent_mesh)
 
     local child_components = parent_mesh.AttachChildren
     if not child_components then return scope_meshes end
+    
+    local sm_class = self.StaticMeshC
+    if not sm_class then
+        local utils = require("common.utils")
+        sm_class = utils.find_required_object("Class /Script/Engine.StaticMeshComponent")
+    end
 
     for _, component in ipairs(child_components) do
-        if component:is_a(self.StaticMeshC) and string.find(component:get_fname():to_string(), "scope") then
+        if sm_class and component:is_a(sm_class) and string.find(component:get_fname():to_string(), "scope") then
             table.insert(scope_meshes, component)
         end
     end

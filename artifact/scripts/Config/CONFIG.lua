@@ -69,9 +69,13 @@ Config = {
     
     -- Red Dot Sight Settings
     redDotSize = 0.007,             -- Scale of the red dot sphere
+    redDotScaleX = 0.007,
+    redDotScaleY = 0.007,
+    redDotScaleZ = 0.007,
     redDotOffsetX = 0.0,
     redDotOffsetY = 0.0,
     redDotOffsetZ = 0.0,
+    redDotApertureRadius = 5.0,     -- Sight glass aperture radius (UU). Dot hidden beyond this.
     redDotProfiles = {},
     
     -- Conversation Fix Settings

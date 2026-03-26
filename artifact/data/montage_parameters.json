@@ -3647,6 +3647,10 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/gvintar/ChangeLevel/MG_fp_gvintar_change_level_auto_to_semi.MG_fp_gvintar_change_level_auto_to_semi",
             "label": "MG_fp_gvintar_change_level_auto_to_semi"
         },
+        "MG_fp_gvintar_change_level_semi_to_auto": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/gvintar/ChangeLevel/MG_fp_gvintar_change_level_semi_to_auto.MG_fp_gvintar_change_level_semi_to_auto",
+            "label": "MG_fp_gvintar_change_level_semi_to_auto"
+        },
         "MG_fp_gvintar_equip": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/gvintar/Equip/MG_fp_gvintar_equip.MG_fp_gvintar_equip",
             "label": "MG_fp_gvintar_equip"

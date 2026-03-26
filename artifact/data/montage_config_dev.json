@@ -14,7 +14,7 @@
     "pawnArmsWhenActivePriority": "0",
     "pawnBodyWhenActive": 1,
     "pawnBodyWhenActivePriority": "0",
-    "recentMontagesPlayed": "MG_fp_udp_melee\nMG_fp_ar_jump_end\nMG_fp_ar_jump_end\nMG_fp_ar_jump_end\nMG_fp_ar_jump_end\nMG_fp_udp_melee",
+    "recentMontagesPlayed": "MG_fp_apb_shoot\nMG_fp_apb_equip_left_hand\nMG_fp_detector_echo_unequip\nMG_fp_detector_echo_equip\nMG_fp_apb_unequip_left_hand\nMG_fp_apb_equip\nMG_fp_rgd5_unequip\nMG_fp_rgd5_equip\nMG_fp_rgd5_strong_throw\nMG_fp_rgd5_equip",
     "rightArmWhenActive": 1,
     "rightArmWhenActivePriority": "0"
 }

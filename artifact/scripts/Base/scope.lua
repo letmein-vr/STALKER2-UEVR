@@ -247,12 +247,10 @@ function ScopeController:get_or_create_reticule_component(weapon_mesh)
 
     -- Check if component exists and is valid
     if not uevrUtils.validate_object(self.reticule_mesh_component) then
-        print("[DEBUG] Creating Red Dot Component (Persistent)...")
 
         self.reticule_mesh_component = uevrUtils.createStaticMeshComponent("StaticMesh /Engine/BasicShapes/Sphere.Sphere")
 
         if self.reticule_mesh_component then
-            print("[DEBUG] Reticule Component Created Successfully")
             self.reticule_mesh_component:SetCollisionEnabled(0)
             self.reticule_mesh_component.BoundsScale = 10
             
@@ -264,50 +262,34 @@ function ScopeController:get_or_create_reticule_component(weapon_mesh)
             self.reticule_mesh_component:SetWorldScale3D(scale_vec)
 
             -- Set Material (ONCE)
-            -- Set Material (ONCE)
-            -- Apply our robust UI material that accepts colors and bypasses physical render culling
+            -- Widget3DPassThrough is the only engine material confirmed to render a visible
+            -- coloured dot without requiring a texture. It responds to one of the vector
+            -- parameters below (exact name uncertain — full set kept for safety).
             local wanted_mat = utils.find_required_object("Material /Engine/EngineMaterials/Widget3DPassThrough.Widget3DPassThrough")
-            
-            -- If somehow the widget material is missing, fallback to generic checkerboard so we don't crash
             if not wanted_mat then
-                local default_mat_name = "Material /Engine/EngineMaterials/DefaultMaterial.DefaultMaterial"
-                wanted_mat = utils.find_required_object(default_mat_name)
+                wanted_mat = utils.find_required_object("Material /Engine/EngineMaterials/DefaultMaterial.DefaultMaterial")
             end
 
             if wanted_mat then
-                print("[DEBUG] Applying Base Material: " .. wanted_mat:get_fname():to_string())
-                
-                -- Only force blend mode if using the generic engine material
-                if wanted_mat:get_fname():to_string() == "DefaultMaterial" then
-                    wanted_mat.BlendMode = 0 
-                end
-                
-                
+                -- Additive blend: dot colour adds to the scene, never washed out in daylight
+                wanted_mat.BlendMode = 1
                 self.reticule_material = self.reticule_mesh_component:CreateDynamicMaterialInstance(0, wanted_mat, uevrUtils.fname_from_string("ReticuleDMI"))
                 if self.reticule_material then
-                    -- Apply a massive Emissive magnitude to overwrite any physical textures (like dirt) if we fell back
-            local color = StructObject.new(self.flinearColor_c)
-            local initIntensity = Config.redDotBrightness or 150.0
-            color.R = initIntensity
-            color.G = 0.0
-            color.B = 0.0
-            color.A = 1.0
-
-            self.reticule_material:SetVectorParameterValue("EmissiveColor", color)
-            self.reticule_material:SetVectorParameterValue("BaseColor", color)
-            self.reticule_material:SetVectorParameterValue("Color", color)
-            self.reticule_material:SetVectorParameterValue("Tint", color)
-            self.reticule_material:SetVectorParameterValue("TintColor", color)
-            self.reticule_material:SetVectorParameterValue("LinearColor", color)
-            self.reticule_material:SetVectorParameterValue("Emissive", color)
-            self.reticule_material:SetVectorParameterValue("TintColorAndOpacity", color)  -- specifically for Widget3DPassThrough
-                    
-                    print("[DEBUG] DMI Created and Colored RED (".. wanted_mat:get_fname():to_string() ..")")
-                else
-                    print("[DEBUG] ERROR: Failed to create DMI for Reticule")
+                    local color = StructObject.new(self.flinearColor_c)
+                    local initIntensity = Config.redDotBrightness or 150.0
+                    color.R = initIntensity
+                    color.G = 0.0
+                    color.B = 0.0
+                    color.A = 1.0
+                    self.reticule_material:SetVectorParameterValue("EmissiveColor", color)
+                    self.reticule_material:SetVectorParameterValue("BaseColor", color)
+                    self.reticule_material:SetVectorParameterValue("Color", color)
+                    self.reticule_material:SetVectorParameterValue("Tint", color)
+                    self.reticule_material:SetVectorParameterValue("TintColor", color)
+                    self.reticule_material:SetVectorParameterValue("LinearColor", color)
+                    self.reticule_material:SetVectorParameterValue("Emissive", color)
+                    self.reticule_material:SetVectorParameterValue("TintColorAndOpacity", color)
                 end
-            else
-                print("[DEBUG] ERROR: Failed to find base material")
             end
         end
     end
@@ -342,7 +324,6 @@ function ScopeController:get_or_create_reticule_component(weapon_mesh)
             )
             
             self:UpdateReticulePosition()
-            print("[DEBUG] Attached Reticule to: " .. parent_mesh:get_fname():to_string())
         end
         
         self.reticule_mesh_component:SetVisibility(true)
@@ -382,16 +363,105 @@ function ScopeController:UpdateReticulePosition(scopeName)
             color.G = 0.0
             color.B = 0.0
             color.A = 1.0
+            -- EmissiveMeshMaterial exposes "Color" as its vector parameter
+            self.reticule_material:SetVectorParameterValue("Color", color)
             self.reticule_material:SetVectorParameterValue("EmissiveColor", color)
             self.reticule_material:SetVectorParameterValue("BaseColor", color)
-            self.reticule_material:SetVectorParameterValue("Color", color)
-            self.reticule_material:SetVectorParameterValue("Tint", color) 
+            self.reticule_material:SetVectorParameterValue("Tint", color)
             self.reticule_material:SetVectorParameterValue("TintColor", color)
             self.reticule_material:SetVectorParameterValue("LinearColor", color)
             self.reticule_material:SetVectorParameterValue("Emissive", color)
             self.reticule_material:SetVectorParameterValue("TintColorAndOpacity", color)
         end
     end
+end
+
+-- Computes and applies the parallax-corrected position for the red dot every frame.
+-- Performs a ray-plane intersection: casts a ray from the HMD eye position along the
+-- weapon bore axis, finds where it hits the sight glass plane, and places the dot sphere
+-- at that local 2D position. This makes the sight behave like a parallax-free reflex sight:
+-- the dot always indicates the correct aiming direction regardless of eye angle.
+-- Per-scope profile offsets (X/Y/Z) are additive fine-tuning on top.
+function ScopeController:UpdateParallaxCorrection()
+    if not self.scope_mesh or not self.reticule_mesh_component then return end
+    if not uevrUtils.validate_object(self.scope_mesh) then return end
+    if not uevrUtils.validate_object(self.reticule_mesh_component) then return end
+    if not self.KismetMathLibrary or not self.fvector_c then return end
+
+    -- 1. HMD eye position
+    local eye_pos = controllers.getControllerLocation(2)
+    if not eye_pos then return end
+
+    -- 2. Sight glass centre: scope mesh world origin (the plane anchor)
+    local sight_pos = self.scope_mesh:K2_GetComponentLocation()
+    if not sight_pos then return end
+
+    -- 3. Bore forward axis = scope mesh local X axis rotated to world space
+    local scope_transform = self.scope_mesh:K2_GetComponentToWorld()
+    if not scope_transform then return end
+    local local_fwd = StructObject.new(self.fvector_c)
+    local_fwd.X = 1.0; local_fwd.Y = 0.0; local_fwd.Z = 0.0
+    local bore_fwd = self.KismetMathLibrary:Quat_RotateVector(scope_transform.Rotation, local_fwd)
+    if not bore_fwd then return end
+
+    -- 4. Ray-plane intersection parameter:
+    --    Ray: P = eye_pos + t * bore_fwd
+    --    Plane: (P - sight_pos) · bore_fwd = 0  →  t = (sight_pos - eye_pos) · bore_fwd
+    local t = (sight_pos.X - eye_pos.X) * bore_fwd.X
+            + (sight_pos.Y - eye_pos.Y) * bore_fwd.Y
+            + (sight_pos.Z - eye_pos.Z) * bore_fwd.Z
+
+    -- 5. Hit point in world space, expressed relative to scope mesh origin, for inverse rotation
+    local loc_diff = StructObject.new(self.fvector_c)
+    loc_diff.X = eye_pos.X + bore_fwd.X * t - scope_transform.Translation.X
+    loc_diff.Y = eye_pos.Y + bore_fwd.Y * t - scope_transform.Translation.Y
+    loc_diff.Z = eye_pos.Z + bore_fwd.Z * t - scope_transform.Translation.Z
+
+    -- 6. Rotate into scope mesh component space via inverse quaternion
+    local inv_q = self.KismetMathLibrary:Quat_Inversed(scope_transform.Rotation)
+    local local_hit = self.KismetMathLibrary:Quat_RotateVector(inv_q, loc_diff)
+    if not local_hit then return end
+
+    -- 7. Look up per-scope profile — needed for both aperture cull and final offset
+    local scopeName = nil
+    if self.scope_mesh.SkeletalMesh then
+        scopeName = uevrUtils.getShortName(self.scope_mesh.SkeletalMesh)
+    elseif self.scope_mesh.StaticMesh then
+        scopeName = uevrUtils.getShortName(self.scope_mesh.StaticMesh)
+    end
+    local prof = (scopeName and Config.redDotProfiles and Config.redDotProfiles[scopeName]) or {}
+
+    -- 8. Aperture cull: if the computed hit point is outside the sight glass radius,
+    --    hide the dot entirely. This prevents the sphere from projecting onto world geometry
+    --    when the weapon is lowered or the eye is far off the bore axis.
+    --    Per-scope profile value takes priority over global Config (slider applied live).
+    local aperture = prof.apertureRadius or Config.redDotApertureRadius or 5.0
+    local lateral_sq = local_hit.Y * local_hit.Y + local_hit.Z * local_hit.Z
+    if lateral_sq > aperture * aperture then
+        -- Eye is outside the glass aperture — hide dot
+        if self.reticule_visible ~= false then
+            self.reticule_visible = false
+            self.reticule_mesh_component:SetVisibility(false)
+        end
+        return
+    end
+    -- Eye is inside the glass aperture — ensure dot is visible
+    if self.reticule_visible ~= true then
+        self.reticule_visible = true
+        self.reticule_mesh_component:SetVisibility(true)
+        self.reticule_mesh_component:SetHiddenInGame(false)
+    end
+
+    -- 9. Apply: X = user bore-depth offset (keeps dot on glass face)
+    --            Y/Z = parallax correction + user lateral fine-tuning
+    self.reticule_mesh_component:K2_SetRelativeLocation(
+        self.temp_vec3:set(
+            prof.offsetX or Config.redDotOffsetX or 0.0,
+            local_hit.Y + (prof.offsetY or Config.redDotOffsetY or 0.0),
+            local_hit.Z + (prof.offsetZ or Config.redDotOffsetZ or 0.0)
+        ),
+        false, self.reusable_hit_result, false
+    )
 end
 
 function ScopeController:SetScopeBrightness(value)
@@ -947,34 +1017,41 @@ end
 
 
 function ScopeController:Update(engine)
+    -- Self-healing: if ResetStatic() was called without a matching InitStatic()
+    -- (e.g. after on_script_reset when the require cache keeps the old instance),
+    -- re-initialise here so Update() doesn't silently fail inside pcall.
+    if not self.Statics then
+        if not self:InitStatic() then return end
+    end
     local c_pawn = api:get_local_pawn(0)
     local weapon_mesh = GameState:GetEquippedWeapon()
     if weapon_mesh then
         -- fix_materials(weapon_mesh)
         local weapon_changed = not self.current_weapon or weapon_mesh.AnimScriptInstance ~= self.current_weapon.AnimScriptInstance
         -- Check for a live scope swap (user detached one and attached another)
+        -- Capture whether we had NO scope before this detection runs.
+        -- Used below to distinguish scope ADD (nil->scope, always refresh)
+        -- from scope SWAP (A->B, keep ADS gate so we don't force-spawn while idle).
+        local had_no_scope = (self.tracked_main_mesh_addr == nil)
         local current_true_scope = GameState:get_scope_mesh(weapon_mesh)
         local was_scope_swapped = false
         if current_true_scope then
             local scope_addr = current_true_scope:get_address()
             if self.tracked_main_mesh_addr ~= scope_addr then
-                print(string.format("[Scope] Scope swap detected: %s -> %s", tostring(self.tracked_main_mesh_addr), tostring(scope_addr)))
                 was_scope_swapped = true
                 self.tracked_main_mesh_addr = scope_addr
                 self:destroy_reticule_actor()
             end
         elseif self.tracked_main_mesh_addr ~= nil then
-            print("[Scope] Scope removed")
             was_scope_swapped = true
             self.tracked_main_mesh_addr = nil
             self:destroy_reticule_actor()
         end
 
-        local scope_changed = was_scope_swapped and GameState:is_scope_active(c_pawn)
+        -- Scope ADD (no scope -> scope): always refresh regardless of ADS state.
+        -- Scope SWAP (A -> B): keep is_scope_active gate to avoid re-spawning while idle.
+        local scope_changed = was_scope_swapped and (had_no_scope or GameState:is_scope_active(c_pawn))
         if weapon_changed or scope_changed then
-            print(string.format("[Scope] Refresh triggered: weapon_changed=%s, scope_changed=%s", tostring(weapon_changed), tostring(scope_changed)))
-            print("Previous weapon: " .. (self.current_weapon and self.current_weapon:get_fname():to_string() or "none"))
-            print("New weapon: " .. weapon_mesh:get_fname():to_string())
 
             -- Update current weapon reference
             self.current_weapon = weapon_mesh
@@ -982,47 +1059,46 @@ function ScopeController:Update(engine)
             -- Attempt to attach components
             self:spawn_scope(engine, c_pawn)
             self:attach_components_to_weapon(weapon_mesh)
+            -- H4: invalidate reticule visibility cache on weapon/scope change
+            self.reticule_visible = nil
             
             -- Reset retry timer to force material updates for a few frames
             self.material_fix_retry_timer = 60 
         end
         
-        -- Red Dot Sight (Reflex) logic with deep diagnostics
-        if self.scopeInternalTick % 60 == 0 then
-            print(string.format("[DEBUG] REFLEX STATUS: is_reflex=%s | scope_mesh=%s | reticule=%s",
-                tostring(self.is_reflex_sight), 
-                tostring(self.scope_mesh ~= nil),
-                tostring(self.reticule_mesh_component ~= nil)))
-        end
+        -- H3 perf: pass weapon_mesh into update_scope_state to avoid redundant GetEquippedWeapon()
+        self:update_scope_state(c_pawn, weapon_mesh)
 
         if self.is_reflex_sight and self.scope_mesh then
             self:get_or_create_reticule_component(weapon_mesh)
             
             if self.reticule_mesh_component then
-                -- Dirty-check: only call C++ bridge when visibility state changes
+                -- H4 perf: dirty-check — only call bridge when visibility state changes
                 if self.reticule_visible ~= true then
+                    self.reticule_visible = true
                     self.reticule_mesh_component:SetVisibility(true)
                     self.reticule_mesh_component:SetHiddenInGame(false)
-                    self.reticule_visible = true
                 end
-                
+
+                -- Parallax correction: reposition dot every frame so it indicates the
+                -- correct aim point regardless of HMD angle relative to the bore axis
+                self:UpdateParallaxCorrection()
+
                 -- Status verification (Parallax Info)
                 if self.scopeInternalTick % 120 == 0 then
                     local loc = self.reticule_mesh_component:K2_GetComponentLocation()
                     local parent = self.reticule_mesh_component:GetAttachParent()
                     local hmd_pos = controllers.getControllerLocation(2)
                     local dist = hmd_pos and uevrUtils.distanceBetween(loc, hmd_pos) or -1
-                    
-                    print(string.format("[DEBUG] Red Dot: Loc=%.1f,%.1f,%.1f | DistToHMD=%.1f | Parent=%s", 
-                        loc.X, loc.Y, loc.Z, dist, parent and parent:get_fname():to_string() or "NONE"))
                 end
             end
         else
             -- Hide if not a reflex sight
             if self.reticule_mesh_component then
+                -- H4 perf: dirty-check — only call bridge when visibility state changes
                 if self.reticule_visible ~= false then
-                    self.reticule_mesh_component:SetVisibility(false)
                     self.reticule_visible = false
+                    self.reticule_mesh_component:SetVisibility(false)
                 end
             end
         end
@@ -1059,15 +1135,13 @@ function ScopeController:Update(engine)
     else
         -- Weapon was removed/unequipped
         if self.current_weapon then
-            print("Weapon unequipped - Cleaning up Reticule")
             self.current_weapon = nil
             self.scope_mesh = nil
             self.tracked_main_mesh_addr = nil -- Flush address tracking
             self:destroy_reticule_actor()    -- Kill the ball immediately
         end
     end
-    -- Pass the already-fetched weapon_mesh down to avoid a second GetEquippedWeapon() call
-    self:update_scope_state(c_pawn, weapon_mesh)
+    self:update_scope_state(c_pawn)
 end
 
 function ScopeController:Reset()
@@ -1080,6 +1154,12 @@ function ScopeController:Reset()
     self.current_weapon = nil
     self.scope_material = nil
     self.is_reflex_sight = false
+    -- Clear detection / dirty-check state so the next Update() treats everything as new
+    self.tracked_main_mesh_addr = nil
+    self.reticule_visible = nil
+    self.force_refresh_fix = nil
+    self.heartbeatTick = 0
+    self.has_dumped_scope_mats = nil
 end
 
 function ScopeController:SetScopePlaneScale(depth)
@@ -1109,7 +1189,6 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         end)
         
         if not success then
-             print("ERROR: ScopeController crashed: " .. tostring(err))
         end
     end
 )
@@ -1131,9 +1210,12 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 
 
 uevr.sdk.callbacks.on_script_reset(function()
-    print("Resetting")
     scope_controller:Reset()
     scope_controller:ResetStatic()
+    -- Re-initialise statics immediately so the first tick after reset doesn't fail.
+    -- (If the require cache keeps the old instance, Update()'s self-healing guard
+    -- also covers this, but explicit init here is safer.)
+    scope_controller:InitStatic()
 end)
 
 
