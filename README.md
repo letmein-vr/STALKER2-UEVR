@@ -49,6 +49,7 @@ Perform actions by physically reaching to different parts of your body and squee
 ### Scopes
 * **Activation:** Two-hand the weapon and hold **Right Grip**. The scope appears when within 15cm of your eye.
 * **Brightness:** While looking through a scope, hold **Right Grip**, rest your thumb on the **Left Thumb Rest**, and move the **Right Thumbstick** Up/Down.
+* **Reflext Scopes:** A dynamic red dot should appear when looking through these and will move based on line of sight through the scope (it is NOT perfect).
 
 ### Immersive Animations & VR Hands
 * **Dynamic Grip:** Fingers automatically curl to the unique shape of weapons, bolts, or scanners.
