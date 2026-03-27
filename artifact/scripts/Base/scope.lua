@@ -439,13 +439,43 @@ function ScopeController:UpdateParallaxCorrection()
     end
     local prof = (scopeName and Config.redDotProfiles and Config.redDotProfiles[scopeName]) or {}
 
-    -- 8. Aperture cull: if the computed hit point is outside the sight glass radius,
-    --    hide the dot entirely. This prevents the sphere from projecting onto world geometry
-    --    when the weapon is lowered or the eye is far off the bore axis.
-    --    Per-scope profile value takes priority over global Config (slider applied live).
-    local aperture = prof.apertureRadius or Config.redDotApertureRadius or 5.0
-    local lateral_sq = local_hit.Y * local_hit.Y + local_hit.Z * local_hit.Z
-    if lateral_sq > aperture * aperture then
+    -- 8. Aperture cull with shape auto-detection.
+    --    Shape is auto-detected from scope name. Per-profile 'apertureShape' overrides this.
+    --    "rectangle": abs(dy)>1 OR abs(dz)>1 — each axis is an independent hard limit.
+    --    "ellipse":   dy²+dz²>1 — unit-circle test, cuts corners.
+    --    colimscope_mini MUST be checked before colimscope (it's a substring).
+    local SCOPE_SHAPES = {
+        { "colimscope_mini", "ellipse"    },
+        { "colimscope",      "rectangle"  },
+        { "deadeye_scope",   "rectangle"  },
+        { "goloscope",       "rectangle"  },
+        { "margach_scope",   "ellipse"    },
+    }
+    local shape = prof.apertureShape  -- per-profile manual override
+    if not shape and scopeName then
+        local sn = scopeName:lower()
+        for _, entry in ipairs(SCOPE_SHAPES) do
+            if sn:find(entry[1], 1, true) then
+                shape = entry[2]; break
+            end
+        end
+    end
+    shape = shape or "ellipse"  -- safe default
+
+    local legacyR   = prof.apertureRadius or Config.redDotApertureRadius or 5.0
+    local apertureY = prof.apertureY  or Config.redDotApertureY  or legacyR
+    local apertureZ = prof.apertureZ  or Config.redDotApertureZ  or legacyR
+    local centreY   = prof.apertureCentreY or Config.redDotApertureCentreY or 0.0
+    local centreZ   = prof.apertureCentreZ or Config.redDotApertureCentreZ or 0.0
+    local dy = (local_hit.Y - centreY) / apertureY
+    local dz = (local_hit.Z - centreZ) / apertureZ
+    local outside
+    if shape == "rectangle" then
+        outside = math.abs(dy) > 1.0 or math.abs(dz) > 1.0
+    else
+        outside = (dy * dy + dz * dz) > 1.0
+    end
+    if outside then
         -- Eye is outside the glass aperture — hide dot
         if self.reticule_visible ~= false then
             self.reticule_visible = false

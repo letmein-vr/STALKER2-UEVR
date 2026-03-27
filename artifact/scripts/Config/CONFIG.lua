@@ -75,7 +75,11 @@ Config = {
     redDotOffsetX = 0.0,
     redDotOffsetY = 0.0,
     redDotOffsetZ = 0.0,
-    redDotApertureRadius = 5.0,     -- Sight glass aperture radius (UU). Dot hidden beyond this.
+    redDotApertureRadius = 5.0,     -- Legacy fallback radius (used if Y/Z not set)
+    redDotApertureY = 5.0,          -- Elliptical aperture horizontal semi-axis (UU)
+    redDotApertureZ = 5.0,          -- Elliptical aperture vertical semi-axis (UU)
+    redDotApertureCentreY = 0.0,    -- Aperture ellipse centre horizontal offset (UU)
+    redDotApertureCentreZ = 0.0,    -- Aperture ellipse centre vertical offset (UU)
     redDotProfiles = {},
     
     -- Conversation Fix Settings

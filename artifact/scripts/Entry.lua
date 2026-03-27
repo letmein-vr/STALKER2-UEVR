@@ -2284,20 +2284,83 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
 
             imgui.separator()
 
-            -- Aperture Radius
-            local ra = currentProf.apertureRadius or Config.redDotApertureRadius or 5.0
-            local arChanged, nAR = imgui.slider_float("Aperture Radius (Glass Size)", ra, 0.5, 30.0, "%.1f")
-            if arChanged then
+            -- Elliptical Aperture
+            imgui.text("Aperture — controls when the dot hides as eye moves off-axis.")
+            local raY = currentProf.apertureY or Config.redDotApertureY or currentProf.apertureRadius or Config.redDotApertureRadius or 5.0
+            local raZ = currentProf.apertureZ or Config.redDotApertureZ or currentProf.apertureRadius or Config.redDotApertureRadius or 5.0
+            local rcY = currentProf.apertureCentreY or Config.redDotApertureCentreY or 0.0
+            local rcZ = currentProf.apertureCentreZ or Config.redDotApertureCentreZ or 0.0
+
+            local ayChanged, nAY = imgui.slider_float("Aperture Width (Y)", raY, 0.5, 30.0, "%.2f")
+            if ayChanged then
                 if currentScopeName then
                     if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
-                    Config.redDotProfiles[currentScopeName].apertureRadius = nAR
-                else
-                    Config.redDotApertureRadius = nAR
-                end
-                changed = true
-                saveWeaponProfile()
+                    Config.redDotProfiles[currentScopeName].apertureY = nAY
+                else Config.redDotApertureY = nAY end
+                changed = true; saveWeaponProfile()
             end
-            imgui.text("Controls how far off-axis the eye can be before the dot disappears.")
+
+            local azChanged, nAZ = imgui.slider_float("Aperture Height (Z)", raZ, 0.5, 30.0, "%.2f")
+            if azChanged then
+                if currentScopeName then
+                    if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
+                    Config.redDotProfiles[currentScopeName].apertureZ = nAZ
+                else Config.redDotApertureZ = nAZ end
+                changed = true; saveWeaponProfile()
+            end
+            imgui.text("Width/Height: how far off horizontal/vertical axis before dot hides.")
+
+            imgui.spacing()
+
+            local cYChanged, nCY = imgui.drag_float("Aperture Centre Y", rcY, 0.1, -15.0, 15.0, "%.2f")
+            if cYChanged then
+                if currentScopeName then
+                    if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
+                    Config.redDotProfiles[currentScopeName].apertureCentreY = nCY
+                else Config.redDotApertureCentreY = nCY end
+                changed = true; saveWeaponProfile()
+            end
+
+            local cZChanged, nCZ = imgui.drag_float("Aperture Centre Z", rcZ, 0.1, -15.0, 15.0, "%.2f")
+            if cZChanged then
+                if currentScopeName then
+                    if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
+                    Config.redDotProfiles[currentScopeName].apertureCentreZ = nCZ
+                else Config.redDotApertureCentreZ = nCZ end
+                changed = true; saveWeaponProfile()
+            end
+            imgui.text("Centre: shifts the ellipse origin to compensate for scope mesh misalignment.")
+
+            imgui.spacing()
+
+            -- Shape: auto-detected or per-profile override
+            local SHAPE_OPTIONS = { "auto", "ellipse", "rectangle" }
+            local currentShape = currentProf.apertureShape or "auto"
+            local currentShapeIdx = 0
+            for i, v in ipairs(SHAPE_OPTIONS) do
+                if v == currentShape then currentShapeIdx = i - 1; break end
+            end
+            local autoLabel = ""
+            if not currentProf.apertureShape and currentScopeName then
+                local sn = currentScopeName:lower()
+                local detected = "ellipse"
+                if sn:find("colimscope_mini", 1, true) then detected = "ellipse"
+                elseif sn:find("colimscope", 1, true) then detected = "rectangle"
+                elseif sn:find("deadeye_scope", 1, true) then detected = "rectangle"
+                elseif sn:find("goloscope", 1, true) then detected = "rectangle"
+                end
+                autoLabel = " (auto: " .. detected .. ")"
+            end
+            imgui.text("Aperture Shape" .. autoLabel)
+            local shapeChanged, newShapeIdx = imgui.combo("##apertureShape", currentShapeIdx, SHAPE_OPTIONS)
+            if shapeChanged then
+                local newShape = SHAPE_OPTIONS[newShapeIdx + 1]
+                if currentScopeName then
+                    if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
+                    Config.redDotProfiles[currentScopeName].apertureShape = (newShape ~= "auto") and newShape or nil
+                end
+                changed = true; saveWeaponProfile()
+            end
 
             imgui.tree_pop()
         end
