@@ -248,9 +248,12 @@ function ScopeController:get_or_create_reticule_component(weapon_mesh)
     -- Check if component exists and is valid
     if not uevrUtils.validate_object(self.reticule_mesh_component) then
 
-        self.reticule_mesh_component = uevrUtils.createStaticMeshComponent("StaticMesh /Engine/BasicShapes/Sphere.Sphere")
+        self.reticule_mesh_component = uevrUtils.createStaticMeshComponent("StaticMesh /Engine/EngineMeshes/Sphere.Sphere")
 
         if self.reticule_mesh_component then
+            -- Spawn succeeded — clear any previous failure flag
+            self.reticule_spawn_failed = nil
+
             self.reticule_mesh_component:SetCollisionEnabled(0)
             self.reticule_mesh_component.BoundsScale = 10
             
@@ -291,6 +294,11 @@ function ScopeController:get_or_create_reticule_component(weapon_mesh)
                     self.reticule_material:SetVectorParameterValue("TintColorAndOpacity", color)
                 end
             end
+        else
+            -- Bug B fix: Sphere.Sphere wasn't loaded yet (can happen on certain maps at load time).
+            -- Flag it so Update() invalidates current_weapon on the next SECOND, forcing a retry.
+            print("[Scope] Red dot spawn failed (Sphere mesh not ready) — will retry.")
+            self.reticule_spawn_failed = true
         end
     end
 
@@ -631,7 +639,17 @@ function ScopeController:scan_and_fix_materials(weapon_mesh)
     local function process_mesh(mesh)
         if not mesh or not UEVR_UObjectHook.exists(mesh) then return false end
         
-        local name = mesh:get_fname():to_string():lower()
+        -- Bug C fix: prefer the StaticMesh ASSET name (stable across saves),
+        -- fall back to the component instance FName only if no asset is found.
+        local name = nil
+        if mesh.StaticMesh and UEVR_UObjectHook.exists(mesh.StaticMesh) then
+            name = mesh.StaticMesh:get_fname():to_string():lower()
+        end
+        -- Fallback to component FName
+        if not name or name == "" or name == "none" then
+            name = mesh:get_fname():to_string():lower()
+        end
+
         if name:find("deadeye_scope") or name:find("goloscope") or name:find("colimscope") or name:find("margach_scope") then  
              
              local min_index = 1
@@ -641,32 +659,39 @@ function ScopeController:scan_and_fix_materials(weapon_mesh)
              elseif name:find("deadeye_scope") then min_index = 1
              elseif name:find("margach_scope") then min_index = 2 end
              
-             -- Dump materials once for diagnostics
-             if not self.has_dumped_scope_mats then
-                 self.has_dumped_scope_mats = true
-                 print("\n[DEBUG-MAT] --- DUMPING SCOPE MATERIALS FOR: " .. name .. " ---")
-                 local num_mats2 = mesh:GetNumMaterials()
-                 for mi = 0, num_mats2 - 1 do
-                     local mat2 = mesh:GetMaterial(mi)
-                     if mat2 then
-                         print(string.format("[DEBUG-MAT] [%d]: %s", mi, mat2:get_fname():to_string()))
-                     else
-                         print(string.format("[DEBUG-MAT] [%d]: NIL", mi))
+             -- PERF: Only run the expensive transparency fix (DMI creation, SetCastShadow etc.)
+             -- when the scope component address has actually changed. Quick re-scans from the
+             -- heartbeat just re-flag without repeating the costly UE material calls.
+             local mesh_addr = mesh:get_address()
+             if mesh_addr ~= self.transparency_fix_applied_addr then
+                 -- Dump materials once for diagnostics
+                 if not self.has_dumped_scope_mats then
+                     self.has_dumped_scope_mats = true
+                     print("\n[DEBUG-MAT] --- DUMPING SCOPE MATERIALS FOR: " .. name .. " ---")
+                     local num_mats2 = mesh:GetNumMaterials()
+                     for mi = 0, num_mats2 - 1 do
+                         local mat2 = mesh:GetMaterial(mi)
+                         if mat2 then
+                             print(string.format("[DEBUG-MAT] [%d]: %s", mi, mat2:get_fname():to_string()))
+                         else
+                             print(string.format("[DEBUG-MAT] [%d]: NIL", mi))
+                         end
                      end
+                     print("[DEBUG-MAT] --- END MATERIAL DUMP ---\n")
                  end
-                 print("[DEBUG-MAT] --- END MATERIAL DUMP ---\n")
+
+                 pcall(function() self:apply_transparency_fix(mesh, min_index) end)
+                 pcall(function()
+                       mesh:SetCastShadow(false)
+                       mesh:SetRenderCustomDepth(false)
+                 end)
+                 self.transparency_fix_applied_addr = mesh_addr
+                 print("[DEBUG] Reflex Sight Detected (transparency fix applied): " .. name)
              end
-             
-             pcall(function() self:apply_transparency_fix(mesh, min_index) end)
-             pcall(function()
-                   mesh:SetCastShadow(false)
-                   mesh:SetRenderCustomDepth(false)
-             end)
              
             -- Flag as reflex sight for red dot logic
              self.is_reflex_sight = true
              self.scope_mesh = mesh
-             print("[DEBUG] Reflex Sight Detected: " .. name)
              return true
         end
         return false
@@ -674,43 +699,54 @@ function ScopeController:scan_and_fix_materials(weapon_mesh)
     
     self.is_reflex_sight = false -- Reset before scan
     
-    -- 1. Check Main Scope Mesh (via GameState cache)
-    local main_scope = GameState:get_scope_mesh(weapon_mesh)
-    if main_scope then
-        if process_mesh(main_scope) then found_any = true end
-    end
+    -- ROOT CAUSE FIX (confirmed via MCP live inspection):
+    -- Scope attachments (goloscope, colimscope, etc.) are children of WeaponInHandsMesh,
+    -- NOT of WeaponData.WeaponMesh (what weapon_mesh is). We must scan WeaponInHandsMesh too.
+    local weapon_in_hands = GameState:GetWeaponInHandsMesh()
     
-    if weapon_mesh.AttachChildren then
-         local children = weapon_mesh.AttachChildren
-         -- print("[DEBUG] Deep Scan: Main Weapon " .. weapon_mesh:get_fname():to_string() .. " has " .. #children .. " children")
-         for i = 1, #children do
-             local child = children[i]
-             -- Just check existence, don't enforce StaticMesh property presence
-             if child and UEVR_UObjectHook.exists(child) then
-                 local cName = child:get_fname():to_string()
-                 -- print("[DEBUG] Inspecting Child: " .. cName)
-                 if process_mesh(child) then 
-                     print("[DEBUG] FOUND FIX TARGET: " .. cName)
-                     found_any = true 
-                 end
-             end
-             
-             -- Check for nested attachments
-             if child and child.AttachChildren then
-                 local grand_children = child.AttachChildren
-                 for j = 1, #grand_children do
-                     local grand_child = grand_children[j]
-                     if grand_child and UEVR_UObjectHook.exists(grand_child) then
-                         local gcName = grand_child:get_fname():to_string()
-                         -- print("[DEBUG] Inspecting GrandChild: " .. gcName)
-                         if process_mesh(grand_child) then 
-                             print("[DEBUG] FOUND FIX TARGET (Nested): " .. gcName)
-                             found_any = true 
-                         end
-                     end
-                 end
-             end
-         end
+    -- Helper: scan a mesh's direct children and one level of grandchildren
+    local function scan_mesh_children(parent_mesh)
+        if not parent_mesh then return end
+        local children = parent_mesh.AttachChildren
+        if not children then return end
+        for i = 1, #children do
+            local child = children[i]
+            if child and UEVR_UObjectHook.exists(child) then
+                if process_mesh(child) then
+                    print("[DEBUG] FOUND FIX TARGET: " .. child:get_fname():to_string())
+                    found_any = true
+                end
+                if child.AttachChildren then
+                    for j = 1, #child.AttachChildren do
+                        local gc = child.AttachChildren[j]
+                        if gc and UEVR_UObjectHook.exists(gc) then
+                            if process_mesh(gc) then
+                                print("[DEBUG] FOUND FIX TARGET (Nested): " .. gc:get_fname():to_string())
+                                found_any = true
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- 1. Primary scan: WeaponInHandsMesh (where scope SMCs actually live)
+    if weapon_in_hands then
+        scan_mesh_children(weapon_in_hands)
+    end
+
+    -- 2. Also check Main Scope Mesh via GameState cache (fallback for non-HandsOnly weapons)
+    if not found_any then
+        local main_scope = GameState:get_scope_mesh(weapon_mesh)
+        if main_scope then
+            if process_mesh(main_scope) then found_any = true end
+        end
+    end
+
+    -- 3. Fallback: scan weapon_mesh children (WeaponData.WeaponMesh path, legacy)
+    if not found_any then
+        scan_mesh_children(weapon_mesh)
     end
     
     if not found_any then
@@ -876,9 +912,26 @@ function ScopeController:update_scope_state(pawn, weapon_mesh)
     local current_time = os.clock()
     if not self.last_scan_time or (current_time - self.last_scan_time > 1.0) then
          self.last_scan_time = current_time
-         -- Use weapon_mesh passed from Update() to avoid a redundant GetEquippedWeapon() call
          if weapon_mesh then
-             self:attach_components_to_weapon(weapon_mesh) 
+             -- PERF: Skip the expensive full re-scan if we already know this is a reflex sight
+             -- and the scope mesh is still alive. Only re-scan if:
+             --   a) scope not yet detected (is_reflex_sight=false)
+             --   b) scope_mesh was invalidated
+             --   c) safety re-scan every 30 seconds (catches hot-swaps that bypass weapon_changed)
+             local scope_confirmed = self.is_reflex_sight
+                 and self.scope_mesh
+                 and UEVR_UObjectHook.exists(self.scope_mesh)
+             local needs_rescan = not scope_confirmed
+             if not needs_rescan then
+                 self.heartbeat_rescan_tick = (self.heartbeat_rescan_tick or 0) + 1
+                 if self.heartbeat_rescan_tick >= 30 then
+                     self.heartbeat_rescan_tick = 0
+                     needs_rescan = true  -- safety net: re-check every 30 seconds
+                 end
+             end
+             if needs_rescan then
+                 self:attach_components_to_weapon(weapon_mesh)
+             end
          end
     end
 
@@ -1026,6 +1079,15 @@ function ScopeController:Update(engine)
     local c_pawn = api:get_local_pawn(0)
     local weapon_mesh = GameState:GetEquippedWeapon()
     if weapon_mesh then
+        -- Bug B fix: if a previous reticule spawn failed (Sphere mesh not loaded yet),
+        -- invalidate current_weapon once per ~second so weapon_changed fires and retries the spawn.
+        if self.reticule_spawn_failed then
+            self.reticule_spawn_retry_tick = (self.reticule_spawn_retry_tick or 0) + 1
+            if self.reticule_spawn_retry_tick % 60 == 0 then
+                self.current_weapon = nil  -- force weapon_changed = true next tick
+            end
+        end
+
         -- fix_materials(weapon_mesh)
         local weapon_changed = not self.current_weapon or weapon_mesh.AnimScriptInstance ~= self.current_weapon.AnimScriptInstance
         -- Check for a live scope swap (user detached one and attached another)
@@ -1048,6 +1110,19 @@ function ScopeController:Update(engine)
             self:destroy_reticule_actor()
         end
 
+        -- Bug E fix: get_scope_mesh may return nil for nested scopes (on rails), but
+        -- scan_and_fix_materials() may already have set self.scope_mesh from its deeper scan.
+        -- If that happened and we haven't tracked it yet, treat it as a new scope ADD.
+        if not current_true_scope and self.scope_mesh and UEVR_UObjectHook.exists(self.scope_mesh) then
+            local deep_addr = self.scope_mesh:get_address()
+            if self.tracked_main_mesh_addr ~= deep_addr then
+                was_scope_swapped = true
+                had_no_scope = true  -- treat as fresh add so ADS gate is bypassed
+                self.tracked_main_mesh_addr = deep_addr
+                self:destroy_reticule_actor()
+            end
+        end
+
         -- Scope ADD (no scope -> scope): always refresh regardless of ADS state.
         -- Scope SWAP (A -> B): keep is_scope_active gate to avoid re-spawning while idle.
         local scope_changed = was_scope_swapped and (had_no_scope or GameState:is_scope_active(c_pawn))
@@ -1056,14 +1131,27 @@ function ScopeController:Update(engine)
             -- Update current weapon reference
             self.current_weapon = weapon_mesh
 
+            -- Clear transparency addr so apply_transparency_fix always runs fresh on weapon change
+            -- (needed for save loads where scope addr may be identical to previous session)
+            self.transparency_fix_applied_addr = nil
+            self.heartbeat_rescan_tick = 0  -- reset safety rescan counter
+
             -- Attempt to attach components
             self:spawn_scope(engine, c_pawn)
             self:attach_components_to_weapon(weapon_mesh)
             -- H4: invalidate reticule visibility cache on weapon/scope change
             self.reticule_visible = nil
             
-            -- Reset retry timer to force material updates for a few frames
-            self.material_fix_retry_timer = 60 
+            -- PERF: Only run the material retry loop for non-reflex scopes.
+            -- For reflex sights, scope detection is done inside scan_and_fix_materials;
+            -- the retry loop calls get_all_scope_meshes on WeaponData.WeaponMesh which is
+            -- the WRONG mesh (scopes live on WeaponInHandsMesh) and causes 6 redundant
+            -- UE bridge traversals over 60 frames.
+            if not self.is_reflex_sight then
+                self.material_fix_retry_timer = 60
+            else
+                self.material_fix_retry_timer = 0
+            end
         end
         
         -- H3 perf: pass weapon_mesh into update_scope_state to avoid redundant GetEquippedWeapon()
@@ -1103,10 +1191,12 @@ function ScopeController:Update(engine)
             end
         end
         -- Continuous Material Fix Retry (Fixes glitch on first equip OR after settings change)
+        -- PERF: Skipped entirely for reflex sights (material_fix_retry_timer forced to 0 above).
+        -- The retry loop uses get_all_scope_meshes(weapon_mesh) which scans the wrong mesh for
+        -- reflex sights; scopes live on WeaponInHandsMesh, not WeaponData.WeaponMesh.
         if self.material_fix_retry_timer and self.material_fix_retry_timer > 0 then
              self.material_fix_retry_timer = self.material_fix_retry_timer - 1
              if self.material_fix_retry_timer % 10 == 0 then -- Check every 10 frames
-                 -- Re-run the material patching logic
                  if self.current_weapon then
                       local all_scope_meshes = GameState:get_all_scope_meshes(self.current_weapon)
                       if all_scope_meshes then
@@ -1114,7 +1204,6 @@ function ScopeController:Update(engine)
                               local name = mesh:get_fname():to_string():lower()
                               if name:find("holo") or name:find("deadeye_scope") or name:find("colimator") or name:find("goloscope") then
                                    pcall(function()
-                                        -- Force update material params to combat DLSS artifacts
                                         mesh:SetScalarParameterValueOnMaterials("Refraction", 0.0)
                                         mesh:SetScalarParameterValueOnMaterials("Specular", 0.0)
                                         mesh:SetScalarParameterValueOnMaterials("Roughness", 0.0)
@@ -1141,7 +1230,9 @@ function ScopeController:Update(engine)
             self:destroy_reticule_actor()    -- Kill the ball immediately
         end
     end
-    self:update_scope_state(c_pawn)
+    -- Pass weapon_mesh so the 1-second heartbeat inside update_scope_state actually fires.
+    -- Previously this was called without weapon_mesh, making the heartbeat re-scan dead code.
+    self:update_scope_state(c_pawn, weapon_mesh)
 end
 
 function ScopeController:Reset()
@@ -1160,6 +1251,12 @@ function ScopeController:Reset()
     self.force_refresh_fix = nil
     self.heartbeatTick = 0
     self.has_dumped_scope_mats = nil
+    -- Clear spawn-retry state (Bug B fix)
+    self.reticule_spawn_failed = nil
+    self.reticule_spawn_retry_tick = nil
+    -- Clear perf-gate state
+    self.transparency_fix_applied_addr = nil
+    self.heartbeat_rescan_tick = nil
 end
 
 function ScopeController:SetScopePlaneScale(depth)

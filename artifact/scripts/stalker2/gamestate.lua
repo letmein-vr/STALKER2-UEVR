@@ -512,6 +512,7 @@ function GameStateManager:get_scope_mesh(parent_mesh)
     end
 
     -- Single-pass: prefer component with OpticCutoutSocket, fall back to first scope found
+    -- Bug D fix: search grandchildren too so nested scopes (on rails) are found.
     local fallback = nil
     for _, component in ipairs(child_components) do
         if sm_class and component:is_a(sm_class) and string.find(component:get_fname():to_string(), "scope") then
@@ -519,6 +520,18 @@ function GameStateManager:get_scope_mesh(parent_mesh)
                 return component  -- best match, return immediately
             elseif not fallback then
                 fallback = component  -- keep first scope as fallback
+            end
+        end
+        -- Search one level deeper (grandchildren) — handles scopes on rails/silencers
+        if component and component.AttachChildren then
+            for _, grandchild in ipairs(component.AttachChildren) do
+                if sm_class and grandchild:is_a(sm_class) and string.find(grandchild:get_fname():to_string(), "scope") then
+                    if grandchild:DoesSocketExist("OpticCutoutSocket") then
+                        return grandchild
+                    elseif not fallback then
+                        fallback = grandchild
+                    end
+                end
             end
         end
     end

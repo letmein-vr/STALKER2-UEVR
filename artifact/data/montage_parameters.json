@@ -1559,6 +1559,10 @@
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
         },
+        "MG_fp_aku_sight_colim_attach": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/smg/aku/Attaches/scope/MG_fp_aku_sight_colim_attach.MG_fp_aku_sight_colim_attach",
+            "label": "MG_fp_aku_sight_colim_attach"
+        },
         "MG_fp_aku_suppress_attach": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/smg/aku/Attaches/silencer/MG_fp_aku_suppress_attach.MG_fp_aku_suppress_attach",
             "label": "MG_fp_aku_suppress_attach"
@@ -5266,6 +5270,10 @@
         "MG_fp_mark_reload_increased_tactical": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/sr/mark/Reload/MG_fp_mark_reload_increased_tactical.MG_fp_mark_reload_increased_tactical",
             "label": "MG_fp_mark_reload_increased_tactical"
+        },
+        "MG_fp_mark_reload_tactical": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/sr/mark/Reload/MG_fp_mark_reload_tactical.MG_fp_mark_reload_tactical",
+            "label": "MG_fp_mark_reload_tactical"
         },
         "MG_fp_mark_shoot": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/sr/mark/Shoot/MG_fp_mark_shoot.MG_fp_mark_shoot",

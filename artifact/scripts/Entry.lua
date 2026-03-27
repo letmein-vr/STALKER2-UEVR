@@ -2184,7 +2184,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
             local rz = currentProf.offsetZ or Config.redDotOffsetZ or 0.0
 
             -- Scale
-            local sxChanged, nSX = imgui.drag_float("Red Dot Scale X", rsx, 0.001, 0.001, 1.0, "%.3f")
+            local sxChanged, nSX = imgui.drag_float("Red Dot Scale X", rsx, 0.0001, 0.0001, 1.0, "%.4f")
             if sxChanged then 
                 if currentScopeName then
                     if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
@@ -2196,7 +2196,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
                 saveWeaponProfile()
             end
             
-            local syChanged, nSY = imgui.drag_float("Red Dot Scale Y", rsy, 0.001, 0.001, 1.0, "%.3f")
+            local syChanged, nSY = imgui.drag_float("Red Dot Scale Y", rsy, 0.0001, 0.0001, 1.0, "%.4f")
             if syChanged then 
                 if currentScopeName then
                     if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
@@ -2208,7 +2208,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
                 saveWeaponProfile()
             end
             
-            local szChanged, nSZ = imgui.drag_float("Red Dot Scale Z", rsz, 0.001, 0.001, 1.0, "%.3f")
+            local szChanged, nSZ = imgui.drag_float("Red Dot Scale Z", rsz, 0.0001, 0.0001, 1.0, "%.4f")
             if szChanged then 
                 if currentScopeName then
                     if not Config.redDotProfiles[currentScopeName] then Config.redDotProfiles[currentScopeName] = {} end
