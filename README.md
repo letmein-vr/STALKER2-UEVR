@@ -26,7 +26,7 @@ Perform actions by physically reaching to different parts of your body and squee
 | **Knife/Melee** | Left hip | Left |
 | **Flashlight** | Head | Right |
 | **Night Vision** | Head | Left |
-| **Inventory** | Left shoulder | Left |
+| **Inventory** | Right shoulder | Left |
 | **Detector** | Right chest | Left |
 | **Bolts** | Right chest | Right (Head Aimed) |
 | **Grenades** | Left chest | Left |
