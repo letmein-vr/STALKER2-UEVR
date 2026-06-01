@@ -4,12 +4,14 @@ Welcome to the Zone, Stalker! This mod transforms Stalker 2 into an immersive VR
 
 ## **⚠️ IMPORTANT ⚠️**
 
-S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.6 REQUIRED! UEVR will crash on any later version of the game!
+S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.9 OR LATER REQUIRED FOR HANDS ONLY VERSION!
 
-LATEST UEVR NIGHTLY REQUIRED!
+S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.6 REQUIRED FOR IK VERSION! UEVR will crash on any later version of the game!
+
+LATEST UEVR NIGHTLY 1133 REQUIRED!
 
 ### **Credits**
-Thanks and credits to: Mutar, jbusfield, gwizdek, Holydh and Pande4360
+Thanks and credits to: Mutar, jbusfield, gwizdek, Holydh and Pande4360 as well as Praydog of course.
 
 ---
 
@@ -49,7 +51,7 @@ Perform actions by physically reaching to different parts of your body and squee
 ### Scopes
 * **Activation:** Two-hand the weapon and hold **Right Grip**. The scope appears when within 15cm of your eye.
 * **Brightness:** While looking through a scope, hold **Right Grip**, rest your thumb on the **Left Thumb Rest**, and move the **Right Thumbstick** Up/Down.
-* **Reflext Scopes:** A dynamic red dot should appear when looking through these and will move based on line of sight through the scope (it is NOT perfect).
+* **Reflex Scopes:** A dynamic red dot should appear when looking through these and will move based on line of sight through the scope (aiming is NOT perfect).
 
 ### Immersive Animations & VR Hands
 * **Dynamic Grip:** Fingers automatically curl to the unique shape of weapons, bolts, or scanners.
@@ -70,6 +72,7 @@ Perform actions by physically reaching to different parts of your body and squee
 ## ⚠️ KNOWN ISSUES ⚠️
 
 * **VR Hands:** Player knockdowns can cause hands to disappear; reset scripts to fix.
+* **Scopes:** When you first load into a level and change to a scope, it may take a few seconds to render in and when it does, it may be low-res. Change weapons and back, it will be fixed.
 * **Holographic Scopes:** Original reticule and scope glass removed, replaced with custom red dot due to upscaling graphical issues.
 * **Laser Sights:** These are not accurate/aligned properly.
 * **Upscaling Glitch:** Upscaling may cause flickering or screen squashing.
