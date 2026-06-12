@@ -1,12 +1,8 @@
-# ☢️ **S.T.A.L.K.E.R. 2: Heart of Chornobyl UEVR Mod - Player Guide** ☢️
-
-Welcome to the Zone, Stalker! This mod transforms Stalker 2 into an immersive VR experience, and is built on the fantastic original mod by Mutar!
+![Stalker 2 VR](https://raw.githubusercontent.com/letmein-vr/STALKER2-UEVR/master/screenshots/Stalker2_VR.png)
 
 ## **⚠️ IMPORTANT ⚠️**
 
-S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.9 OR LATER REQUIRED FOR HANDS ONLY VERSION!
-
-S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.6 REQUIRED FOR IK VERSION! UEVR will crash on any later version of the game!
+S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.9 OR LATER REQUIRED!
 
 LATEST UEVR NIGHTLY 1133 REQUIRED!
 
@@ -73,9 +69,6 @@ Perform actions by physically reaching to different parts of your body and squee
 
 * **VR Hands:** Player knockdowns can cause hands to disappear; reset scripts to fix.
 * **Scopes:** When you first load into a level and change to a scope, it may take a few seconds to render in and when it does, it may be low-res. Change weapons and back, it will be fixed.
-* **Holographic Scopes:** Original reticule and scope glass removed, replaced with custom red dot due to upscaling graphical issues.
 * **Laser Sights:** These are not accurate/aligned properly.
-* **Upscaling Glitch:** Upscaling may cause flickering or screen squashing.
-    * **Fix:** Set `r.TemporalAA.Upsampling = 0` in UEVR Cvars, or turn on the Flashlight, or restart.
 * **Pre-rendered Cutscenes:** These stay on a 2D screen that follows your head movement.
 * **Aim Assist:** Manually **DISABLE** this in game settings every time you load a save.
