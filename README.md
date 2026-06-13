@@ -63,7 +63,9 @@ Perform actions by physically reaching to different parts of your body and squee
 ### Cvars Options
 * **Cvars:** Tailor your Cvars to your system - includes options for Volumetrics, Shadows, Lighting/Lumen, Foliage/View Distance
 
----
+## CONTROLS
+
+![Stalker 2 VR](https://raw.githubusercontent.com/letmein-vr/STALKER2-UEVR/master/screenshots/Stalker2Controls.png)
 
 ## ⚠️ KNOWN ISSUES ⚠️
 
