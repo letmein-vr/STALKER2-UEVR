@@ -70,7 +70,5 @@ Perform actions by physically reaching to different parts of your body and squee
 ## ⚠️ KNOWN ISSUES ⚠️
 
 * **VR Hands:** Player knockdowns can cause hands to disappear; reset scripts to fix.
-* **Scopes:** When you first load into a level and change to a scope, it may take a few seconds to render in and when it does, it may be low-res. Change weapons and back, it will be fixed.
 * **Laser Sights:** These are not accurate/aligned properly.
-* **Pre-rendered Cutscenes:** These stay on a 2D screen that follows your head movement.
 * **Aim Assist:** Manually **DISABLE** this in game settings every time you load a save.
