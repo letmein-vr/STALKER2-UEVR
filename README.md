@@ -1,4 +1,4 @@
-![Stalker 2 VR](https://raw.githubusercontent.com/letmein-vr/STALKER2-UEVR/master/screenshots/Stalker2_VR.png)
+![Stalker 2 VR](https://raw.githubusercontent.com/letmein-vr/STALKER2-UEVR/master/screenshots/B08D89B3-30EA-40B6-B099-712389A9D5B1.png)
 
 ## **⚠️ IMPORTANT ⚠️**
 
