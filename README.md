@@ -4,7 +4,7 @@
 
 S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.9 OR LATER REQUIRED!
 
-LATEST UEVR NIGHTLY 1133 REQUIRED!
+UEVR NIGHTLY 1133 REQUIRED!
 
 ### **Credits**
 Thanks and credits to: Mutar, jbusfield, gwizdek, Holydh and Pande4360 as well as Praydog of course.
@@ -34,8 +34,6 @@ Perform actions by physically reaching to different parts of your body and squee
 | **PDA** | Left chest | Right |
 | **Weapon Attachments (default off)** | Left shoulder | Left |
 
-> **Note:** The mod automatically adjusts these zones depending on whether you play seated or standing.
-
 * **D-Pad Controls:** Activate using the **Right Controller Thumb Rest** and **Left Thumbstick**. You can change this via usual UEVR Input tab.
 * **Leaning:** Enabled via **Left Trigger**. If movement becomes very slow, Lean is likely toggled on!
 * **Haptic Feedback:** Controllers vibrate when successfully interacting with a body zone or the flashlight/NVG.
@@ -43,9 +41,8 @@ Perform actions by physically reaching to different parts of your body and squee
 ### Weapon Handling & Combat
 * **Reloading:** Reach to the gun magazine with your left hand and press **Left Grip**. The hand will follow the reload animation via collision boxes.
 * **Two-Handed Aiming:** Hold the **Left Grip** on the weapon barrel or handle to align shots.
-* **Virtual Gunstock (ADS):** Scoped weapons create a "virtual shoulder" to stabilize your view.
-* **Physical Recoil:** Firing physically kicks the VR camera upwards.
-* **Interactive ADS:** Bring your weapon up to your HMD and the aim should automatically enter ADS mode. Lowering your weapon will revert. Beware this is experimental!
+* **Physical Recoil:** Firing kicks the VR camera upwards.
+* **Interactive ADS:** Bring your weapon up to your HMD and the aim should automatically enter ADS mode. Lowering your weapon will revert. Beware this is experimental! Disabled by default.
 
 ### Scopes
 * **Activation:** Two-hand the weapon and hold **Right Grip**. The scope appears when within 15cm of your eye.
@@ -69,5 +66,4 @@ Perform actions by physically reaching to different parts of your body and squee
 ## ⚠️ KNOWN ISSUES ⚠️
 
 * **VR Hands:** Player knockdowns can cause hands to disappear; reset scripts to fix.
-* **Laser Sights:** These are not accurate/aligned properly.
-* **Aim Assist:** Manually **DISABLE** this in game settings every time you load a save.
+* **Laser Sights:** These are not accurate/aligned.
