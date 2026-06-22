@@ -10,11 +10,11 @@ UEVR NIGHTLY 1133 REQUIRED!
 Thanks and credits to: Mutar, jbusfield, gwizdek, Holydh and Pande4360 as well as Praydog of course.
 
 ---
-## CONTROLS
+## Controls
 
 ![Stalker 2 VR](https://raw.githubusercontent.com/letmein-vr/STALKER2-UEVR/master/screenshots/Stalker2Controls.png)
 
-## 🛠 FEATURES
+## 🛠 Features
 
 ### Physical Controls & Gestures
 Perform actions by physically reaching to different parts of your body and squeezing the **Grip** button on the left or right controllers.
@@ -63,7 +63,7 @@ Perform actions by physically reaching to different parts of your body and squee
 ### Cvars Options
 * **Cvars:** Tailor your Cvars to your system - includes options for Volumetrics, Shadows, Lighting/Lumen, Foliage/View Distance
 
-## ⚠️ KNOWN ISSUES ⚠️
+## ⚠️ Known Issues ⚠️
 
 * **VR Hands:** Player knockdowns can cause hands to disappear; reset scripts to fix.
 * **Laser Sights:** These are not accurate/aligned.
