@@ -1,0 +1,6 @@
+[22:50:07] [Scope-Diag] === scope.lua loaded, diag file open ===
+[22:50:07] [Scope-Diag] warmup sphere kept alive as hook keeper -- SMC hook chain now valid
+[22:50:07] [Scope-Diag] warmup: creating hook-keeper SCC + RT (separate from scope SCC)
+[22:50:07] [Scope-Diag] warmup: hook-keeper RT created -> true
+[22:50:07] [Scope-Diag] warmup: hook-keeper SCC created -> true
+[22:50:07] [Scope-Diag] warmup: hook-keeper SCC stored (scope_controller.scene_capture_component left nil)

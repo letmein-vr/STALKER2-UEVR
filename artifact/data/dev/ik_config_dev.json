@@ -1,0 +1,70 @@
+{
+    "uevr_ik_active": true,
+    "uevr_ik_active_profile": 1,
+    "uevr_ik_allow_stretch": false,
+    "uevr_ik_allow_wrist_affects_elbow": true,
+    "uevr_ik_animation_location_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_ik_animation_mesh_combo": 5,
+    "uevr_ik_animation_mesh_combo_show_children": false,
+    "uevr_ik_animation_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_ik_end_bone": "jnt_l_hand",
+    "uevr_ik_end_bone_combo": 45,
+    "uevr_ik_end_bone_offset": [
+        -11.699999809265137,
+        -2.299999952316284,
+        -3.4000000953674316
+    ],
+    "uevr_ik_end_bone_rotation": [
+        0.0,
+        -160.0,
+        -20.0
+    ],
+    "uevr_ik_end_control_type": 1,
+    "uevr_ik_joint_bone": "jnt_l_fore_arm",
+    "uevr_ik_joint_bone_combo": 44,
+    "uevr_ik_label": "Left Arm",
+    "uevr_ik_lower_twist_bone_1": "jnt_l_fore_arm_roll",
+    "uevr_ik_lower_twist_bone_1_combo": 66,
+    "uevr_ik_lower_twist_bone_2": "",
+    "uevr_ik_lower_twist_bone_2_combo": 1,
+    "uevr_ik_lower_twist_bone_3": "",
+    "uevr_ik_lower_twist_bone_3_combo": 1,
+    "uevr_ik_lower_twist_bone_frac_1": 0.5,
+    "uevr_ik_lower_twist_bone_frac_2": 0.0,
+    "uevr_ik_lower_twist_bone_frac_3": 0.0,
+    "uevr_ik_max_stretch_scale": 1.1,
+    "uevr_ik_mesh": "Custom",
+    "uevr_ik_mesh_combo": 5,
+    "uevr_ik_mesh_combo_show_children": false,
+    "uevr_ik_mesh_location_offset": [
+        -5.0,
+        0.0,
+        -95.0
+    ],
+    "uevr_ik_mesh_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_ik_rename_profile_input": "",
+    "uevr_ik_rig_label": "",
+    "uevr_ik_smoothing": 0.0,
+    "uevr_ik_solver_select": 2,
+    "uevr_ik_solver_type": 1,
+    "uevr_ik_sort_order": 1,
+    "uevr_ik_start_bone": "jnt_l_shoulder",
+    "uevr_ik_start_bone_combo": 42,
+    "uevr_ik_start_stretch_ratio": 0.9,
+    "uevr_ik_wrist_bone": "",
+    "uevr_ik_wrist_bone_combo": 1,
+    "uevr_ik_wrist_twist_influence": 0.35,
+    "uevr_ik_wrist_twist_max": 75.0
+}
