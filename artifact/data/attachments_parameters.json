@@ -1,0 +1,764 @@
+{
+    "attachmentOffsets": [
+        {
+            "animation": "udp",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_udp",
+            "id": "CharacterMesh_SK_udp",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "gvintar",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_gvi",
+            "id": "CharacterMesh_SK_gvi",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "rhino",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_rhino00000",
+            "id": "CharacterMesh_SK_rhino00000",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "kharod",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_kharod000",
+            "id": "CharacterMesh_SK_kharod000",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "lavina",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_lav",
+            "id": "CharacterMesh_SK_lav",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "viper",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_vip",
+            "id": "CharacterMesh_SK_vip",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "ptm",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_pm",
+            "id": "CharacterMesh_SK_pm",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "ak74",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_AK74",
+            "id": "CharacterMesh_SK_AK74",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "m160",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_m160",
+            "id": "CharacterMesh_SK_m160",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "gp37",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_gp37",
+            "id": "CharacterMesh_SK_gp37",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "aku",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_aku",
+            "id": "CharacterMesh_SK_aku",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "apb",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_apb",
+            "id": "CharacterMesh_SK_apb",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "kora",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_kora",
+            "id": "CharacterMesh_SK_kora",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "fora",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_fora0",
+            "id": "CharacterMesh_SK_fora0",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "dnipro",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_dnipro",
+            "id": "CharacterMesh_SK_dnipro",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "grim",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_grim0",
+            "id": "CharacterMesh_SK_grim0",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "m1000",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_m1000",
+            "id": "CharacterMesh_SK_m1000",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "mark",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_mar",
+            "id": "CharacterMesh_SK_mar",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "zubr",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_zubr0",
+            "id": "CharacterMesh_SK_zubr0",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "integral",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_integ",
+            "id": "CharacterMesh_SK_integ",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "obrez",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_obrez",
+            "id": "CharacterMesh_SK_obrez",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "bucket",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_bucket0",
+            "id": "CharacterMesh_SK_bucket0",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "toz34",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_Toz34",
+            "id": "CharacterMesh_SK_Toz34",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "scoped": false
+        },
+        {
+            "animation": "d1200",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_d1200",
+            "id": "CharacterMesh_SK_d1200",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "spsa_shotgun",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_spsa00",
+            "id": "CharacterMesh_SK_spsa00",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "m86_shotgun",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_m86000",
+            "id": "CharacterMesh_SK_m86000",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "svu_sniper",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_svu",
+            "id": "CharacterMesh_SK_svu",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "ram2_shotgun",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_ram2",
+            "id": "CharacterMesh_SK_ram2",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "m701_sniper",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_m701",
+            "id": "CharacterMesh_SK_m701",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "threeline_sniper",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_ThreeLine",
+            "id": "CharacterMesh_SK_ThreeLine",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "svdm_sniper",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_svm",
+            "id": "CharacterMesh_SK_svm",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "pkp_lmg",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_pkp00000",
+            "id": "CharacterMesh_SK_pkp00000",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "animation": "gauss",
+            "any_child": true,
+            "any_parent": false,
+            "child": "SK_gauss",
+            "id": "CharacterMesh_SK_gauss",
+            "location": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "parent": "CharacterMesh",
+            "rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ]
+        }
+    ]
+}

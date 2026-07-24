@@ -1,0 +1,18 @@
+{
+    "uevr_pawn_active_profile": 1,
+    "uevr_pawn_hidePawnArmsAnimationMesh": true,
+    "uevr_pawn_hidePawnArmsBones": false,
+    "uevr_pawn_hidePawnArmsMesh": true,
+    "uevr_pawn_hidePawnBodyMesh": true,
+    "uevr_pawn_pawnArmsAnimationMeshList": 3,
+    "uevr_pawn_pawnArmsFOVFix": "",
+    "uevr_pawn_pawnArmsMeshList": 3,
+    "uevr_pawn_pawnBodyFOVFix": "",
+    "uevr_pawn_pawnBodyMeshList": 3,
+    "uevr_pawn_pawnUpperArmLeft": 42,
+    "uevr_pawn_pawnUpperArmRight": 9,
+    "uevr_pawn_rename_profile_input": "",
+    "uevr_pawn_selectedPawnArmsAnimationMesh": "Pawn.Mesh",
+    "uevr_pawn_selectedPawnArmsMesh": "Pawn.Mesh",
+    "uevr_pawn_selectedPawnBodyMesh": "Pawn.Mesh"
+}

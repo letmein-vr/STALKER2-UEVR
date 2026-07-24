@@ -1,0 +1,31 @@
+{
+    "uevr_lib_scope_brightness": 2,
+    "uevr_lib_scope_create_demo": false,
+    "uevr_lib_scope_deactivate_distance": 15,
+    "uevr_lib_scope_disable": false,
+    "uevr_lib_scope_fov": 2,
+    "uevr_lib_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_lib_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_lib_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_lib_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_lib_scope_ocular_lens_scale": 1,
+    "uevr_lib_scope_show_debug": false,
+    "uevr_lib_scope_zoom_exponential": 0.5,
+    "uevr_lib_scope_zoom_speed": 1.0
+}
