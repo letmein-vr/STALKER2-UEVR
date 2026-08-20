@@ -2,9 +2,9 @@
 
 ## **⚠️ IMPORTANT ⚠️**
 
-S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.9 OR LATER REQUIRED!
+S.T.A.L.K.E.R. 2: Heart of Chornobyl STEAM VERSION 1.9 REQUIRED! 2.0 DOES NOT WORK!
 
-UEVR NIGHTLY 1133 REQUIRED!
+LATEST UEVR NIGHTLY REQUIRED!
 
 ### **Credits**
 Thanks and credits to: Mutar, jbusfield, gwizdek, Holydh and Pande4360 as well as Praydog of course.
