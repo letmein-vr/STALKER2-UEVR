@@ -4,7 +4,7 @@
 
 S.T.A.L.K.E.R. 2: Heart of Chornobyl
 
-LATEST UEVR JoeyHodge REQUIRED!
+Custom UEVR build from releases page required!
 
 ### **Credits**
 Thanks and credits to: Mutar, jbusfield, gwizdek, Holydh and Pande4360, Joeyhodge as well as Praydog of course.
@@ -40,6 +40,7 @@ Perform actions by physically reaching to different parts of your body and squee
 
 ### Weapon Handling & Combat
 * **Reloading:** Reach to the gun magazine with your left hand and press **Left Grip**. The hand will follow the reload animation via collision boxes.
+* **Physical Knife Melee:** Swing right controller with knife equipped to melee.
 * **Two-Handed Aiming:** Hold the **Left Grip** on the weapon barrel or handle to align shots.
 * **Physical Recoil:** Firing kicks the VR camera upwards.
 * **Interactive ADS:** Bring your weapon up to your HMD and the aim should automatically enter ADS mode. Lowering your weapon will revert. Beware this is experimental! Disabled by default.
