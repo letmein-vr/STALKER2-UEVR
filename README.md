@@ -99,18 +99,9 @@ Perform actions by physically reaching to different parts of your body and squee
 
 * **PipelineRefresh.dll:** Download and copy it to the profile `plugins` folder if you encounter DLSS quarter-eye flashing in the right eye. Credit: **Remleo** (https://github.com/Remleo/uevr-plugins/tree/main)
 
-## Recent Fixes
-
-* Aim fixed for the latest game patch (shots go down the barrel again instead of following the HMD).
-* Burer weapon strip while two-handing no longer stretches the left arm.
-* Burer weapon strip during a manual reload no longer freezes animations.
-* Manual reload: the fresh magazine now inserts reliably into the magwell.
-* Body items hide while climbing and during scripted animations.
-
 ## ⚠️ Known Issues ⚠️
 
 * **VR Hands:** Player knockdowns can cause hands to disappear; reset scripts to fix.
-* **Laser Sights:** These are not accurate/aligned.
 
 ---
 ## Repository
