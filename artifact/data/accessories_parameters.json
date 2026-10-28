@@ -1,0 +1,166 @@
+{
+    "accessories": {
+        "CharacterMesh_SK_DevBinocular_01": {
+            "774f0c89-26e1-4b6c-87f5-3acf8053e05a": {
+                "label": "New Accessory",
+                "markers": [
+                    {
+                        "activation_distance": 8.300000190734863,
+                        "activation_hand": 2,
+                        "attach_type": 2,
+                        "end_time": 0.0,
+                        "grip_animation": "",
+                        "grip_priority": 1,
+                        "location": [
+                            -8.0,
+                            2.0,
+                            1.899999976158142
+                        ],
+                        "rotation": [
+                            -16.0,
+                            147.0,
+                            -9.800000190734863
+                        ],
+                        "socket_name": "jnt_l_hand",
+                        "start_time": 0.0
+                    }
+                ]
+            }
+        },
+        "CharacterMesh_SK_apb": {
+            "c67378e8-d296-4405-8847-a5cb50d64dca": {
+                "label": "Left Hand",
+                "markers": [
+                    {
+                        "activation_distance": 5.400000095367432,
+                        "activation_hand": 2,
+                        "attach_type": 2,
+                        "end_time": 0.0,
+                        "grip_animation": "apb",
+                        "grip_priority": 1,
+                        "location": [
+                            -10.199999809265137,
+                            5.0,
+                            1.100000023841858
+                        ],
+                        "rotation": [
+                            -25.799999237060547,
+                            138.6999969482422,
+                            0.0
+                        ],
+                        "socket_name": "jnt_l_hand",
+                        "start_time": 0.0
+                    }
+                ]
+            }
+        },
+        "CharacterMesh_SK_kora": {
+            "ad061ee1-95f4-448b-b306-c7c8dce42142": {
+                "label": "Left Hand",
+                "markers": [
+                    {
+                        "activation_distance": 6.400000095367432,
+                        "activation_hand": 2,
+                        "attach_type": 2,
+                        "end_time": 0.0,
+                        "grip_animation": "kora",
+                        "grip_priority": 1,
+                        "location": [
+                            -8.5,
+                            4.400000095367432,
+                            0.20000000298023224
+                        ],
+                        "rotation": [
+                            -41.70000076293945,
+                            128.60000610351563,
+                            3.799999952316284
+                        ],
+                        "socket_name": "jnt_l_hand",
+                        "start_time": 0.0
+                    }
+                ]
+            }
+        },
+        "CharacterMesh_SK_pm": {
+            "450742a7-7fcc-4987-a1eb-8cc3e62c905a": {
+                "label": "Left Hand",
+                "markers": [
+                    {
+                        "activation_distance": 9.0,
+                        "activation_hand": 2,
+                        "attach_type": 2,
+                        "end_time": 0.0,
+                        "grip_animation": "ptm",
+                        "grip_priority": 1,
+                        "location": [
+                            -9.0,
+                            4.5,
+                            1.0
+                        ],
+                        "rotation": [
+                            -25.5,
+                            129.5,
+                            11.600000381469727
+                        ],
+                        "socket_name": "jnt_l_hand",
+                        "start_time": 0.0
+                    }
+                ]
+            }
+        },
+        "CharacterMesh_SK_rhino00000": {
+            "b1e4a5ed-eb2b-4282-b81b-5fe60a0237f6": {
+                "label": "New Accessory",
+                "markers": [
+                    {
+                        "activation_distance": 5.300000190734863,
+                        "activation_hand": 2,
+                        "attach_type": 2,
+                        "end_time": 0.0,
+                        "grip_animation": "rhino",
+                        "grip_priority": 1,
+                        "location": [
+                            -10.100000381469727,
+                            4.699999809265137,
+                            3.5999999046325684
+                        ],
+                        "rotation": [
+                            -27.100000381469727,
+                            138.60000610351563,
+                            5.0
+                        ],
+                        "socket_name": "jnt_l_hand",
+                        "start_time": 0.0
+                    }
+                ]
+            }
+        },
+        "CharacterMesh_SK_udp": {
+            "a3561359-c860-481a-b87e-e4654149978f": {
+                "label": "Left Hand",
+                "markers": [
+                    {
+                        "activation_distance": 5.699999809265137,
+                        "activation_hand": 2,
+                        "attach_type": 2,
+                        "end_time": 0.0,
+                        "grip_animation": "udp",
+                        "grip_priority": 1,
+                        "location": [
+                            -9.300000190734863,
+                            4.599999904632568,
+                            1.899999976158142
+                        ],
+                        "rotation": [
+                            -19.399999618530273,
+                            129.8000030517578,
+                            5.0
+                        ],
+                        "socket_name": "jnt_l_hand",
+                        "start_time": 0.0
+                    }
+                ]
+            }
+        }
+    }
+}

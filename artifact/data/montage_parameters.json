@@ -232,6 +232,10 @@
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147216251",
             "label": "AnimMontage_2147216251"
         },
+        "AnimMontage_2147217363": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147217363",
+            "label": "AnimMontage_2147217363"
+        },
         "AnimMontage_2147217678": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147217678",
             "label": "AnimMontage_2147217678"
@@ -271,6 +275,10 @@
         "AnimMontage_2147282906": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147282906",
             "label": "AnimMontage_2147282906"
+        },
+        "AnimMontage_2147283381": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147283381",
+            "label": "AnimMontage_2147283381"
         },
         "AnimMontage_2147283513": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147283513",
@@ -536,6 +544,18 @@
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147456097",
             "label": "AnimMontage_2147456097"
         },
+        "AnimMontage_2147456508": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147456508",
+            "label": "AnimMontage_2147456508"
+        },
+        "AnimMontage_2147456651": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147456651",
+            "label": "AnimMontage_2147456651"
+        },
+        "AnimMontage_2147458015": {
+            "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147458015",
+            "label": "AnimMontage_2147458015"
+        },
         "AnimMontage_2147462820": {
             "class_name": "AnimMontage /Engine/Transient.AnimMontage_2147462820",
             "label": "AnimMontage_2147462820"
@@ -603,6 +623,66 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/NightVisionGoggles/Montages/MG_FP_Player_AR_NVG-SwitchOn_01.MG_FP_Player_AR_NVG-SwitchOn_01",
             "label": "MG_FP_Player_AR_NVG-SwitchOn_01"
         },
+        "MG_FP_Player_Arev_Attach-EnColimScope01_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Attaches/MG_FP_Player_Arev_Attach-EnColimScope01_01.MG_FP_Player_Arev_Attach-EnColimScope01_01",
+            "label": "MG_FP_Player_Arev_Attach-EnColimScope01_01"
+        },
+        "MG_FP_Player_Arev_Attach-EnX2Scope01_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Attaches/MG_FP_Player_Arev_Attach-EnX2Scope01_01.MG_FP_Player_Arev_Attach-EnX2Scope01_01",
+            "label": "MG_FP_Player_Arev_Attach-EnX2Scope01_01"
+        },
+        "MG_FP_Player_Arev_Attach-EnX4Scope01_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Attaches/MG_FP_Player_Arev_Attach-EnX4Scope01_01.MG_FP_Player_Arev_Attach-EnX4Scope01_01",
+            "label": "MG_FP_Player_Arev_Attach-EnX4Scope01_01"
+        },
+        "MG_FP_Player_Arev_Attach-MagHuge_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Attaches/AttachMag/MG_FP_Player_Arev_Attach-MagHuge_01.MG_FP_Player_Arev_Attach-MagHuge_01",
+            "label": "MG_FP_Player_Arev_Attach-MagHuge_01"
+        },
+        "MG_FP_Player_Arev_Attach-MagIncreased_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Attaches/AttachMag/MG_FP_Player_Arev_Attach-MagIncreased_01.MG_FP_Player_Arev_Attach-MagIncreased_01",
+            "label": "MG_FP_Player_Arev_Attach-MagIncreased_01"
+        },
+        "MG_FP_Player_Arev_Detach-MagBase_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Attaches/AttachMag/MG_FP_Player_Arev_Detach-MagBase_01.MG_FP_Player_Arev_Detach-MagBase_01",
+            "label": "MG_FP_Player_Arev_Detach-MagBase_01"
+        },
+        "MG_FP_Player_Arev_Detach-MagIncreased_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Attaches/AttachMag/MG_FP_Player_Arev_Detach-MagIncreased_01.MG_FP_Player_Arev_Detach-MagIncreased_01",
+            "label": "MG_FP_Player_Arev_Detach-MagIncreased_01"
+        },
+        "MG_FP_Player_Arev_Equip_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Equip/MG_FP_Player_Arev_Equip_01.MG_FP_Player_Arev_Equip_01",
+            "label": "MG_FP_Player_Arev_Equip_01"
+        },
+        "MG_FP_Player_Arev_Melee": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Melee/MG_FP_Player_Arev_Melee.MG_FP_Player_Arev_Melee",
+            "label": "MG_FP_Player_Arev_Melee"
+        },
+        "MG_FP_Player_Arev_Reload-MagDefault_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Reload/MG_FP_Player_Arev_Reload-MagDefault_01.MG_FP_Player_Arev_Reload-MagDefault_01",
+            "label": "MG_FP_Player_Arev_Reload-MagDefault_01"
+        },
+        "MG_FP_Player_Arev_Reload-MagDefault_Tactical_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Reload/MG_FP_Player_Arev_Reload-MagDefault_Tactical_01.MG_FP_Player_Arev_Reload-MagDefault_Tactical_01",
+            "label": "MG_FP_Player_Arev_Reload-MagDefault_Tactical_01"
+        },
+        "MG_FP_Player_Arev_Reload-MagHuge_Tactical_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Reload/MG_FP_Player_Arev_Reload-MagHuge_Tactical_01.MG_FP_Player_Arev_Reload-MagHuge_Tactical_01",
+            "label": "MG_FP_Player_Arev_Reload-MagHuge_Tactical_01"
+        },
+        "MG_FP_Player_Arev_Reload-MagIncreased_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Reload/MG_FP_Player_Arev_Reload-MagIncreased_01.MG_FP_Player_Arev_Reload-MagIncreased_01",
+            "label": "MG_FP_Player_Arev_Reload-MagIncreased_01"
+        },
+        "MG_FP_Player_Arev_Shoot_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Shoot/MG_FP_Player_Arev_Shoot_01.MG_FP_Player_Arev_Shoot_01",
+            "label": "MG_FP_Player_Arev_Shoot_01"
+        },
+        "MG_FP_Player_Arev_Unequip_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/Arev/Equip/MG_FP_Player_Arev_Unequip_01.MG_FP_Player_Arev_Unequip_01",
+            "label": "MG_FP_Player_Arev_Unequip_01"
+        },
         "MG_FP_Player_BH_NVG-SwitchOff_01": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/NightVisionGoggles/Montages/MG_FP_Player_BH_NVG-SwitchOff_01.MG_FP_Player_BH_NVG-SwitchOff_01",
             "label": "MG_FP_Player_BH_NVG-SwitchOff_01"
@@ -615,6 +695,10 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/NightVisionGoggles/Montages/MG_FP_Player_Bolt_NVG-SwitchOn_01.MG_FP_Player_Bolt_NVG-SwitchOn_01",
             "label": "MG_FP_Player_Bolt_NVG-SwitchOn_01"
         },
+        "MG_FP_Player_Bucket_FlashlightToggle_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Flashlight/Montages/MG_FP_Player_Bucket_FlashlightToggle_01.MG_FP_Player_Bucket_FlashlightToggle_01",
+            "label": "MG_FP_Player_Bucket_FlashlightToggle_01"
+        },
         "MG_FP_Player_Bucket_NVG-SwitchOff_01": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/NightVisionGoggles/Montages/MG_FP_Player_Bucket_NVG-SwitchOff_01.MG_FP_Player_Bucket_NVG-SwitchOff_01",
             "label": "MG_FP_Player_Bucket_NVG-SwitchOff_01"
@@ -623,6 +707,86 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/NightVisionGoggles/Montages/MG_FP_Player_Bucket_NVG-SwitchOn_01.MG_FP_Player_Bucket_NVG-SwitchOn_01",
             "label": "MG_FP_Player_Bucket_NVG-SwitchOn_01"
         },
+        "MG_FP_Player_Fora230_Equip_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/smg/Fora230/Equip/MG_FP_Player_Fora230_Equip_01.MG_FP_Player_Fora230_Equip_01",
+            "label": "MG_FP_Player_Fora230_Equip_01"
+        },
+        "MG_FP_Player_Fora230_Melee_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/smg/Fora230/Melee/MG_FP_Player_Fora230_Melee_01.MG_FP_Player_Fora230_Melee_01",
+            "label": "MG_FP_Player_Fora230_Melee_01"
+        },
+        "MG_FP_Player_Fora230_Shoot_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/smg/Fora230/Shoot/MG_FP_Player_Fora230_Shoot_01.MG_FP_Player_Fora230_Shoot_01",
+            "label": "MG_FP_Player_Fora230_Shoot_01"
+        },
+        "MG_FP_Player_Fora230_Unequip_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/smg/Fora230/Equip/MG_FP_Player_Fora230_Unequip_01.MG_FP_Player_Fora230_Unequip_01",
+            "label": "MG_FP_Player_Fora230_Unequip_01"
+        },
+        "MG_FP_Player_Gp3a_Attach-EnSilencer04_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Attaches/MG_FP_Player_Gp3a_Attach-EnSilencer04_01.MG_FP_Player_Gp3a_Attach-EnSilencer04_01",
+            "label": "MG_FP_Player_Gp3a_Attach-EnSilencer04_01"
+        },
+        "MG_FP_Player_Gp3a_Attach-MagHuge_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Attaches/AttachMag/MG_FP_Player_Gp3a_Attach-MagHuge_01.MG_FP_Player_Gp3a_Attach-MagHuge_01",
+            "label": "MG_FP_Player_Gp3a_Attach-MagHuge_01"
+        },
+        "MG_FP_Player_Gp3a_Attach-MagIncreased_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Attaches/AttachMag/MG_FP_Player_Gp3a_Attach-MagIncreased_01.MG_FP_Player_Gp3a_Attach-MagIncreased_01",
+            "label": "MG_FP_Player_Gp3a_Attach-MagIncreased_01"
+        },
+        "MG_FP_Player_Gp3a_Detach-MagBase_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Attaches/AttachMag/MG_FP_Player_Gp3a_Detach-MagBase_01.MG_FP_Player_Gp3a_Detach-MagBase_01",
+            "label": "MG_FP_Player_Gp3a_Detach-MagBase_01"
+        },
+        "MG_FP_Player_Gp3a_Detach-MagIncreased_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Attaches/AttachMag/MG_FP_Player_Gp3a_Detach-MagIncreased_01.MG_FP_Player_Gp3a_Detach-MagIncreased_01",
+            "label": "MG_FP_Player_Gp3a_Detach-MagIncreased_01"
+        },
+        "MG_FP_Player_Gp3a_Equip_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Equip/MG_FP_Player_Gp3a_Equip_01.MG_FP_Player_Gp3a_Equip_01",
+            "label": "MG_FP_Player_Gp3a_Equip_01"
+        },
+        "MG_FP_Player_Gp3a_FireType-AutoToSingle_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/FireType/MG_FP_Player_Gp3a_FireType-AutoToSingle_01.MG_FP_Player_Gp3a_FireType-AutoToSingle_01",
+            "label": "MG_FP_Player_Gp3a_FireType-AutoToSingle_01"
+        },
+        "MG_FP_Player_Gp3a_FireType-SingleToAuto_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/FireType/MG_FP_Player_Gp3a_FireType-SingleToAuto_01.MG_FP_Player_Gp3a_FireType-SingleToAuto_01",
+            "label": "MG_FP_Player_Gp3a_FireType-SingleToAuto_01"
+        },
+        "MG_FP_Player_Gp3a_Melee_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Melee/MG_FP_Player_Gp3a_Melee_01.MG_FP_Player_Gp3a_Melee_01",
+            "label": "MG_FP_Player_Gp3a_Melee_01"
+        },
+        "MG_FP_Player_Gp3a_Reload-MagDefault_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Reload/MG_FP_Player_Gp3a_Reload-MagDefault_01.MG_FP_Player_Gp3a_Reload-MagDefault_01",
+            "label": "MG_FP_Player_Gp3a_Reload-MagDefault_01"
+        },
+        "MG_FP_Player_Gp3a_Reload-MagDefault_Tactical_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Reload/MG_FP_Player_Gp3a_Reload-MagDefault_Tactical_01.MG_FP_Player_Gp3a_Reload-MagDefault_Tactical_01",
+            "label": "MG_FP_Player_Gp3a_Reload-MagDefault_Tactical_01"
+        },
+        "MG_FP_Player_Gp3a_Reload-MagHuge_Tactical_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Reload/MG_FP_Player_Gp3a_Reload-MagHuge_Tactical_01.MG_FP_Player_Gp3a_Reload-MagHuge_Tactical_01",
+            "label": "MG_FP_Player_Gp3a_Reload-MagHuge_Tactical_01"
+        },
+        "MG_FP_Player_Gp3a_Reload-MagIncreased_Tactical_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Reload/MG_FP_Player_Gp3a_Reload-MagIncreased_Tactical_01.MG_FP_Player_Gp3a_Reload-MagIncreased_Tactical_01",
+            "label": "MG_FP_Player_Gp3a_Reload-MagIncreased_Tactical_01"
+        },
+        "MG_FP_Player_Gp3a_Shoot_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Shoot/MG_FP_Player_Gp3a_Shoot_01.MG_FP_Player_Gp3a_Shoot_01",
+            "label": "MG_FP_Player_Gp3a_Shoot_01"
+        },
+        "MG_FP_Player_Gp3a_Unequip_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/GP3A/Equip/MG_FP_Player_Gp3a_Unequip_01.MG_FP_Player_Gp3a_Unequip_01",
+            "label": "MG_FP_Player_Gp3a_Unequip_01"
+        },
+        "MG_FP_Player_Gvintar_Attach-RuColimScope02_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/gvintar/Attaches/MG_FP_Player_Gvintar_Attach-RuColimScope02_01.MG_FP_Player_Gvintar_Attach-RuColimScope02_01",
+            "label": "MG_FP_Player_Gvintar_Attach-RuColimScope02_01"
+        },
         "MG_FP_Player_Knife_NVG-SwitchOff_01": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/NightVisionGoggles/Montages/MG_FP_Player_Knife_NVG-SwitchOff_01.MG_FP_Player_Knife_NVG-SwitchOff_01",
             "label": "MG_FP_Player_Knife_NVG-SwitchOff_01"
@@ -630,6 +794,46 @@
         "MG_FP_Player_Knife_NVG-SwitchOn_01": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/NightVisionGoggles/Montages/MG_FP_Player_Knife_NVG-SwitchOn_01.MG_FP_Player_Knife_NVG-SwitchOn_01",
             "label": "MG_FP_Player_Knife_NVG-SwitchOn_01"
+        },
+        "MG_FP_Player_M16_Attach-EnX3Scope01_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/m16/Attaches/MG_FP_Player_M16_Attach-EnX3Scope01_01.MG_FP_Player_M16_Attach-EnX3Scope01_01",
+            "label": "MG_FP_Player_M16_Attach-EnX3Scope01_01"
+        },
+        "MG_FP_Player_SKP_Attach-MagIncreased_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Attaches/AttachMag/MG_FP_Player_SKP_Attach-MagIncreased_01.MG_FP_Player_SKP_Attach-MagIncreased_01",
+            "label": "MG_FP_Player_SKP_Attach-MagIncreased_01"
+        },
+        "MG_FP_Player_SKP_Detach-MagBase_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Attaches/AttachMag/MG_FP_Player_SKP_Detach-MagBase_01.MG_FP_Player_SKP_Detach-MagBase_01",
+            "label": "MG_FP_Player_SKP_Detach-MagBase_01"
+        },
+        "MG_FP_Player_Skp_Equip_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Equip/MG_FP_Player_Skp_Equip_01.MG_FP_Player_Skp_Equip_01",
+            "label": "MG_FP_Player_Skp_Equip_01"
+        },
+        "MG_FP_Player_Skp_Melee_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Melee/MG_FP_Player_Skp_Melee_01.MG_FP_Player_Skp_Melee_01",
+            "label": "MG_FP_Player_Skp_Melee_01"
+        },
+        "MG_FP_Player_Skp_Reload-MagDefault_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Reload/MG_FP_Player_Skp_Reload-MagDefault_01.MG_FP_Player_Skp_Reload-MagDefault_01",
+            "label": "MG_FP_Player_Skp_Reload-MagDefault_01"
+        },
+        "MG_FP_Player_Skp_Reload-MagDefault_Tactical_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Reload/MG_FP_Player_Skp_Reload-MagDefault_Tactical_01.MG_FP_Player_Skp_Reload-MagDefault_Tactical_01",
+            "label": "MG_FP_Player_Skp_Reload-MagDefault_Tactical_01"
+        },
+        "MG_FP_Player_Skp_Reload-MagIncreased_Tactical_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Reload/MG_FP_Player_Skp_Reload-MagIncreased_Tactical_01.MG_FP_Player_Skp_Reload-MagIncreased_Tactical_01",
+            "label": "MG_FP_Player_Skp_Reload-MagIncreased_Tactical_01"
+        },
+        "MG_FP_Player_Skp_Shoot_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Shoot/MG_FP_Player_Skp_Shoot_01.MG_FP_Player_Skp_Shoot_01",
+            "label": "MG_FP_Player_Skp_Shoot_01"
+        },
+        "MG_FP_Player_Skp_Unequip_01": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/dmr/skp/Equip/MG_FP_Player_Skp_Unequip_01.MG_FP_Player_Skp_Unequip_01",
+            "label": "MG_FP_Player_Skp_Unequip_01"
         },
         "MG_fp_BedOnBed": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/contextual_action/MG_fp_BedOnBed.MG_fp_BedOnBed",
@@ -1885,25 +2089,89 @@
         },
         "MG_fp_bh_button_green_lift": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/LaunchButton/launch_button_03/MG_fp_bh_button_green_lift.MG_fp_bh_button_green_lift",
-            "label": "MG_fp_bh_button_green_lift"
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 3,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_bh_button_green_lift",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
         },
         "MG_fp_bh_button_hor_160_01": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/LaunchButton/launch_button_02/MG_fp_bh_button_hor_160_01.MG_fp_bh_button_hor_160_01",
-            "label": "MG_fp_bh_button_hor_160_01"
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 3,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_bh_button_hor_160_01",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
         },
         "MG_fp_bh_button_hor_80": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/LaunchButton/launch_button_01/MG_fp_bh_button_hor_80.MG_fp_bh_button_hor_80",
-            "label": "MG_fp_bh_button_hor_80"
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 3,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_bh_button_hor_80",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
         },
         "MG_fp_bh_button_red_lift": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/LaunchButton/launch_button_03/MG_fp_bh_button_red_lift.MG_fp_bh_button_red_lift",
-            "label": "MG_fp_bh_button_red_lift"
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 3,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_bh_button_red_lift",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
         },
         "MG_fp_bh_cardlock_open": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/ElectricLock/electrick_lock_02/AnimMontages/MG_fp_bh_cardlock_open.MG_fp_bh_cardlock_open",
             "handsWhenActive": 2,
             "handsWhenActivePriority": "0",
-            "inputWhenActive": 1,
+            "inputWhenActive": 3,
             "inputWhenActivePriority": "0",
             "label": "MG_fp_bh_cardlock_open",
             "leftArmWhenActive": 1,
@@ -1923,7 +2191,7 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/MutantLooting/AnimMontages/MG_fp_bh_creaturestash_looting_common.MG_fp_bh_creaturestash_looting_common",
             "handsWhenActive": 2,
             "handsWhenActivePriority": "0",
-            "inputWhenActive": 1,
+            "inputWhenActive": 3,
             "inputWhenActivePriority": "0",
             "label": "MG_fp_bh_creaturestash_looting_common",
             "leftArmWhenActive": 1,
@@ -1967,7 +2235,7 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/Hatch/MG_fp_bh_hatch_valve_open.MG_fp_bh_hatch_valve_open",
             "handsWhenActive": 2,
             "handsWhenActivePriority": "0",
-            "inputWhenActive": 1,
+            "inputWhenActive": 3,
             "inputWhenActivePriority": "0",
             "label": "MG_fp_bh_hatch_valve_open",
             "leftArmWhenActive": 1,
@@ -1989,19 +2257,83 @@
         },
         "MG_fp_bh_lever_big_hor_up_0": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/KnifeSwitch/knife_switch_03/MG_fp_bh_lever_big_hor_up_0.MG_fp_bh_lever_big_hor_up_0",
-            "label": "MG_fp_bh_lever_big_hor_up_0"
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 3,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_bh_lever_big_hor_up_0",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
         },
         "MG_fp_bh_lever_small_hor_up_80": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/KnifeSwitch/knife_switch_02/MG_fp_bh_lever_small_hor_up_80.MG_fp_bh_lever_small_hor_up_80",
-            "label": "MG_fp_bh_lever_small_hor_up_80"
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 3,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_bh_lever_small_hor_up_80",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
         },
         "MG_fp_bh_lever_small_ver_down_160": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/KnifeSwitch/knife_switch_01/MG_fp_bh_lever_small_ver_down_160.MG_fp_bh_lever_small_ver_down_160",
-            "label": "MG_fp_bh_lever_small_ver_down_160"
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 3,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_bh_lever_small_ver_down_160",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
         },
         "MG_fp_bh_lever_small_ver_up_160": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/Interactables/KnifeSwitch/knife_switch_01/MG_fp_bh_lever_small_ver_up_160.MG_fp_bh_lever_small_ver_up_160",
-            "label": "MG_fp_bh_lever_small_ver_up_160"
+            "handsWhenActive": 2,
+            "handsWhenActivePriority": "0",
+            "inputWhenActive": 3,
+            "inputWhenActivePriority": "0",
+            "label": "MG_fp_bh_lever_small_ver_up_160",
+            "leftArmWhenActive": 1,
+            "leftArmWhenActivePriority": "0",
+            "motionSicknessCompensationWhenActive": 1,
+            "motionSicknessCompensationWhenActivePriority": "0",
+            "pawnArmBonesWhenActive": 3,
+            "pawnArmBonesWhenActivePriority": "0",
+            "pawnArmsWhenActive": 3,
+            "pawnArmsWhenActivePriority": "0",
+            "pawnBodyWhenActive": 1,
+            "pawnBodyWhenActivePriority": "0",
+            "rightArmWhenActive": 1,
+            "rightArmWhenActivePriority": "0"
         },
         "MG_fp_bh_lowcrouch_jump_end": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/bh/lowcrouch/jump/MG_fp_bh_lowcrouch_jump_end.MG_fp_bh_lowcrouch_jump_end",
@@ -2431,6 +2763,10 @@
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
         },
+        "MG_fp_d12-Defender_reload_increased": {
+            "class_name": "AnimMontage /S2_DLC1/Animations/Player/AnimSequences/shg/d12/Reload/MG_fp_d12-Defender_reload_increased.MG_fp_d12-Defender_reload_increased",
+            "label": "MG_fp_d12-Defender_reload_increased"
+        },
         "MG_fp_d12_equip": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/d12/Equip/MG_fp_d12_equip.MG_fp_d12_equip",
             "label": "MG_fp_d12_equip"
@@ -2478,6 +2814,10 @@
         "MG_fp_d12_mag_increased_attach": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/d12/Attaches/AttachMag/MG_fp_d12_mag_increased_attach.MG_fp_d12_mag_increased_attach",
             "label": "MG_fp_d12_mag_increased_attach"
+        },
+        "MG_fp_d12_mag_increased_detach": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/d12/Attaches/AttachMag/MG_fp_d12_mag_increased_detach.MG_fp_d12_mag_increased_detach",
+            "label": "MG_fp_d12_mag_increased_detach"
         },
         "MG_fp_d12_mag_large_attach": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/d12/Attaches/AttachMag/MG_fp_d12_mag_large_attach.MG_fp_d12_mag_large_attach",
@@ -2618,6 +2958,10 @@
             "pawnBodyWhenActivePriority": "0",
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
+        },
+        "MG_fp_death_by_mutants_common": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/player_death/death_by_mutants/MG_fp_death_by_mutants_common.MG_fp_death_by_mutants_common",
+            "label": "MG_fp_death_by_mutants_common"
         },
         "MG_fp_death_by_water": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/player_death/death_by_water/MG_fp_death_by_water.MG_fp_death_by_water",
@@ -2967,6 +3311,10 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/dnipro/Attaches/AttachMag/MG_fp_dnipro_mag_paired_attach.MG_fp_dnipro_mag_paired_attach",
             "label": "MG_fp_dnipro_mag_paired_attach"
         },
+        "MG_fp_dnipro_mag_paired_detach": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/dnipro/Attaches/AttachMag/MG_fp_dnipro_mag_paired_detach.MG_fp_dnipro_mag_paired_detach",
+            "label": "MG_fp_dnipro_mag_paired_detach"
+        },
         "MG_fp_dnipro_melee": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/dnipro/Melee/MG_fp_dnipro_melee.MG_fp_dnipro_melee",
             "label": "MG_fp_dnipro_melee"
@@ -3259,6 +3607,10 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/fora/Shoot/MG_fp_fora_shoot.MG_fp_fora_shoot",
             "label": "MG_fp_fora_shoot"
         },
+        "MG_fp_fora_sight_holographic_attach": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/fora/Attaches/Scopes/MG_fp_fora_sight_holographic_attach.MG_fp_fora_sight_holographic_attach",
+            "label": "MG_fp_fora_sight_holographic_attach"
+        },
         "MG_fp_fora_sight_x2_attach": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/fora/Attaches/Scopes/MG_fp_fora_sight_x2_attach.MG_fp_fora_sight_x2_attach",
             "label": "MG_fp_fora_sight_x2_attach"
@@ -3286,6 +3638,10 @@
         "MG_fp_gauss_reload": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/sr/gauss/Reload/MG_fp_gauss_reload.MG_fp_gauss_reload",
             "label": "MG_fp_gauss_reload"
+        },
+        "MG_fp_gauss_reload_tactical": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/sr/gauss/Reload/MG_fp_gauss_reload_tactical.MG_fp_gauss_reload_tactical",
+            "label": "MG_fp_gauss_reload_tactical"
         },
         "MG_fp_gauss_shoot": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/sr/gauss/Shoot/MG_fp_gauss_shoot.MG_fp_gauss_shoot",
@@ -3539,6 +3895,10 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/grim/Attaches/Attach_mag/MG_fp_grim_mag_increased_attach.MG_fp_grim_mag_increased_attach",
             "label": "MG_fp_grim_mag_increased_attach"
         },
+        "MG_fp_grim_mag_increased_detach": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/grim/Attaches/Attach_mag/MG_fp_grim_mag_increased_detach.MG_fp_grim_mag_increased_detach",
+            "label": "MG_fp_grim_mag_increased_detach"
+        },
         "MG_fp_grim_mag_large_attach": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/grim/Attaches/Attach_mag/MG_fp_grim_mag_large_attach.MG_fp_grim_mag_large_attach",
             "handsWhenActive": 1,
@@ -3586,6 +3946,10 @@
         "MG_fp_grim_reload": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/grim/Reload/MG_fp_grim_reload.MG_fp_grim_reload",
             "label": "MG_fp_grim_reload"
+        },
+        "MG_fp_grim_reload_increased_tactical": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/grim/Reload/MG_fp_grim_reload_increased_tactical.MG_fp_grim_reload_increased_tactical",
+            "label": "MG_fp_grim_reload_increased_tactical"
         },
         "MG_fp_grim_reload_large": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/grim/Reload/MG_fp_grim_reload_large.MG_fp_grim_reload_large",
@@ -4171,6 +4535,10 @@
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
         },
+        "MG_fp_kharod_mag_increased_attach_Grenlaunch": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Attaches/AttachMag/MG_fp_kharod_mag_increased_attach_Grenlaunch.MG_fp_kharod_mag_increased_attach_Grenlaunch",
+            "label": "MG_fp_kharod_mag_increased_attach_Grenlaunch"
+        },
         "MG_fp_kharod_mag_increased_detach": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Attaches/AttachMag/MG_fp_kharod_mag_increased_detach.MG_fp_kharod_mag_increased_detach",
             "handsWhenActive": 1,
@@ -4222,6 +4590,10 @@
         "MG_fp_kharod_mag_paired_detach": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Attaches/AttachMag/MG_fp_kharod_mag_paired_detach.MG_fp_kharod_mag_paired_detach",
             "label": "MG_fp_kharod_mag_paired_detach"
+        },
+        "MG_fp_kharod_mag_paired_detach_Grenlaunch_shifted": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Attaches/AttachMag/MG_fp_kharod_mag_paired_detach_Grenlaunch_shifted.MG_fp_kharod_mag_paired_detach_Grenlaunch_shifted",
+            "label": "MG_fp_kharod_mag_paired_detach_Grenlaunch_shifted"
         },
         "MG_fp_kharod_mag_paired_detach_shifted": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/kharod/Attaches/AttachMag/MG_fp_kharod_mag_paired_detach_shifted.MG_fp_kharod_mag_paired_detach_shifted",
@@ -4374,6 +4746,10 @@
             "pawnBodyWhenActivePriority": "0",
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
+        },
+        "MG_fp_knife_melee_stab": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/knifes/Melee/MG_fp_knife_melee_stab.MG_fp_knife_melee_stab",
+            "label": "MG_fp_knife_melee_stab"
         },
         "MG_fp_knife_stealth_kill_bh_relax": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/knifes/Stealth_kills/MG_fp_knife_stealth_kill_bh_relax.MG_fp_knife_stealth_kill_bh_relax",
@@ -4939,9 +5315,17 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/m16/Reload/MG_fp_m16_reload_BuckGrenLaunch.MG_fp_m16_reload_BuckGrenLaunch",
             "label": "MG_fp_m16_reload_BuckGrenLaunch"
         },
+        "MG_fp_m16_reload_large": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/m16/Reload/MG_fp_m16_reload_large.MG_fp_m16_reload_large",
+            "label": "MG_fp_m16_reload_large"
+        },
         "MG_fp_m16_reload_large_BuckGrenLaunch": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/m16/Reload/MG_fp_m16_reload_large_BuckGrenLaunch.MG_fp_m16_reload_large_BuckGrenLaunch",
             "label": "MG_fp_m16_reload_large_BuckGrenLaunch"
+        },
+        "MG_fp_m16_reload_large_tactical": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/m16/Reload/MG_fp_m16_reload_large_tactical.MG_fp_m16_reload_large_tactical",
+            "label": "MG_fp_m16_reload_large_tactical"
         },
         "MG_fp_m16_reload_large_tactical_BuckGrenLaunch": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/ar/m16/Reload/MG_fp_m16_reload_large_tactical_BuckGrenLaunch.MG_fp_m16_reload_large_tactical_BuckGrenLaunch",
@@ -5891,6 +6275,10 @@
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/ram2/Reload/MG_fp_ram2_reload.MG_fp_ram2_reload",
             "label": "MG_fp_ram2_reload"
         },
+        "MG_fp_ram2_reload_single_bullet": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/ram2/Reload/MG_fp_ram2_reload_single_bullet.MG_fp_ram2_reload_single_bullet",
+            "label": "MG_fp_ram2_reload_single_bullet"
+        },
         "MG_fp_ram2_reload_tactical": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/ram2/Reload/MG_fp_ram2_reload_tactical.MG_fp_ram2_reload_tactical",
             "handsWhenActive": 1,
@@ -6119,6 +6507,10 @@
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
         },
+        "MG_fp_spsa_empty_click": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/spsa/EmptyClick/MG_fp_spsa_empty_click.MG_fp_spsa_empty_click",
+            "label": "MG_fp_spsa_empty_click"
+        },
         "MG_fp_spsa_equip": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/spsa/Equip/MG_fp_spsa_equip.MG_fp_spsa_equip",
             "label": "MG_fp_spsa_equip"
@@ -6146,6 +6538,10 @@
             "pawnBodyWhenActivePriority": "0",
             "rightArmWhenActive": 1,
             "rightArmWhenActivePriority": "0"
+        },
+        "MG_fp_spsa_reload_single_bullet": {
+            "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/spsa/Reload/MG_fp_spsa_reload_single_bullet.MG_fp_spsa_reload_single_bullet",
+            "label": "MG_fp_spsa_reload_single_bullet"
         },
         "MG_fp_spsa_reload_tactical": {
             "class_name": "AnimMontage /Game/_STALKER2/Animations/Player/AnimSequences/shg/spsa/Reload/MG_fp_spsa_reload_tactical.MG_fp_spsa_reload_tactical",

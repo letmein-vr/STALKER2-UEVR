@@ -459,11 +459,28 @@ function M.initializeBones(skeletalMeshComponent, initialTransform)
 			-- print(rotation.Pitch,rotation.Yaw,rotation.Roll)
 			-- print(location.X,location.Y,location.Z)
 			-- print(scale.X,scale.Y,scale.Z)
-			local localTransform = kismet_math_library:MakeTransform(location, rotation, scale)
-			M.setBoneSpaceLocalTransform(skeletalMeshComponent, uevrUtils.fname_from_string(boneName), localTransform)
+			-- NOTE: do not use kismet_math_library:MakeTransform(location, rotation, scale)
+			-- here. Under newer UEVR builds, FVector/FRotator UFunction parameters no
+			-- longer accept uevrlib's generic StructObject wrappers ("Invalid argument
+			-- type for FVector"). FTransform struct objects built via direct field
+			-- writes (uevrUtils.get_transform) still marshal fine, so build it that way.
+			if rotation ~= nil and location ~= nil and scale ~= nil then
+				local localTransform = uevrUtils.get_transform(location, nil, scale)
+				if localTransform ~= nil then
+					local q = uevrUtils.quatFromRotator(rotation.Pitch, rotation.Yaw, rotation.Roll)
+					if q ~= nil then
+						localTransform.Rotation.X = q.x
+						localTransform.Rotation.Y = q.y
+						localTransform.Rotation.Z = q.z
+						localTransform.Rotation.W = q.w
+					end
+					M.setBoneSpaceLocalTransform(skeletalMeshComponent, uevrUtils.fname_from_string(boneName), localTransform)
+				end
+			else
+				M.print("initializeBones: skipping bone " .. tostring(boneName) .. " (nil transform part)", LogLevel.Warning)
+			end
 		end
 	end
-
 end
 
 function M.initialize(animID, skeletalMeshComponent)
@@ -496,6 +513,17 @@ function M.add(animID, skeletalMeshComponent, animationDefinitions)
 	animations[animID] = {}
 	animations[animID]["component"] = skeletalMeshComponent
 	animations[animID]["definitions"] = animationDefinitions
+end
+
+-- Drops the component behind animID and cancels its running lerps ("<animID>-<animName>") so a
+-- destroyed mesh (IK rig rebuild) is never written to again. Used by hands_animation.lua's
+-- destroyAnimationHandler. Ported from the OW2 profile (2026-10-04).
+function M.detachComponent(animID)
+	if animID == nil then return end
+	uevrUtils.cancelLerpsWithPrefix(tostring(animID) .. "-")
+	if animations and animations[animID] ~= nil then
+		animations[animID]["component"] = nil
+	end
 end
 
 -- function lerpCallback(animID, animName, alpha)

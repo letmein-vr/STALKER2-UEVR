@@ -1,31 +1,40 @@
 {
     "alignConfidenceThreshold": 0.8,
-    "minAngularDeviation": 50,
+    "minAngularDeviation": 45,
     "uevr_input_active_profile": 1,
     "uevr_input_adjustForAnimation": false,
     "uevr_input_adjustForEyeOffset": false,
+    "uevr_input_aimCameraList": 1,
     "uevr_input_aimMethod": 2,
     "uevr_input_eyeOffset": 0,
     "uevr_input_fixSpatialAudio": true,
     "uevr_input_headBones": 1,
     "uevr_input_headOffset": [
+        0.4000000059604645,
         0.0,
-        0.0,
-        -20.0
+        -20.399999618530273
     ],
     "uevr_input_isDisabledOverride": false,
+    "uevr_input_optimizeBodyRotationCalculations": false,
+    "uevr_input_orientRotationToMovement": 1,
     "uevr_input_pawnControlRotationCameraList": 1,
     "uevr_input_pawnPositionAnimationScale": 0.2,
-    "uevr_input_pawnPositionMode": 1,
+    "uevr_input_pawnPositionMode": 2,
     "uevr_input_pawnPositionSweepMovement": true,
+    "uevr_input_pawnRotationLockedSmoothTime": 0.07500000298023224,
     "uevr_input_pawnRotationMode": 5,
     "uevr_input_rename_profile_input": "",
     "uevr_input_rootOffset": [
-        0.0,
-        0.0,
-        0.0
+        -2.200000047683716,
+        -0.4000000059604645,
+        6.900000095367432
     ],
-    "uevr_input_smoothTurnSpeed": 69,
+    "uevr_input_smoothTurnSpeed": 35,
     "uevr_input_snapAngle": 30,
+    "uevr_input_useControllerDesiredRotation": 1,
+    "uevr_input_useControllerRotationPitch": 1,
+    "uevr_input_useControllerRotationRoll": 1,
+    "uevr_input_useControllerRotationYaw": 3,
+    "uevr_input_usePawnControlRotation": 3,
     "uevr_input_useSnapTurn": false
 }

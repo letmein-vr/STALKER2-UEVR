@@ -93,6 +93,20 @@ local parameters = {
     hideAnimationArms = false,
 	bodyMeshFOVFixID = "",
 	armsMeshFOVFixID = "",
+	basePawnName = "Pawn",
+	-- Ported 2026-09-05 from the newer uevrlib pawn.lua (UEVR Libs/scripts/libs) to fix a
+	-- black-silhouette artifact: bRenderInMainPass=false alone leaves bRenderInDepthPass=true,
+	-- so the "hidden" mesh still writes depth (and, live-confirmed, a raw reflection write to
+	-- bRenderInDepthPass has no visible effect - it doesn't dirty the render state/recreate the
+	-- scene proxy; only the real SetRenderInDepthPass() UFunction call does). Each method below
+	-- is independently togglable so a game that DOES need Visibility/HiddenInGame can enable them
+	-- without code changes.
+	hideSettingsVisibility = false,
+	hideSettingsVisibilityPropagate = false,
+	hideSettingsHiddenInGame = false,
+	hideSettingsHiddenInGamePropagate = false,
+	hideSettingsRenderInMainPass = true,
+	hideSettingsRenderInDepthPass = true,
 }
 -- local parameters = {
 --     _profileLabels = {
@@ -204,9 +218,18 @@ local function doHideBodyMesh(val)
 	local mesh = M.getBodyMesh()
 	if mesh ~= nil then
 		M.print("Hiding body mesh: " .. tostring(val))
-		-- mesh:SetVisibility(not val, true)
-		-- mesh:SetHiddenInGame(val, true)
-		mesh:call("SetRenderInMainPass", not val)
+		if getParameter("hideSettingsVisibility") == true then
+			mesh:SetVisibility(not val, getParameter("hideSettingsVisibilityPropagate") == true)
+		end
+		if getParameter("hideSettingsHiddenInGame") == true then
+			mesh:SetHiddenInGame(val, getParameter("hideSettingsHiddenInGamePropagate") == true)
+		end
+		if getParameter("hideSettingsRenderInMainPass") ~= false then
+			mesh:call("SetRenderInMainPass", not val)
+		end
+		if getParameter("hideSettingsRenderInDepthPass") == true then
+			mesh:call("SetRenderInDepthPass", not val)
+		end
 		fixFOV()
 	end
 end
@@ -215,9 +238,18 @@ local function doHideArms(val)
 	local mesh = M.getArmsMesh()
 	if mesh ~= nil then
 		M.print("Hiding arms mesh: " .. tostring(val))
-		--mesh:SetVisibility(not val, true)
-		--mesh:SetHiddenInGame(val, true)
-		mesh:call("SetRenderInMainPass", not val)
+		if getParameter("hideSettingsVisibility") == true then
+			mesh:SetVisibility(not val, getParameter("hideSettingsVisibilityPropagate") == true)
+		end
+		if getParameter("hideSettingsHiddenInGame") == true then
+			mesh:SetHiddenInGame(val, getParameter("hideSettingsHiddenInGamePropagate") == true)
+		end
+		if getParameter("hideSettingsRenderInMainPass") ~= false then
+			mesh:call("SetRenderInMainPass", not val)
+		end
+		if getParameter("hideSettingsRenderInDepthPass") == true then
+			mesh:call("SetRenderInDepthPass", not val)
+		end
 		fixFOV()
 	end
 end
@@ -226,9 +258,18 @@ local function doHideAnimationArms(val)
 	local mesh = M.getArmsAnimationMesh()
 	if mesh ~= nil then
 		M.print("Hiding animation arms mesh: " .. tostring(val))
-		-- mesh:SetVisibility(not val, true)
-		-- mesh:SetHiddenInGame(val, true)
-		mesh:call("SetRenderInMainPass", not val)
+		if getParameter("hideSettingsVisibility") == true then
+			mesh:SetVisibility(not val, getParameter("hideSettingsVisibilityPropagate") == true)
+		end
+		if getParameter("hideSettingsHiddenInGame") == true then
+			mesh:SetHiddenInGame(val, getParameter("hideSettingsHiddenInGamePropagate") == true)
+		end
+		if getParameter("hideSettingsRenderInMainPass") ~= false then
+			mesh:call("SetRenderInMainPass", not val)
+		end
+		if getParameter("hideSettingsRenderInDepthPass") == true then
+			mesh:call("SetRenderInDepthPass", not val)
+		end
 		fixFOV()
 	end
 end
@@ -308,6 +349,14 @@ end
 function M.setBodyMeshName(val)
 	--bodyMeshName = "Pawn." .. val
 	saveParameter("bodyMeshName", "Pawn." .. val)
+end
+
+function M.getPawnBaseName()
+	return getParameter("basePawnName") or "Pawn"
+end
+
+function M.getPawn()
+	return uevrUtils.getObjectFromDescriptor(M.getPawnBaseName())
 end
 
 function M.getBodyMesh()
@@ -452,12 +501,29 @@ uevrUtils.setInterval(100, function()
 
 end)
 
+function M.reset()
+	pawnState = {}
+end
+
 uevrUtils.setInterval(2000, function()
 	fixFOV()
 end)
 
+-- Ported 2026-09-05 from the newer uevrlib pawn.lua: if using Visibility or HiddenInGame to hide
+-- meshes, there's a very good chance the game will override our settings at some point, so we have
+-- to keep reapplying them to ensure they stay hidden. The "render in pass" methods are less likely
+-- to cause issues so we don't waste time re-polling those. No-ops while both hideSettingsVisibility
+-- and hideSettingsHiddenInGame stay false (this project's current default).
+uevrUtils.setInterval(300, function()
+	if getParameter("hideSettingsVisibility") == true or getParameter("hideSettingsHiddenInGame") == true then
+		pawnState.hideArmsMesh = nil
+		pawnState.hideAnimationArms = nil
+		pawnState.hideBodyMesh = nil
+	end
+end)
+
 uevrUtils.registerPreLevelChangeCallback(function(level)
-	pawnState = {}
+	M.reset()
 end)
 
 return M

@@ -8,6 +8,7 @@ print("[UEVR] Reloaded Config. Conversation Threshold: " .. tostring(Config.conv
 -- OpenXR / VR Params
 local vr = uevr.params.vr
 local thumbrestLeftHandle = vr.get_action_handle("/actions/default/in/ThumbrestTouchLeft")
+local thumbrestRightHandle = vr.get_action_handle("/actions/default/in/ThumbrestTouchRight")
 
 local motionControllerActors = require("gestures.motioncontrolleractors")
 package.loaded["stalker2.gamestate"] = nil -- Force reload gamestate
@@ -20,10 +21,49 @@ require("Base.basic")
 local scopeController = require("Base.scope") -- Require the scope controller
 local uevrUtils = require("libs/uevr_utils") -- REQUIRED for attachment logic
 local magReload = require("stalker2.mag_reload") -- REQUIRED for attachment logic
+local ptmReload = require("stalker2.ptm_manual_reload") -- True Manual Reload for PTM
+local rackSlide = require("stalker2.rack_slide") -- rack to chamber after an empty manual reload (driven by ptmReload)
+require("stalker2.muzzle_flash_fix") -- keeps the muzzle flash on the barrel (the game offsets it per shot)
+local gestureKeys = require("stalker2.gesturekeys") -- analog quiet window while a gesture key is delivered
+local knifeMelee = require("stalker2.knife_melee") -- physical knife swings -> RT, sped-up melee montage
+local physicalThrow = require("stalker2.physical_throw") -- grenades / bolts: hold RT, swing, release
+local bodyItems = require("stalker2.body_items") -- equipped sidearm / detector shown at their body zones
 local zoneDebug = require("stalker2.zone_debug")
+-- Body gesture zone markers + live tuning. Loaded behind pcall with a stub fallback: it is a
+-- dev tool, so a fault in it must never stop Entry.lua (and with it the whole profile) loading.
+local bodyZoneDebugOk, bodyZoneDebug = pcall(require, "stalker2.body_zone_debug")
+if not bodyZoneDebugOk then
+    local loadError = tostring(bodyZoneDebug)
+    print("[BodyZoneDebug] failed to load: " .. loadError)
+    bodyZoneDebug = {
+        update = function() end,
+        onLevelChange = function() end,
+        destroy = function() end,
+        drawUI = function() imgui.text("body_zone_debug failed to load: " .. loadError) end,
+    }
+end
+-- VR binoculars (two PiP lens discs + scene capture). Same pcall-with-stub pattern: a fault in it
+-- must never stop Entry.lua loading.
+local binocularsOk, binoculars = pcall(require, "stalker2.binoculars")
+if not binocularsOk then
+    local loadError = tostring(binoculars)
+    print("[Binoculars] failed to load: " .. loadError)
+    binoculars = {
+        update = function() end,
+        on_xinput_get_state = function() end,
+        onLevelChange = function() end,
+        destroy = function() end,
+        isBinocularsMesh = function() return false end,
+        isBinocularsName = function() return false end,
+        drawUI = function() imgui.text("binoculars failed to load: " .. loadError) end,
+    }
+end
+local bodyZonesStanding = require("gestures.bodyzone")       -- for PTM hip-zone check
+local bodyZonesSitting   = require("gestures.bodyzonesitting") -- for PTM hip-zone check (sit mode)
 require("player_collision")
 -- local twoHand   = require("stalker2.two_hand")   -- Collision-based two-hand aiming
 local hands = require("libs/hands")
+local animation = require("libs/animation")
 local pawnModule = require("libs/pawn")
 local inputModule = require("libs/input")
 local uevrUtils = require("libs/uevr_utils")
@@ -91,8 +131,13 @@ if specificHandPoses then
     }
     
     for key, weaponData in pairs(specificHandPoses) do
-        -- Skip detector poses from this override, they have their own specific finger data
-        if not string.find(key, "sk_detector") and weaponData["off"] then
+        -- Skip detector poses from this override, they have their own specific finger data.
+        -- Skip the RIGHT-hand poses too (right_open_hand, right_grip_knife / _bolt / _grenade): this is a LEFT
+        -- index override, and those tables are applied to the right hand every frame while a knife / bolt /
+        -- grenade is equipped. On the glove hands the right glove's left-finger bones are never seen, but the
+        -- IK rig is ONE mesh with both arms, so the left index finger stayed bent the whole time (2026-10-12,
+        -- read live: jnt_l_hand_index_01/02/03 held exactly these three values).
+        if not string.find(key, "sk_detector") and string.sub(key, 1, 6) ~= "right_" and weaponData["off"] then
              for boneName, rotation in pairs(indexFingerOverrides) do
                  -- Overwrite or add to ensure the finger curves correctly
                  weaponData["off"][boneName] = rotation
@@ -241,9 +286,15 @@ do
     end
 end
 
--- Attachments Config Dev panel disabled (pass false to suppress the overlay UI).
--- The underlying attachment registration and grip animation logic still runs normally.
+-- Attachments Config Dev panel hidden (pass true to show the overlay UI).
 attachments.init(false)
+
+-- Accessories runtime (proximity/montage-driven hand-to-accessory attachment, configured via
+-- the "Accessories" section of the Attachments Config Dev panel above). This module is fully
+-- self-driving once required: it registers its own 300ms proximity-check interval and an
+-- "on_module_montage_change" listener for montage-timed markers. Without this require, the
+-- Accessories UI only edits/saves the JSON — nothing ever reads it back or performs the attach.
+require("libs/accessories")
 
 -- Keep holdingAttachment[dominantHand] in sync with the active grip animation.
 --
@@ -293,7 +344,78 @@ end
 
 
 local lastWeaponMesh = nil
+-- Arms Mode switch (scripts/hands.lua): the new arms start on the controllers, so re-run the equip
+-- path on the next tick to put the weapon hand back on the weapon.
+_G.reattachWeaponHand = function()
+    lastWeaponMesh = nil
+end
+
+-- VR_AimMethod value for the current Arms Mode. IK mode never uses UEVR's HMD aim (1): libs/input.lua drives
+-- the control rotation and the view itself, and UEVR's head aim on top broke head turning after every menu
+-- exit (live read 2026-10-04: works at 0, broken at 1). Every gameplay "1" write is aimMethodFor("1", "0").
+local function isIKArmsMode()
+    return _G.getHandsMode ~= nil and _G.getHandsMode() == 2
+end
+local function aimMethodFor(handsValue, ikValue)
+    if isIKArmsMode() then return ikValue end
+    return handsValue
+end
 local currentWeaponName = nil
+local rKeyInjected = false
+
+-- EXPERIMENT (2026-09-04, extended 2026-09-06): ForegroundFOVEnabled=0 rescan state.
+-- Some weapon skin variants (e.g. Monolith Viper) attach their entire visible mesh as
+-- late-binding "WeaponAttachment*" children AFTER the weapon-equip edge fires - the
+-- AttachChildren walk at equip time misses them entirely, leaving those pieces at the
+-- native ForegroundFOVEnabled=1 (wrong depth). Real player-attached weapon mods
+-- (scopes/sights/silencers - also named "WeaponAttachment*", per a live MCP scan) have
+-- the same problem AND can appear/change at any point during gameplay via weapon
+-- customization, not just right after equip - a fixed-duration post-equip window isn't
+-- enough. fixForegroundFOVRecursive walks the FULL attachment tree (fixMeshFOV's own
+-- includeChildren only goes one level deep) fixing every descendant whose full name
+-- contains "WeaponAttachment", at any depth. The poll below now runs continuously for
+-- as long as a weapon is equipped (not just a 2s window) so mod swaps get caught too;
+-- cheap enough (small tree, idempotent re-apply) to run indefinitely at this cadence.
+local fovFixRescanTick = 0
+local FOV_FIX_RESCAN_INTERVAL_TICKS = 30
+
+local function fixForegroundFOVRecursive(comp, depth)
+    if comp == nil then return end
+    depth = depth or 0
+    if depth > 6 then return end -- guard against unexpectedly deep/cyclic attachment trees
+    local ok, children = pcall(function() return comp.AttachChildren end)
+    if not ok or children == nil then return end
+    for _, child in ipairs(children) do
+        local ok2, name = pcall(function() return child:get_full_name() end)
+        if ok2 and name and string.find(name, "WeaponAttachment", 1, true) then
+            pcall(function()
+                uevrUtils.fixMeshFOV(child, "ForegroundFOVEnabled", 0.0, false, false, false)
+            end)
+        end
+        fixForegroundFOVRecursive(child, depth + 1)
+    end
+end
+
+local function applyForegroundFOVFixExperiment(weaponMesh)
+    pcall(function()
+        if weaponMesh then
+            uevrUtils.fixMeshFOV(weaponMesh, "ForegroundFOVEnabled", 0.0, true, false, false)
+            fixForegroundFOVRecursive(weaponMesh)
+        end
+        local lh = hands.getHandComponent(0)
+        local rh = hands.getHandComponent(1)
+        if lh then
+            uevrUtils.fixMeshFOV(lh, "ForegroundFOVEnabled", 0.0, true, false, false)
+            fixForegroundFOVRecursive(lh)
+        end
+        if rh then
+            uevrUtils.fixMeshFOV(rh, "ForegroundFOVEnabled", 0.0, true, false, false)
+            fixForegroundFOVRecursive(rh)
+        end
+    end)
+end
+
+
 local weaponCheckTimer = 0
 local lastSupportHandState = false
 local lastClimbingState = false
@@ -328,7 +450,13 @@ local cachedLHPose = nil -- Cache the "correct" left hand pose for restoration
 local savedAimMethod = nil  -- Store aim method before climbing
 local lastClimbingState = false  -- Track climbing state changes
 local brightnessDirty = false -- Track if brightness needs saving
+local escapeComboWasActive = false -- Track rising edge for Right thumbrest + Left L3 -> Escape key
+local escapeKeyIsDown = false -- VK_ESCAPE is currently held down by the combo
+local escapeKeyDownTime = 0 -- os.clock() when that keydown was sent
+local ESCAPE_MAX_HOLD = 0.25 -- Force-release the key after this many seconds (stuck-key guard)
 local lastThrowableState = false  -- Track throwable (bolt/knife/grenade) equip state
+local throwableMemoName = nil     -- PERF: memo of the last weapon name classified as throwable-or-not
+local throwableMemoValue = false
 
 
 -- Global flag to suppress item attachment during consumption montages
@@ -467,8 +595,8 @@ local function toggleAttachmentSimulation(enable)
         return 
     end
     
-    local leftHand = hands.getHandComponent(0)
-    if not leftHand then 
+    local leftHand = hands.getHandAttachParent(0) -- glove origin frame, see the mod-mesh attach
+    if not leftHand then
         print("[Simulate] Could not find Left Hand Component")
         isSimulatingAttachment = false
         return 
@@ -502,7 +630,12 @@ local function toggleAttachmentSimulation(enable)
             print("[Simulate] Hijacking attachment: " .. targetName .. " from " .. simulatedAttachmentOriginalSocket)
             
             targetMesh:DetachFromParent(true, true)
-            targetMesh:K2_AttachToComponent(leftHand, uevrUtils.fname_from_string("None"), 2, true) 
+            -- K2_AttachToComponent takes 6 params in this SDK (Parent, SocketName, LocationRule,
+            -- RotationRule, ScaleRule, bWeldSimulatedBodies) - all 6 must be passed explicitly or
+            -- UEVR's generic UFunction bridge zero-inits the missing ones (RotationRule/ScaleRule
+            -- silently become KeepRelative=0 instead of SnapToTarget, and bWeld never gets set,
+            -- leaving a simulated body unwelded to its new parent).
+            targetMesh:K2_AttachToComponent(leftHand, uevrUtils.fname_from_string("None"), 2, 2, 2, true)
             
             attachedModMesh = targetMesh
             isSimulatingAttachment = true
@@ -535,7 +668,8 @@ local function toggleAttachmentSimulation(enable)
              print("[Simulate] Restoring attachment to: " .. simulatedAttachmentOriginalSocket)
              
              attachedModMesh:DetachFromParent(true, true)
-             attachedModMesh:K2_AttachToComponent(simulatedAttachmentOriginalParent, uevrUtils.fname_from_string(simulatedAttachmentOriginalSocket), 2, true)
+             -- 6-param K2_AttachToComponent - see note at the hijack call site above.
+             attachedModMesh:K2_AttachToComponent(simulatedAttachmentOriginalParent, uevrUtils.fname_from_string(simulatedAttachmentOriginalSocket), 2, 2, 2, true)
         end
         
         -- Always cleanup state
@@ -557,18 +691,48 @@ uevrUtils.registerMontageChangeCallback(function(montage, montageName)
         lastPlayedMontageName = montageName
     end
 
+    -- Physical knife melee: speed up the knife melee montages (no-op unless the knife is held).
+    pcall(knifeMelee.onMontageChange, montage, montageName)
+
     -- Check if this is a reload montage
     if montageName and string.lower(montageName):find("reload") then
         isReloadMontageActive = true
-        -- print("Reload montage detected: " .. montageName)
+        -- PTM manual reload: intercept any native reload while PTM is equipped.
+        -- tryInterceptReload checks PTM equipped, stops the native reload montage immediately
+        -- (so AnimNotify_WeaponAction can't fire and replenish ammo), then sets STATE_DROPPING.
+        ptmReload.tryInterceptReload(montage, montageName)
+        -- If tryInterceptReload just activated (auto-reload while 2-handing) or was already active, immediately
+        -- release the support hand from the weapon. The per-tick attach/detach block is
+        -- guarded by 'not ptmReload.isActive()', so it won't run until reload is done,
+        -- meaning the left hand PMC would stay stuck to the gun without this explicit release.
+        if ptmReload.isActive() then
+            local supportHand = 1 - Config.dominantHand
+            hands.attachHandToController(supportHand)
+            hands.setHoldingAttachment(supportHand, false)
+            hands.updateAnimationState(supportHand)
+        end
     else
         isReloadMontageActive = false
     end
     
-    -- Check if this is a magazine attach/detach montage
-    if montageName and montageName:find("_mag_") and (montageName:find("_attach") or montageName:find("_detach")) then
-        isMagazineMontageActive = true
-        -- print("Magazine montage detected: " .. montageName)
+    -- Check if this is a magazine attach/detach montage.
+    -- Two naming conventions coexist in this game's data:
+    --   old/common style: "MG_fp_ak74_mag_base_attach"       (lowercase, underscore-delimited)
+    --   DMR-family style:  "MG_FP_Player_Gp3a_Attach-MagIncreased_01"  (mixed case, hyphen before "Mag")
+    -- so the match is done case-insensitively against bare "mag"/"attach"/"detach" substrings
+    -- rather than the old literal "_mag_"/"_attach"/"_detach". Verified against every mag-containing
+    -- montage name in data/montage_parameters.json: everything else with "mag" in it is a Reload
+    -- montage (already covered separately by isReloadMontageActive, harmless overlap), and the
+    -- DMR scope/silencer attach montages ("Attach-EnColimScope01_01", "Attach-EnSilencer04_01")
+    -- contain no "mag" substring so they still route only through the weapon-mod check below.
+    if montageName then
+        local montageNameLower = string.lower(montageName)
+        if montageNameLower:find("mag", 1, true) and (montageNameLower:find("attach", 1, true) or montageNameLower:find("detach", 1, true)) then
+            isMagazineMontageActive = true
+            -- print("Magazine montage detected: " .. montageName)
+        else
+            isMagazineMontageActive = false
+        end
     else
         isMagazineMontageActive = false
     end
@@ -646,6 +810,42 @@ pawnModule.registerIsPawnArmsHiddenCallback(function()
     return nil, 0  -- Default behavior
 end)
 
+-- Proxy mag / shell hand offsets per weapon VARIANT (2026-10-17). SK_m86000 is a box-mag weapon
+-- (bigmag) or a single-shell tube-fed one under the same mesh name, so one shared offset made one
+-- of the two proxies sit wrong in the left hand. ptmReload.getProxyVariant() names the variant
+-- ("bigmag" / "tube", nil for normal weapons); its offsets live in
+-- profile.ptmMagProxyByVariant[variant], falling back to the shared profile.ptmMagProxyLocation /
+-- Rotation until that variant has been tuned.
+local DEFAULT_PTM_PROXY_LOC = {-4.000, 4.000, -1.000}
+local DEFAULT_PTM_PROXY_ROT = {-35.000, 0.000, 10.000}
+local loadedProxyVariant = nil -- variant whose offsets are in Config.ptmMagProxyLocation / Rotation
+
+local function loadProxyOffsets()
+    local variant = ptmReload.getProxyVariant()
+    local profile = currentWeaponName and Config.weaponProfiles[currentWeaponName] or nil
+    local loc, rot = nil, nil
+    if profile ~= nil then
+        local slot = variant and type(profile.ptmMagProxyByVariant) == "table" and profile.ptmMagProxyByVariant[variant] or nil
+        if slot ~= nil then
+            loc, rot = slot.location, slot.rotation
+        else
+            loc, rot = profile.ptmMagProxyLocation, profile.ptmMagProxyRotation
+        end
+    end
+    loc = loc or DEFAULT_PTM_PROXY_LOC
+    rot = rot or DEFAULT_PTM_PROXY_ROT
+    Config.ptmMagProxyLocation = {loc[1], loc[2], loc[3]}
+    Config.ptmMagProxyRotation = {rot[1], rot[2], rot[3]}
+    loadedProxyVariant = variant
+    pcall(function() ptmReload.setProxyOffset(Config.ptmMagProxyLocation, Config.ptmMagProxyRotation) end)
+end
+
+local function syncProxyVariant()
+    if currentWeaponName and ptmReload.getProxyVariant() ~= loadedProxyVariant then
+        loadProxyOffsets()
+    end
+end
+
 -- Helper to save current settings to profile
 local function saveWeaponProfile()
     if currentWeaponName then
@@ -658,6 +858,23 @@ local function saveWeaponProfile()
         profile.disableReloadAttachment = Config.disableReloadAttachment
         profile.reloadRotation = {Config.reloadHandRotation[1], Config.reloadHandRotation[2], Config.reloadHandRotation[3]}
         profile.reloadLocation = {Config.reloadHandLocation[1], Config.reloadHandLocation[2], Config.reloadHandLocation[3]}
+
+        -- Save ptm mag proxy offsets per weapon, or per variant for weapons that have them
+        -- (loadProxyOffsets). Only into the variant the current values were loaded for: right after a
+        -- variant change they still belong to the other one until the next tick reloads them.
+        local proxyVariant = ptmReload.getProxyVariant()
+        if proxyVariant ~= nil then
+            if proxyVariant == loadedProxyVariant and Config.ptmMagProxyLocation and Config.ptmMagProxyRotation then
+                if type(profile.ptmMagProxyByVariant) ~= "table" then profile.ptmMagProxyByVariant = {} end
+                profile.ptmMagProxyByVariant[proxyVariant] = {
+                    location = {Config.ptmMagProxyLocation[1], Config.ptmMagProxyLocation[2], Config.ptmMagProxyLocation[3]},
+                    rotation = {Config.ptmMagProxyRotation[1], Config.ptmMagProxyRotation[2], Config.ptmMagProxyRotation[3]},
+                }
+            end
+        else
+            if Config.ptmMagProxyLocation then profile.ptmMagProxyLocation = {Config.ptmMagProxyLocation[1], Config.ptmMagProxyLocation[2], Config.ptmMagProxyLocation[3]} end
+            if Config.ptmMagProxyRotation then profile.ptmMagProxyRotation = {Config.ptmMagProxyRotation[1], Config.ptmMagProxyRotation[2], Config.ptmMagProxyRotation[3]} end
+        end
 
         -- Save mag box config from mag_reload module
         local boxCfg = magReload.get_config()
@@ -682,11 +899,34 @@ local function saveWeaponProfile()
             scopeProf.scopeTubeDepth = Config.cylinderTubeDepth
             scopeProf.scopeMagnifier = Config.scopeMagnifier
             scopeProf.scopeBrightness = Config.scopeBrightnessAmplifier
+            scopeProf.scopeExposureBias = Config.scopeExposureBias
         end
         
         Config:markDirty()
         Config:save()
     end
+end
+
+-- Mag/Shell grip pose override (manual reload). While PTM holds the proxy mag/shell the
+-- support hand is posed from Config.ptmMagGripPose; a per-weapon override lives in
+-- Config.weaponProfiles[weapon].magGripPose (persisted by Config:save() like leftHandPose)
+-- so a fat mag, a shell, etc. can each get their own grip. Tuned from the dev panel
+-- ("Mag/Shell Grip Pose (Manual Reload)"); nil = use the default.
+local magGripPreview = false -- dev-panel "preview on left hand" toggle (applies the pose while idle)
+local function getMagGripPose()
+    local profile = currentWeaponName and Config.weaponProfiles[currentWeaponName]
+    if profile and profile.magGripPose then return profile.magGripPose end
+    return Config.ptmMagGripPose
+end
+
+-- Rack grip pose (rack to chamber): the support hand while it holds the slide / handle. Per-weapon
+-- Config.weaponProfiles[weapon].rackGripPose, tuned from Debug Dev Config > Manual Reload Settings >
+-- "Rack Grip Pose"; nil = the weapon's mag grip pose (the pose the rack used before this existed).
+local rackGripPreview = false -- dev-panel "preview on left hand" toggle
+local function getRackGripPose()
+    local profile = currentWeaponName and Config.weaponProfiles[currentWeaponName]
+    if profile and profile.rackGripPose then return profile.rackGripPose end
+    return getMagGripPose()
 end
 
 local lastCutsceneAimState = false  -- tracks aim method override separately from 2D toggle
@@ -700,7 +940,7 @@ local function handleCutscene2DMode()
             uevr.params.vr.set_mod_value("VR_AimMethod", "0")     -- Game aim during cutscene
             uevr.params.vr.set_mod_value("UI_FollowView", "false") -- Disable follow view
         else
-            uevr.params.vr.set_mod_value("VR_AimMethod", "1")     -- Restore HMD aim
+            uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))     -- Restore HMD aim (IK: Game aim, as the old IK codebase)
             uevr.params.vr.set_mod_value("UI_FollowView", "true")  -- Restore follow view
         end
         lastCutsceneAimState = isAnimPlaying
@@ -725,14 +965,30 @@ local function handleCutscene2DMode()
     end
 end
 
+
+
 uevr.sdk.callbacks.on_pre_engine_tick(
     function(engine, delta)
         engineTickCount = engineTickCount + 1
 
-        if gameState:IsLevelChanged(engine) then
+
+
+        -- Own consumer key: Base/scope.lua polls the same detector earlier in the tick and
+        -- used to consume the edge, so this branch never ran (see gamestate.lua).
+        if gameState:IsLevelChanged(engine, "entry") then
             print("Level changed, resetting game state and motion controllers")
+            -- Release before Reset(): GestureBase:Reset() zeroes wasActive, after which
+            -- JustDeactivated() can never fire, so any gesture holding a key DOWN right
+            -- now would lose its SendKeyUp permanently and leave that key actuated in
+            -- UE's input system for the rest of the session.
+            gameState:ReleaseAllKeys()
             currentPreset:Reset()
-            motionControllerActors:Reset() -- Reset the motion controller actors
+            motionControllerActors:Invalidate() -- forget (never touch) the old-world actors; Update() respawns them
+            bodyZoneDebug.onLevelChange() -- forget (never touch) old-world debug components
+            pcall(bodyItems.onLevelChange) -- same for the items shown on the body
+            pcall(physicalThrow.onLevelChange) -- and for a throw in flight (projectile, parked camera)
+            pcall(binoculars.onLevelChange) -- same: old-world lens discs/capture are gone with the pawn
+            pcall(ptmReload.onLevelChange) -- and the reload montage / proxy mesh caches (/Game assets, freed on loads)
             gamepadState:Reset()
             -- Reset aim-method state machine so stale lastMenuState from the previous
             -- session doesn't suppress the menu-exit enforce window on load.
@@ -744,12 +1000,39 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             -- Force HMD aim immediately and hold it for 60 ticks (~1 s at 60 Hz).
             -- This stops the exo spawn-animation or any other load-time montage from
             -- briefly setting VR_AimMethod=0 and causing UEVR to lock in a wrong yaw.
-            uevr.params.vr.set_mod_value("VR_AimMethod", "1")
-            _G.levelLoadEnforceTicks = 60
+            if not isIKArmsMode() then uevr.params.vr.set_mod_value("VR_AimMethod", "1") end -- old IK codebase: no level-load force
+            _G.levelLoadEnforceTicks = isIKArmsMode() and 0 or 60
         else
             gameState:Update()
             handleCutscene2DMode()
             motionControllerActors:Update(engine)
+            -- Gate reload tick work behind in-game check: both calls are no-ops
+            -- in the main menu / pause menu (no pawn, no weapon, no mag box).
+            if not gameState.inMenu then
+                -- Keep the reload module in step with the config (covers settings.json load
+                -- and the dev-panel checkbox; no-op when unchanged).
+                ptmReload.setEnabled(Config.enableManualReload ~= false)
+                if ptmReload.isEnabled() then
+                    magReload.updateOverlapState()
+                end
+                ptmReload.on_pre_engine_tick(engine, delta, gameState.isReloading)
+                -- rack to chamber: learn each weapon's slide / handle travel in play until it is fully learned
+                -- (then it returns at once; see rack_slide.lua). _frameWeapon = the same WeaponInHandsMesh.
+                if Config.enableManualReload ~= false then
+                    pcall(rackSlide.learnTick, delta, ptmReload.isTriggerHeld(), gameState.isReloading == true,
+                        ptmReload.isIdleForLearning(), gameState._frameWeapon)
+                end
+                -- Physical knife melee swing detection (cheap: two controller reads per tick,
+                -- and only while the knife is the equipped item).
+                pcall(knifeMelee.on_pre_engine_tick, delta, currentWeaponName)
+                -- Physical grenade / bolt throws: hand velocity sampling, release handling, projectile hand-over.
+                pcall(physicalThrow.on_pre_engine_tick, delta, currentWeaponName)
+                -- Equipped items on the body: learn what is in the hands, show the rest at their zones.
+                pcall(bodyItems.update)
+                -- Weapon variant changed while held (M860 bigmag / tube - late attach, inventory swap):
+                -- its own proxy hand offsets. A compare per tick; nil for normal weapons.
+                pcall(syncProxyVariant)
+            end
 
             -- Exoskeleton camera fix: the exo skeleton's jnt_camera bone has a -90° Yaw
             -- baked in, which makes UEVR think game-forward is 90° left of the pawn facing,
@@ -782,7 +1065,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     _G.menuExitEnforceTicks = 0  -- cancel any pending HMD re-assertion
                 else
                     -- Exiting menu - restore to HMD aim for gameplay
-                    uevr.params.vr.set_mod_value("VR_AimMethod", "1")  -- HMD aim
+                    uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))  -- HMD aim
                     uevr.params.vr.set_mod_value("UI_FollowView", "true")  -- Game aim (fixed UI)
                     -- print("Menu closed - restored to HMD aim method (1)")
                     -- ADS lockout: prevent Interactive ADS from firing immediately on menu close
@@ -802,7 +1085,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             if (_G.menuExitEnforceTicks or 0) > 0 then
                 _G.menuExitEnforceTicks = _G.menuExitEnforceTicks - 1
                 if not gameState.isClimbing then
-                    uevr.params.vr.set_mod_value("VR_AimMethod", "1")
+                    uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))
                 end
             end
 
@@ -811,7 +1094,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             -- climbing, guitar) so the exo spawn animation can't rotate the player on load.
             if (_G.levelLoadEnforceTicks or 0) > 0 then
                 _G.levelLoadEnforceTicks = _G.levelLoadEnforceTicks - 1
-                uevr.params.vr.set_mod_value("VR_AimMethod", "1")
+                uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))
             end
 
             -- Continuous Enforcement: Ensure aim method stays at 0 while in UI
@@ -843,7 +1126,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 
                     -- Restore Aim Method (unless in Menu or Conversation or Climbing)
                     if not currentMenuState and not gameState.isConversation and not gameState.isClimbing then
-                        uevr.params.vr.set_mod_value("VR_AimMethod", "1")  -- HMD aim
+                        uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))  -- HMD aim
                         -- print("[Guitar] Restored HMD aim method (1)")
                     end
                 end
@@ -884,7 +1167,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 
                     -- Restore Aim Method (unless in Menu or Conversation)
                     if not currentMenuState and not gameState.isConversation then
-                        uevr.params.vr.set_mod_value("VR_AimMethod", "1")  -- HMD aim
+                        uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))  -- HMD aim
                         -- print("[Climbing] Restored HMD aim method (1)")
                     else
                         -- print("[Climbing] Skipping aim restore - Menu/Conversation active")
@@ -910,7 +1193,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 else
                     -- print("Conversation/Zoom Ended - Restoring Aim Method")
                     if not gameState.isClimbing and not currentMenuState then
-                        uevr.params.vr.set_mod_value("VR_AimMethod", "1")
+                        uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))
                     end
                 end
                 lastConversationState = currentConversationState
@@ -958,21 +1241,27 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             -- Throwable / bare hands HMD enforcement.
             -- Covers: bolt, knife, grenade (trajectory view zooms FOV, no WeaponPushbackData),
             -- and bare hands (holster animation leaves stale GunFiringState).
+            -- PERF (2026-09-08): the lower()+5x find() only depends on currentWeaponName, so it is
+            -- memoised per name instead of re-run every tick (was one string alloc per frame).
             local currentThrowableState = (currentWeaponName == nil)  -- bare hands
             if currentWeaponName then
-                local n = currentWeaponName:lower()
-                currentThrowableState = n:find("bolt") ~= nil
-                    or n:find("knife")   ~= nil
-                    or n:find("sk_f1")   ~= nil
-                    or n:find("sk_rgd")  ~= nil
-                    or n:find("grenade") ~= nil
+                if currentWeaponName ~= throwableMemoName then
+                    local n = currentWeaponName:lower()
+                    throwableMemoName = currentWeaponName
+                    throwableMemoValue = n:find("bolt") ~= nil
+                        or n:find("knife")   ~= nil
+                        or n:find("sk_f1")   ~= nil
+                        or n:find("sk_rgd")  ~= nil
+                        or n:find("grenade") ~= nil
+                end
+                currentThrowableState = throwableMemoValue
             end
             if currentThrowableState ~= lastThrowableState then
                 if currentThrowableState then
                     -- Throwable equipped: switch to HMD aim (yields to cutscene, climbing, conversation)
                     if not gameState.isAnimMontagePlaying and not gameState.isClimbing
                     and not gameState.isConversation then
-                        uevr.params.vr.set_mod_value("VR_AimMethod", "1")
+                        uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))
                         -- print("[Throwable] Equipped - enforcing HMD aim (1)")
                     end
                 else
@@ -980,7 +1269,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     -- unless another system needs Game aim
                     if not currentMenuState and not gameState.isClimbing
                     and not gameState.isConversation and not gameState.isGuitarEquipped then
-                        uevr.params.vr.set_mod_value("VR_AimMethod", "1")
+                        uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))
                         -- print("[Throwable] Unequipped - restored HMD aim (1)")
                     end
                 end
@@ -990,7 +1279,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             if currentThrowableState and not currentMenuState
             and not gameState.isAnimMontagePlaying and not gameState.isClimbing
             and not gameState.isConversation and engineTickCount % 10 == 0 then
-                uevr.params.vr.set_mod_value("VR_AimMethod", "1")
+                uevr.params.vr.set_mod_value("VR_AimMethod", aimMethodFor("1", "0"))
             end
 
             -- Use the weapon already resolved this tick by gameState:Update() — avoids a redundant C++ bridge call
@@ -1002,6 +1291,16 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             if currentWeaponMesh ~= nil then
                  wInfo = gameState:GetWeaponCache(currentWeaponMesh)
                  if wInfo then currentScopeMesh = wInfo.scope end
+            end
+
+            -- Stalker 2 recycles the WeaponInHandsMesh component across weapon switches, so a
+            -- changed component pointer is NOT a reliable weapon-change signal: swapping between
+            -- two weapons that reuse the same component leaves currentWeaponMesh identical, and
+            -- currentWeaponName (assigned only inside the weaponChanged/scopeChanged block below)
+            -- would stay pinned to the previous weapon forever — which also gates the deferred
+            -- grip re-registration. Treat a changed resolved name as a weapon change too.
+            if wInfo and wInfo.name ~= currentWeaponName then
+                weaponChanged = true
             end
             
             local scopeChanged = currentScopeMesh ~= lastScopeMesh
@@ -1035,6 +1334,9 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                                 if profile.disableReloadAttachment ~= nil then Config.disableReloadAttachment = profile.disableReloadAttachment else Config.disableReloadAttachment = false end
                                 if profile.reloadRotation then Config.reloadHandRotation = {profile.reloadRotation[1], profile.reloadRotation[2], profile.reloadRotation[3]} end
                                 if profile.reloadLocation then Config.reloadHandLocation = {profile.reloadLocation[1], profile.reloadLocation[2], profile.reloadLocation[3]} end
+                                
+                                if profile.ptmMagProxyLocation then Config.ptmMagProxyLocation = {profile.ptmMagProxyLocation[1], profile.ptmMagProxyLocation[2], profile.ptmMagProxyLocation[3]} else Config.ptmMagProxyLocation = {-4.000, 4.000, -1.000} end
+                                if profile.ptmMagProxyRotation then Config.ptmMagProxyRotation = {profile.ptmMagProxyRotation[1], profile.ptmMagProxyRotation[2], profile.ptmMagProxyRotation[3]} else Config.ptmMagProxyRotation = {-35.000, 0.000, 10.000} end
                             else
                                  -- print("No profile for " .. currentWeaponName .. ", resetting to defaults")
                                  -- Reset to defaults to avoid carry-over from previous weapon
@@ -1045,6 +1347,37 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                                  Config.reloadHandLocation = {0, 0, 0}
                                  Config.reloadSocketName = "jnt_l_hand"
                                  Config.disableReloadAttachment = false
+                                 Config.ptmMagProxyLocation = {-4.000, 4.000, -1.000}
+                                 Config.ptmMagProxyRotation = {-35.000, 0.000, 10.000}
+                            end
+                            
+                            -- Per-item mesh offset for the items the attachments system does not own (knife,
+                            -- bolt, grenades); consumed every frame by Base/basic.lua update_weapon_offset.
+                            do
+                                local meshProfile = Config.weaponProfiles[currentWeaponName]
+                                if meshProfile and isMeleeItem(currentWeaponName) then
+                                    _G.weaponMeshUserOffset = meshProfile.meshOffset
+                                else
+                                    _G.weaponMeshUserOffset = nil
+                                end
+                                -- FIX (2026-09-23): the melee/throwable rotation offset lives in the
+                                -- motion-controller STATE of the WeaponInHandsMesh component, and that
+                                -- component is recycled across weapons. Base/basic.lua only writes the
+                                -- rotation while a melee item's offset is set, and libs/attachments only
+                                -- overwrites it when the firearm's own profile carries a rotation - so a
+                                -- firearm equipped after a grenade/bolt/knife inherited the throwable's
+                                -- angle whenever the component was reused. Zero it on every change here;
+                                -- the deferred grip registration (>= 1 tick later) re-applies any
+                                -- firearm-specific rotation on top.
+                                pcall(function()
+                                    local st = UEVR_UObjectHook.get_or_add_motion_controller_state(currentWeaponMesh)
+                                    if st then st:set_rotation_offset(Vector3f.new(0, 0, 0)) end
+                                end)
+                            end
+
+                            -- Live-push to the reload module so new weapon equip takes effect immediately
+                            if ptmReload and ptmReload.setProxyOffset then
+                                pcall(function() ptmReload.setProxyOffset(Config.ptmMagProxyLocation, Config.ptmMagProxyRotation) end)
                             end
                         end
                         
@@ -1055,6 +1388,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                             Config.scopeDiameter = 0.024
                             Config.scopeMagnifier = 0.7
                             Config.scopeBrightnessAmplifier = 1.0
+                            Config.scopeExposureBias = 0.0
 
                             -- Attempt to find attached scope (From Cache)
                             local scopeMesh = currentScopeMesh
@@ -1089,6 +1423,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                                     if sProf.scopeTubeDepth then Config.cylinderTubeDepth = sProf.scopeTubeDepth else Config.cylinderTubeDepth = 0.001 end
                                     if sProf.scopeMagnifier then Config.scopeMagnifier = sProf.scopeMagnifier end
                                     if sProf.scopeBrightness then Config.scopeBrightnessAmplifier = sProf.scopeBrightness end
+                                    if sProf.scopeExposureBias then Config.scopeExposureBias = sProf.scopeExposureBias end
                                 end
                             end
 
@@ -1111,6 +1446,17 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 
                     hands.attachHandToMesh(Config.dominantHand, currentWeaponMesh, Config.weaponSocketName, Config.weaponHandRotation, Config.weaponHandLocation)
 
+                    -- EXPERIMENT (2026-09-04, user-requested, confirmed working): force
+                    -- ForegroundFOVEnabled=0 on the weapon mesh (+ its full "WeaponAttachment*"
+                    -- descendant tree - skin-variant pieces and real player-attached mods like
+                    -- scopes/sights/silencers) and both VR hand PoseableMeshComponents, overriding
+                    -- the game's native "_fov"-suffixed materials (authored at 1.0). The immediate
+                    -- pass here can miss late-binding pieces (skin variants attach after this point
+                    -- in the same equip sequence; mod attachments can be swapped anytime afterward
+                    -- via weapon customization) - the continuous rescan poll below (in the main tick
+                    -- body) re-applies for as long as the weapon stays equipped to catch both cases.
+                    applyForegroundFOVFixExperiment(currentWeaponMesh)
+
                     -- Fix: right hand index finger sometimes shows in wrong pose after weapon switch.
                     -- The grip animation callback from attachments fires asynchronously and may arrive
                     -- before the attachment has fully settled, leaving the hand in its default bind pose.
@@ -1126,6 +1472,9 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     local pawnForMag = uevr.api:get_local_pawn(0)
                     if pawnForMag then
                         magReload.init(pawnForMag, motionControllerActors.left_hand_component)
+                        ptmReload.init(motionControllerActors.left_hand_component, currentWeaponName)
+                        -- the variant is known once the reload module has initialised for this weapon
+                        loadProxyOffsets()
                         zoneDebug.init(pawnForMag)
                         -- Load per-weapon mag box config, fallback to global defaults
                         local weapBoxCfg = nil
@@ -1151,7 +1500,16 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                                 magOffZ = Config.magLocalZ or 0,
                             }
                         end
-                        magReload.update_weapon_collision(pawnForMag, currentWeaponMesh, weapBoxCfg)
+                        -- 4th arg: insert-target socket declared by the weapon profile (RPG-7 -> "Muzzle");
+                        -- nil for every weapon covered by mag_reload.lua's own socket chain.
+                        magReload.update_weapon_collision(pawnForMag, currentWeaponMesh, weapBoxCfg,
+                            ptmReload.getActiveMagSocket and ptmReload.getActiveMagSocket() or nil)
+                        -- Refresh the overlap cache immediately after re-attaching MagBox.
+                        -- updateOverlapState() ran earlier this tick before weapon detection,
+                        -- so its cached result reflects the old weapon position. Re-querying
+                        -- here ensures handOverlapsMag is accurate for the rest of this frame,
+                        -- preventing a stale 'true' from letting an unsuppressed grip through.
+                        magReload.updateOverlapState()
 
                         -- Two-hand foregrip box (per-weapon)
                         -- local thCfg = nil
@@ -1167,6 +1525,14 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     uevrUtils.setTimeout(500, function()
                         -- Ensure weapon hasn't changed since timeout started, and we aren't in a montage, menu, or attachment mod animation
                         if capWeaponMesh == gameState:GetEquippedWeapon() and capWeaponName and not gameState.isMontageAttached and not gameState.inMenu and not gameState.isInventoryPDA and not isWeaponModMontageActive and not isMagazineMontageActive then
+                            -- PERF (2026-09-21): only capture when this weapon has no cached pose yet.
+                            -- getSpecificHandPose() tier 1 returns the cached table anyway, so re-capturing
+                            -- on EVERY equip only cost a throwaway PoseableMesh + ~20 MIDs and a full
+                            -- 350 KB settings.json rewrite on the game thread half a second after each
+                            -- weapon switch. The dev-panel "Clear Cached Left Hand Pose" button nils the
+                            -- entry, so a forced re-capture still happens on the next equip after that.
+                            local existingProfile = Config.weaponProfiles[capWeaponName]
+                            if existingProfile and existingProfile.leftHandPose then return end
                             local pawn = gameState:GetLocalPawn()
                             if pawn and pawn.Mesh then
                                 -- leftHandBones is now defined at the top level
@@ -1194,36 +1560,50 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 else
                     -- Weapon unequipped, attach hand back to controller
                     hands.attachHandToController(Config.dominantHand)
+                    -- a reload in progress (weapon stripped by a Burer) must not stay parked on the body mesh
+                    pcall(ptmReload.onWeaponLost)
                     currentWeaponName = nil
+                    _G.weaponMeshUserOffset = nil
                     currentScopeName = nil
                     lastScopeMesh = nil
                 end
                 lastWeaponMesh = currentWeaponMesh
                 lastScopeMesh = currentScopeMesh
             end
-            
+
+            -- EXPERIMENT (2026-09-04, extended 2026-09-06): ForegroundFOVEnabled=0 rescan poll.
+            -- Runs continuously (throttled to every FOV_FIX_RESCAN_INTERVAL_TICKS ticks) for as
+            -- long as a weapon is equipped, not just right after equip - covers both late-binding
+            -- skin-variant "WeaponAttachment*" pieces and real mod attachments (scope/sight/
+            -- silencer) swapped in mid-session via weapon customization, which a fixed post-equip
+            -- window would miss. Re-running the fix is cheap (small attachment tree, and both
+            -- CreateAndSetMaterialInstanceDynamicFromMaterial and the recursive walk are no-ops on
+            -- material/components already converted) so a plain re-apply beats diffing what's new.
+            fovFixRescanTick = fovFixRescanTick + 1
+            if fovFixRescanTick % FOV_FIX_RESCAN_INTERVAL_TICKS == 0 then
+                local rescanWeaponMesh = gameState:GetEquippedWeapon()
+                if rescanWeaponMesh then
+                    applyForegroundFOVFixExperiment(rescanWeaponMesh)
+                end
+            end
+
+            -- VR binoculars: tracks equip/unequip by weapon NAME (the WeaponInHandsMesh component is
+            -- recycled across weapons), defers GPU creation, and gates the capture by HMD distance.
+            pcall(binoculars.update, gameState._frameWeapon, currentWeaponName, gameState.inMenu)
+
             if not gameState.isInventoryPDA and not gameState.inMenu then
                 currentPreset:Update(EMPTY_CONTEXT)
+                pcall(bodyZoneDebug.update) -- no-op unless the dev-panel zone view is switched on
+                -- Feed the hip-zone state to the PTM reload module so it knows when
+                -- the left hand is in the left hip zone for the fresh-mag grab.
+                ptmReload.setHandInHipZone(
+                    bodyZonesStanding.leftHipZoneLH.isActive or
+                    bodyZonesSitting.leftHipZoneLH.isActive
+                )
                 
-                -- X-Button to R-Key mapping.
-                -- If the X press was injected by the mag gesture (gestureFired flag set),
-                -- call SendKeyDown('R') which sets isReloading=true → left-hand attachment.
-                -- If it's a physical X press, call SendReloadKey() which pulses R to the
-                -- game WITHOUT setting isReloading → no hand flicker.
-                if XINPUT_GAMEPAD_X then
-                    local isXPressed = gamepadState:isButtonPressed(XINPUT_GAMEPAD_X)
-                    if isXPressed and not isXButtonHeld then
-                        isXButtonHeld = true
-                        if magReload.consumeGestureFired() then
-                            gameState:SendKeyDown('R')   -- mag gesture: isReloading=true, hand attaches
-                        else
-                            gameState:SendReloadKey()    -- physical X: R fires, no hand attachment
-                        end
-                    elseif not isXPressed and isXButtonHeld then
-                        isXButtonHeld = false
-                        gameState:SendKeyUp('R')         -- resets isReloading if it was set
-                    end
-                end
+                -- Legacy X-Button to R-Key mapping removed.
+                -- Injecting 'R' was forcing the game into Keyboard/Mouse mode, causing ghost inputs.
+                -- The native X button press handles reloads natively.
 
                 -- Shortcut to RESET poisoned hand poses (NumPad 0)
                 -- We register this once to handle the keyboard event
@@ -1402,11 +1782,14 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                         -- print("[Debug] Continuous Check: Searching for Mod Mesh...")
                         local modMesh = gameState:get_weapon_attachment_mesh(pawn)
                         if modMesh then
-                            local leftHandComp = hands.getHandComponent(0) -- 0 is Left Hand
+                            -- 0 is Left Hand. Glove origin frame (IK: the anchor on the rig's hand bone) - the
+                            -- mod-mesh offsets are tuned against it.
+                            local leftHandComp = hands.getHandAttachParent(0)
                             if leftHandComp then
                                 -- print("[Debug] Attaching Mod Mesh to Left VR Hand")
                                 modMesh:DetachFromParent(true, true)
-                                modMesh:K2_AttachToComponent(leftHandComp, uevrUtils.fname_from_string("None"), 2, true) -- SnapToTarget
+                                -- 6-param K2_AttachToComponent - see note near the mod-mesh hijack above.
+                                modMesh:K2_AttachToComponent(leftHandComp, uevrUtils.fname_from_string("None"), 2, 2, 2, true) -- SnapToTarget (Location/Rotation/Scale), weld
                                 
                                 hasAttachedModMesh = true
                                 attachedModMesh = modMesh -- Store reference for cleanup
@@ -1517,8 +1900,8 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 
                 -- If Montage is active, skip other hand logic to prevent fighting
                 if not currentMontageState then
-                    if currentSupportHandState ~= lastSupportHandState or 
-                       currentReloadState ~= lastReloadState or 
+                    if currentSupportHandState ~= lastSupportHandState or
+                       currentReloadState ~= lastReloadState or
                        currentTwoHandingState ~= lastTwoHandingState or
                        currentDetectorState ~= lastDetectorState or
                         currentWeaponName ~= lastWeaponName or
@@ -1549,16 +1932,18 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                             -- print("[HandPose] Weapon Name Changed: '" .. tostring(lastWeaponName) .. "' -> '" .. tostring(currentWeaponName) .. "'")
                         end
 
-                        if currentSupportHandState or currentDetectorState then
+                        if (currentSupportHandState or currentDetectorState) and not ptmReload.isActive() then
                             -- Attachment logic (Weapon only)
                             if (currentSupportHandState and (currentSupportHandState ~= lastSupportHandState or lastMontageState)) or (currentTwoHandingState and currentWeaponName ~= lastWeaponName) then
                                 if weaponMesh then
                                     if not Config.disableReloadAttachment then
-                                        hands.attachHandToMesh(supportHand, weaponMesh, Config.reloadSocketName or "jnt_l_hand", Config.reloadHandRotation, Config.reloadHandLocation)
+                                        -- Glides onto the socket over supportHandBlendTime (0 = instant snap)
+                                        hands.attachHandToMeshBlended(supportHand, weaponMesh, Config.reloadSocketName or "jnt_l_hand", Config.reloadHandRotation, Config.reloadHandLocation, Config.supportHandBlendTime)
                                         -- Force pose restoration (Prefer cached pose to avoid "montage-clobbered" captures)
                                         local handPose = cachedLHPose or getSpecificHandPose(currentWeaponName)
                                         if handPose then
-                                            hands.setHandPose(supportHand, handPose)
+                                            -- Fingers curl into the grip over fingerCurlTime (0 = instant)
+                                            hands.setHandPoseBlended(supportHand, handPose, Config.fingerCurlTime)
                                             -- print("[HandPose] Restored CORRECT pose for " .. tostring(currentWeaponName))
                                         end
                                     else
@@ -1581,7 +1966,10 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                         else
                             -- Detach handlers if we just stopped using support/detector
                             local supportHand = 1 - Config.dominantHand
-                            hands.attachHandToController(supportHand)
+                            -- Glides back to the controller over supportHandBlendTime (0 = instant snap).
+                            -- Snaps when the weapon is gone (holstered / stripped by a Burer): the glide
+                            -- starts from the old weapon's socket, which a stripped weapon carries away.
+                            hands.attachHandToControllerBlended(supportHand, weaponMesh and Config.supportHandBlendTime or 0)
                             hands.setInitialTransform(supportHand)
                             -- Clear the stale animation lock so the xinput handler drives free-hand
                             -- finger animation (left_grip / left_trigger) instead of the static
@@ -1653,6 +2041,21 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                         lastRightHandOverride = false
                     end
                     
+                    -- Tell hands.lua when one of the raw bone-table poses below owns the support hand so
+                    -- its thumbrest-touch lerp stops stomping thumb_01..03 (see hands.setThumbLerpSuppressed).
+                    -- Mirrors the branch structure of the block below exactly.
+                    do
+                        local supportHand = 1 - Config.dominantHand
+                        local owned = ptmReload.isHolding() or magGripPreview or rackGripPreview
+                        if not owned and (currentSupportHandState or currentDetectorState) then
+                            if currentDetectorState then
+                                owned = not Config.disableDetectorPose
+                            else
+                                owned = (currentReloadState or currentTwoHandingState) and true or false
+                            end
+                        end
+                        hands.setThumbLerpSuppressed(supportHand, owned)
+                    end
                     -- Pose Logic (Run every frame to ensure persistence)
                     if currentSupportHandState or currentDetectorState then
                          local supportHand = 1 - Config.dominantHand
@@ -1673,7 +2076,10 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                                      hands.setHandPose(supportHand, Config.detectorHandPose)
                                  end
                              end
-                         elseif currentReloadState then
+                         elseif currentReloadState and not ptmReload.isHolding() then
+                             -- Skipped while PTM holds the mag proxy: the ptmMagGripPose block below
+                             -- owns the hand then. Applying both every frame made the two poses
+                             -- overwrite each other each tick (visible hand shake).
                              hands.setHandPose(supportHand, Config.reloadHandPose)
                          elseif currentTwoHandingState then
                              -- Try to get session-cached pose first, then weapon-specific profile pose
@@ -1689,10 +2095,33 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                                      hands.setHandPose(supportHand, Config.twoHandedRifleHandPose)
                                  end
                              end
+                         elseif ptmReload.isHolding() then
+                             -- PERF (2026-09-08): during a PTM mag/shell hold the reload branch above is
+                             -- skipped (isHolding), and falling through to setInitialTransform every frame
+                             -- invalidated the pose cache so the ptmMagGripPose apply below re-ran a full
+                             -- bone walk (~60ms/hand) every tick for the whole hold. The block below owns
+                             -- the hand while holding; do nothing here.
                          else
                              hands.setInitialTransform(supportHand)
                          end
-                    end
+                     end
+                     -- PTM Manual Reload: while player is holding the proxy mag,
+                     -- override the left hand pose every frame so fingers grip the mag correctly.
+                     if ptmReload.isHolding() then
+                         local supportHand = 1 - Config.dominantHand
+                         -- on the slide / handle (rack to chamber): the weapon's rack grip pose
+                         hands.setHandPose(supportHand, ptmReload.isRackGripping() and getRackGripPose() or getMagGripPose())
+                     end
+                     -- Dev-panel preview of the mag/shell grip pose while NOT holding anything (so it can
+                     -- be tuned without juggling a proxy mag). The idle pose block above is not entered
+                     -- when no support-hand state is active, so nothing fights this.
+                     if not ptmReload.isHolding() and magGripPreview and currentWeaponName then
+                         hands.setHandPose(1 - Config.dominantHand, getMagGripPose())
+                     end
+                     -- same for the rack grip pose (wins over the mag preview when both are ticked)
+                     if not ptmReload.isHolding() and rackGripPreview and currentWeaponName then
+                         hands.setHandPose(1 - Config.dominantHand, getRackGripPose())
+                     end
             end
         end
     end
@@ -1705,22 +2134,64 @@ uevr.sdk.callbacks.on_xinput_get_state(function(retval, user_index, state)
         local hasX = (buttons & 0x4000) ~= 0 -- XINPUT_GAMEPAD_X
         local hasB = (buttons & 0x2000) ~= 0 -- XINPUT_GAMEPAD_B
         if hasX then
-            buttons = buttons & ~0x4000
+            buttons = buttons & 0xBFFF
             buttons = buttons | 0x2000
         elseif hasB then
-            buttons = buttons & ~0x2000
+            buttons = buttons & 0xDFFF
             buttons = buttons | 0x4000
         end
         state.Gamepad.wButtons = buttons
     end
 
+    -- Escape combo: Right thumbrest touch + Left stick click (L3) = keyboard Escape tap.
+    -- (applied unconditionally before any guards, so it works whether or not a menu is open)
+    -- The key goes out over luakey.dll's custom-event channel; "0x1B" = VK_ESCAPE. Keydown on the
+    -- rising edge, keyup when the combo is released (capped by ESCAPE_MAX_HOLD) — i.e. a real
+    -- held press, the way a keyboard behaves.
+    local escapeComboActive = false
+    if state ~= nil and Config.gestures.escapeCombo and vr.is_using_controllers() and vr.is_openxr() then
+        escapeComboActive = vr.is_action_active(thumbrestRightHandle, vr.get_right_joystick_source())
+            and uevrUtils.isButtonPressed(state, XINPUT_GAMEPAD_LEFT_THUMB)
+    end
+
+    if escapeComboActive and not escapeComboWasActive and not escapeKeyIsDown then
+        print("[EscapeCombo] VK_ESCAPE down")
+        uevr.api:dispatch_custom_event("0x1B", "down")
+        escapeKeyIsDown = true
+        escapeKeyDownTime = os.clock()
+    end
+    -- Release on combo release, or after ESCAPE_MAX_HOLD as a stuck-key guard. A same-frame
+    -- down+up was NOT enough here: the pause menu opens on the key-down and the UI layer that
+    -- comes up then eats the key-up as its own "back", closing the menu again in the same frame.
+    if escapeKeyIsDown and (not escapeComboActive or (os.clock() - escapeKeyDownTime) > ESCAPE_MAX_HOLD) then
+        print("[EscapeCombo] VK_ESCAPE up")
+        uevr.api:dispatch_custom_event("0x1B", "up")
+        escapeKeyIsDown = false
+    end
+    escapeComboWasActive = escapeComboActive
+
     if gameState.inMenu or gameState.isInventoryPDA then return end
 
-    -- Mag reload input check
-    local dpawn = uevr.api:get_local_pawn(0)
-    if dpawn then
-        magReload.check_reload_input(state, dpawn)
-    end
+    -- VR binoculars zoom: right stick up/down steps the capture FOV while binoculars are held
+    -- (edge-triggered, stick Y swallowed so the game never sees it).
+    pcall(binoculars.on_xinput_get_state, state)
+
+    -- PTM manual reload input: handles grip-press state transitions and button suppression
+    ptmReload.on_xinput_get_state(state)
+
+    -- Gesture key delivery: keep sticks/triggers silent so the game stays in keyboard mode
+    -- until the key has landed (see stalker2/gesturekeys.lua, step 4).
+    gestureKeys.applyAnalogSuppression(state)
+
+    -- Physical knife melee: deliver the swing as a short Right Trigger press. After the analog
+    -- quiet window above on purpose, so a swing is never zeroed by a gesture key in flight.
+    knifeMelee.on_xinput_get_state(state)
+
+    -- Physical throws: RT is held back while a grenade / bolt is equipped and tapped on the release.
+    physicalThrow.on_xinput_get_state(state)
+
+    -- PERF (2026-09-08): removed a per-poll get_local_pawn that only fed
+    -- magReload.check_reload_input, which is a disabled stub (returns false).
 
     -- Scope Brightness Control (Left Thumbrest modifier + right stick Y)
     local isModifierPressed = false
@@ -1731,11 +2202,13 @@ uevr.sdk.callbacks.on_xinput_get_state(function(retval, user_index, state)
         end
     end
 
-    if gameState:is_scope_active(gameState:GetLocalPawn()) and isModifierPressed then
+    -- PERF (2026-09-08): test the (almost always false) modifier first so the pawn fetch +
+    -- PlayerOpticScopeComponent read only happen while the thumbrest is actually touched.
+    if isModifierPressed and gameState:is_scope_active(gameState:GetLocalPawn()) then
         local ry = state.Gamepad.sThumbRY
         if math.abs(ry) > 4000 then
             local delta = (ry / 32768.0) * 0.02
-            Config.scopeBrightnessAmplifier = math.max(0.0, math.min(3.0, Config.scopeBrightnessAmplifier + delta))
+            Config.scopeBrightnessAmplifier = math.max(0.0, math.min(100.0, Config.scopeBrightnessAmplifier + delta))
             if scopeController then
                 scopeController:SetScopeBrightness(Config.scopeBrightnessAmplifier)
             end
@@ -1753,31 +2226,49 @@ end)
 
 uevr.sdk.callbacks.on_script_reset(function()
     -- print("Resetting")
+    -- Same reasoning as the level-change path: release held keys BEFORE the gesture
+    -- state that owns them is wiped, or they stay stuck down in the game.
+    gameState:ReleaseAllKeys()
     currentPreset:Reset()
     gameState:Reset() -- Reset the game state to initial conditions
     motionControllerActors:Reset() -- Reset the motion controller actors
+    bodyZoneDebug.destroy()
+    pcall(binoculars.destroy) -- tear down capture + lens discs before the Lua state goes away
     gamepadState:Reset()
+    pcall(knifeMelee.reset)
+    pcall(physicalThrow.reset)
+    pcall(bodyItems.destroy)
 end)
 
 -- Load config at script init
 updateConfig(Config)
 
--- Helper to set integer console variables (live)
-local function set_cvar_int(cvar, value)
-    local console_manager = uevr.api:get_console_manager()
-    local var = console_manager:find_variable(cvar)
-    if var ~= nil then
-        var:set_int(value)
+-- Helper to set console variables (live).
+-- IMPORTANT: do NOT use uevr.api:get_console_manager():find_variable() here.
+-- Under the upgraded UEVR build its console-manager pattern scan latches onto a
+-- garbage pointer for this game (log.txt shows "Console object count: 2097263" at a
+-- nonsense address), and find_variable() then walks that bogus list FOREVER -
+-- a hard game freeze at injection, not a catchable error. Route through the
+-- engine's own ExecuteConsoleCommand via KismetSystemLibrary instead.
+local function set_cvar_raw(cvar, valueStr)
+    local ok = pcall(function()
+        if kismet_system_library == nil then return end
+        local uevrUtils = require("libs/uevr_utils")
+        local world = uevrUtils.get_world()
+        if world == nil then return end
+        kismet_system_library:ExecuteConsoleCommand(world, cvar .. " " .. valueStr, nil)
+    end)
+    if not ok then
+        print("[CVars] Failed to set " .. tostring(cvar))
     end
 end
 
--- Helper to set float console variables (live)
+local function set_cvar_int(cvar, value)
+    set_cvar_raw(cvar, tostring(math.floor(value)))
+end
+
 local function set_cvar_float(cvar, value)
-    local console_manager = uevr.api:get_console_manager()
-    local var = console_manager:find_variable(cvar)
-    if var ~= nil then
-        var:set_float(value)
-    end
+    set_cvar_raw(cvar, tostring(value))
 end
 
 local function apply_compatibility_cvars()
@@ -1821,7 +2312,219 @@ local function apply_compatibility_cvars()
     set_cvar_float("r.ViewDistanceScale",            Config.viewDistanceScale or 1.0)
     set_cvar_float("fg.CullDistanceScale.Grass",     Config.grassCullScale or 1.0)
     set_cvar_float("foliage.DensityScale",           Config.foliageDensity or 1.0)
-    set_cvar_float("foliage.LODDistanceScale",       Config.foliageLODScale or 1.0)
+    -- DISABLED: foliage.LODDistanceScale hard-freezes the game when set via
+    -- ExecuteConsoleCommand under the upgraded UEVR build (confirmed via tick_trace:
+    -- 25 prior cvars complete in ms, this one never returns). Setting it forces a
+    -- world-wide foliage LOD re-cull with a rendering flush, which deadlocks against
+    -- UEVR's present-hook frame sync. Set it from the game's own console/config if
+    -- needed instead.
+    -- set_cvar_float("foliage.LODDistanceScale",       Config.foliageLODScale or 1.0)
+end
+
+-- Live, per-bone tuning for the two-handed left hand grip pose (the same
+-- Config.weaponProfiles[weapon].leftHandPose table the adaptive capture in
+-- capturePoseFromMesh writes, and getSpecificHandPose()'s tier-1 lookup reads).
+-- Same 15 bones as leftHandBones (line ~325).
+local LEFT_HAND_POSE_TUNING_BONES = {
+    { label = "Thumb 01",  bone = "jnt_l_hand_thumb_01" },
+    { label = "Thumb 02",  bone = "jnt_l_hand_thumb_02" },
+    { label = "Thumb 03",  bone = "jnt_l_hand_thumb_03" },
+    { label = "Index 01",  bone = "jnt_l_hand_index_01" },
+    { label = "Index 02",  bone = "jnt_l_hand_index_02" },
+    { label = "Index 03",  bone = "jnt_l_hand_index_03" },
+    { label = "Middle 01", bone = "jnt_l_hand_middle_01" },
+    { label = "Middle 02", bone = "jnt_l_hand_middle_02" },
+    { label = "Middle 03", bone = "jnt_l_hand_middle_03" },
+    { label = "Ring 01",   bone = "jnt_l_hand_ring_01" },
+    { label = "Ring 02",   bone = "jnt_l_hand_ring_02" },
+    { label = "Ring 03",   bone = "jnt_l_hand_ring_03" },
+    { label = "Pinky 01",  bone = "jnt_l_hand_pinky_01" },
+    { label = "Pinky 02",  bone = "jnt_l_hand_pinky_02" },
+    { label = "Pinky 03",  bone = "jnt_l_hand_pinky_03" },
+}
+local LEFT_HAND_POSE_TUNING_LABELS = {}
+for i, b in ipairs(LEFT_HAND_POSE_TUNING_BONES) do LEFT_HAND_POSE_TUNING_LABELS[i] = b.label end
+
+local lhTuningBoneIndex = 1
+local lhTuningPitch, lhTuningYaw, lhTuningRoll = 0.0, 0.0, 0.0
+local lhTuningLoadedFor = nil -- "<weapon>:<boneIndex>" - detects weapon/bone selection change
+
+-- Materializes (in-memory only, NOT saved to disk) Config.weaponProfiles[weapon].leftHandPose
+-- if the weapon doesn't have one yet, cloning whatever's currently active
+-- (captured / mapped / fallback) as the starting point, and points cachedLHPose at
+-- the SAME table. From then on, edits here are automatically what Entry.lua's own
+-- periodic two-handed pose re-apply (Entry.lua ~1754) uses too - no fighting between
+-- this tool's live preview and that periodic re-apply. Nothing hits settings.json
+-- until saveWeaponProfile() is explicitly called (the Save button below).
+local function ensureLHPoseTuningTarget()
+    if not currentWeaponName then return nil end
+    if not Config.weaponProfiles[currentWeaponName] then
+        Config.weaponProfiles[currentWeaponName] = {}
+    end
+    local profile = Config.weaponProfiles[currentWeaponName]
+    if profile.leftHandPose == nil then
+        local base = cachedLHPose or getSpecificHandPose(currentWeaponName)
+        local clone = {}
+        if base then
+            for boneName, rot in pairs(base) do
+                clone[boneName] = { rot[1], rot[2], rot[3] }
+            end
+        end
+        profile.leftHandPose = clone
+    end
+    cachedLHPose = profile.leftHandPose
+    return cachedLHPose
+end
+
+local function loadLHPoseTuningSliders()
+    local target = LEFT_HAND_POSE_TUNING_BONES[lhTuningBoneIndex]
+    if target == nil then return end
+    local pose = cachedLHPose or (currentWeaponName and getSpecificHandPose(currentWeaponName))
+    local stored = pose and pose[target.bone]
+    if stored then
+        lhTuningPitch, lhTuningYaw, lhTuningRoll = stored[1], stored[2], stored[3]
+    else
+        lhTuningPitch, lhTuningYaw, lhTuningRoll = 0.0, 0.0, 0.0
+    end
+    lhTuningLoadedFor = tostring(currentWeaponName) .. ":" .. tostring(lhTuningBoneIndex)
+end
+
+-- Writes the slider values into the (in-memory) pose table for the selected bone,
+-- and pushes them onto the live hand immediately so dragging the sliders shows up
+-- in headset without waiting for Entry.lua's own 250ms-throttled re-apply.
+local function applyLHPoseTuningLive()
+    local target = LEFT_HAND_POSE_TUNING_BONES[lhTuningBoneIndex]
+    if target == nil or not currentWeaponName then return end
+    local pose = ensureLHPoseTuningTarget()
+    if pose == nil then return end
+    pose[target.bone] = { lhTuningPitch, lhTuningYaw, lhTuningRoll }
+
+    local component = hands.getHandComponent(0)
+    if not uevrUtils.validate_object(component) then return end
+    pcall(animation.setBoneSpaceLocalRotator, component, uevrUtils.fname_from_string(target.bone), uevrUtils.rotator(lhTuningPitch, lhTuningYaw, lhTuningRoll), 0)
+end
+
+-- Live, per-bone tuning for the mag/shell grip pose used during PTM manual reload
+-- (Config.weaponProfiles[weapon].magGripPose, falling back to Config.ptmMagGripPose).
+-- Same design as the two-hand tool above: the override table is materialized in memory
+-- as a clone of the default, the per-frame apply (Entry.lua getMagGripPose) re-applies
+-- that SAME table, sliders mutate it in place, and nothing hits settings.json until Save.
+local magGripTuningBoneIndex = 1
+local magGripTuningPitch, magGripTuningYaw, magGripTuningRoll = 0.0, 0.0, 0.0
+local magGripTuningLoadedFor = nil
+
+local function ensureMagGripTuningTarget()
+    if not currentWeaponName then return nil end
+    if not Config.weaponProfiles[currentWeaponName] then
+        Config.weaponProfiles[currentWeaponName] = {}
+    end
+    local profile = Config.weaponProfiles[currentWeaponName]
+    if profile.magGripPose == nil then
+        local clone = {}
+        for boneName, rot in pairs(Config.ptmMagGripPose) do
+            clone[boneName] = { rot[1], rot[2], rot[3] }
+        end
+        profile.magGripPose = clone
+    end
+    return profile.magGripPose
+end
+
+local function loadMagGripTuningSliders()
+    local target = LEFT_HAND_POSE_TUNING_BONES[magGripTuningBoneIndex]
+    if target == nil then return end
+    local stored = getMagGripPose()[target.bone]
+    if stored then
+        magGripTuningPitch, magGripTuningYaw, magGripTuningRoll = stored[1], stored[2], stored[3]
+    else
+        magGripTuningPitch, magGripTuningYaw, magGripTuningRoll = 0.0, 0.0, 0.0
+    end
+    magGripTuningLoadedFor = tostring(currentWeaponName) .. ":" .. tostring(magGripTuningBoneIndex)
+end
+
+-- Writes the slider values into the override table and, when the hand is actually in that
+-- pose (holding a proxy, or previewing), pushes the bone immediately for instant feedback.
+local function applyMagGripTuningLive()
+    local target = LEFT_HAND_POSE_TUNING_BONES[magGripTuningBoneIndex]
+    if target == nil or not currentWeaponName then return end
+    local pose = ensureMagGripTuningTarget()
+    if pose == nil then return end
+    pose[target.bone] = { magGripTuningPitch, magGripTuningYaw, magGripTuningRoll }
+    if not (ptmReload.isHolding() or magGripPreview) then return end
+    local component = hands.getHandComponent(1 - Config.dominantHand)
+    if not uevrUtils.validate_object(component) then return end
+    pcall(animation.setBoneSpaceLocalRotator, component, uevrUtils.fname_from_string(target.bone), uevrUtils.rotator(magGripTuningPitch, magGripTuningYaw, magGripTuningRoll), 0)
+end
+
+-- Live, per-bone tuning for the rack grip pose (Config.weaponProfiles[weapon].rackGripPose, falling back to
+-- the weapon's mag grip pose). Same design as the mag grip tool above: the override is materialized in
+-- memory as a clone of the current fallback, the per-frame apply re-applies that SAME table, the sliders
+-- mutate it in place, and nothing hits settings.json until Save.
+local rackGripTuningBoneIndex = 1
+local rackGripTuningPitch, rackGripTuningYaw, rackGripTuningRoll = 0.0, 0.0, 0.0
+local rackGripTuningLoadedFor = nil
+local rackPoseCopyTargets = {} -- [weapon profile name] = true, ticked in "Copy this rack pose to other weapons"
+
+local function ensureRackGripTuningTarget()
+    if not currentWeaponName then return nil end
+    if not Config.weaponProfiles[currentWeaponName] then
+        Config.weaponProfiles[currentWeaponName] = {}
+    end
+    local profile = Config.weaponProfiles[currentWeaponName]
+    if profile.rackGripPose == nil then
+        local clone = {}
+        for boneName, rot in pairs(getMagGripPose() or {}) do
+            clone[boneName] = { rot[1], rot[2], rot[3] }
+        end
+        profile.rackGripPose = clone
+    end
+    return profile.rackGripPose
+end
+
+local function loadRackGripTuningSliders()
+    local target = LEFT_HAND_POSE_TUNING_BONES[rackGripTuningBoneIndex]
+    if target == nil then return end
+    local stored = (getRackGripPose() or {})[target.bone]
+    if stored then
+        rackGripTuningPitch, rackGripTuningYaw, rackGripTuningRoll = stored[1], stored[2], stored[3]
+    else
+        rackGripTuningPitch, rackGripTuningYaw, rackGripTuningRoll = 0.0, 0.0, 0.0
+    end
+    rackGripTuningLoadedFor = tostring(currentWeaponName) .. ":" .. tostring(rackGripTuningBoneIndex)
+end
+
+local function rackGripPoseShown()
+    return ptmReload.isRackGripping() or (rackGripPreview and not ptmReload.isHolding())
+end
+
+local function applyRackGripTuningLive()
+    local target = LEFT_HAND_POSE_TUNING_BONES[rackGripTuningBoneIndex]
+    if target == nil or not currentWeaponName then return end
+    local pose = ensureRackGripTuningTarget()
+    if pose == nil then return end
+    pose[target.bone] = { rackGripTuningPitch, rackGripTuningYaw, rackGripTuningRoll }
+    if not rackGripPoseShown() then return end
+    local component = hands.getHandComponent(1 - Config.dominantHand)
+    if not uevrUtils.validate_object(component) then return end
+    pcall(animation.setBoneSpaceLocalRotator, component, uevrUtils.fname_from_string(target.bone), uevrUtils.rotator(rackGripTuningPitch, rackGripTuningYaw, rackGripTuningRoll), 0)
+end
+
+-- "Get Current Hand Pose": the support hand's 15 finger bones as they are right now (parent-bone local
+-- rotators, the format setHandPose / the sliders use) become this weapon's rack grip pose, in memory.
+local function captureRackGripPoseFromHand()
+    if not currentWeaponName then return false end
+    local component = hands.getHandComponent(1 - Config.dominantHand)
+    if not uevrUtils.validate_object(component) then return false end
+    local captured = {}
+    for _, boneName in ipairs(leftHandBones) do
+        local ok, rot = pcall(animation.getBoneSpaceLocalTransform, component, uevrUtils.fname_from_string(boneName), 0)
+        if ok and rot ~= nil then captured[boneName] = { rot.Pitch, rot.Yaw, rot.Roll } end
+    end
+    if next(captured) == nil then return false end
+    if not Config.weaponProfiles[currentWeaponName] then Config.weaponProfiles[currentWeaponName] = {} end
+    Config.weaponProfiles[currentWeaponName].rackGripPose = captured
+    hands.invalidatePoseCache(1 - Config.dominantHand)
+    rackGripTuningLoadedFor = nil
+    return true
 end
 
 -- Config UI as a collapsing header
@@ -1836,6 +2539,28 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
     -- 1. Gameplay Experience Options
     imgui.text("Gameplay Experience Options:")
     
+    -- Hands / IK Arms (scripts/hands.lua owns the mode; stalker2/ik_arms.lua routes the glove calls to the IK
+    -- rig). Rig tuning lives in data/ik_parameters.json (IK configuration panel, enabled via ik.init(true)).
+    local handsModeChanged, newHandsMode = imgui.combo("Arms Mode", Config.handsMode or 1, {"Hands", "IK Arms"})
+    if handsModeChanged then
+        changed = true
+        if _G.setHandsMode ~= nil then _G.setHandsMode(newHandsMode) else Config.handsMode = newHandsMode end
+    end
+    if (Config.handsMode or 1) == 2 then
+        local fullBodyChanged, newFullBody = imgui.checkbox("IK Full Body (show body/legs)", Config.ikFullBody == true)
+        if fullBodyChanged then Config.ikFullBody = newFullBody; changed = true end
+        if Config.ikFullBody == true then
+            local smoothChanged, newSmooth = imgui.slider_float("IK Full Body Shoulder Smoothing (s, 0 = off)", Config.ikFullBodyShoulderSmoothing or 0.35, 0.0, 1.0)
+            if smoothChanged then Config.ikFullBodyShoulderSmoothing = newSmooth; changed = true end
+            local heightChanged, newHeight = imgui.slider_float("IK Full Body Shoulder Height (cm, negative = lower)", Config.ikFullBodyShoulderHeight or 0.0, -30.0, 30.0)
+            if heightChanged then Config.ikFullBodyShoulderHeight = newHeight; changed = true end
+            local widthChanged, newWidth = imgui.slider_float("IK Full Body Shoulder Width (cm per side, negative = narrower)", Config.ikFullBodyShoulderWidth or 0.0, -15.0, 15.0)
+            if widthChanged then Config.ikFullBodyShoulderWidth = newWidth; changed = true end
+            local forwardChanged, newForward = imgui.slider_float("IK Full Body Shoulder Forward (cm, negative = back)", Config.ikFullBodyShoulderForward or 0.0, -20.0, 20.0)
+            if forwardChanged then Config.ikFullBodyShoulderForward = newForward; changed = true end
+        end
+    end
+
     local sitChanged, newSit = imgui.checkbox("Sitting Experience", Config.sittingExperience)
     if sitChanged then Config.sittingExperience = newSit; changed = true end
 
@@ -1860,6 +2585,52 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
     local swapChanged, newSwap = imgui.checkbox("Swap X and B Buttons", Config.swapXandB)
     if swapChanged then Config.swapXandB = newSwap; changed = true end
 
+    -- Global. Off = legacy reload: native montage plays through with the left hand attached
+    -- to the weapon's reload socket; start it with X or the reload gesture.
+    local manualRelChanged, newManualRel = imgui.checkbox("Manual Reload (off = animated reload)", Config.enableManualReload ~= false)
+    if manualRelChanged then Config.enableManualReload = newManualRel; changed = true end
+
+    -- Rack to chamber (stalker2/rack_slide.lua): after an EMPTY manual reload, grab the slide / charging
+    -- handle with the left hand, pull it back and let go before the weapon fires again. Per weapon type.
+    if Config.enableManualReload ~= false then
+        local rc = Config.rackToChamber
+        if type(rc) ~= "table" then
+            rc = { pistol = true, smg = true, ar = true, sniper = true, shotgun = true }
+            Config.rackToChamber = rc
+        end
+        imgui.text("  Rack to chamber after an empty reload:")
+        local types = {
+            { key = "pistol", label = "Pistols" },
+            { key = "smg",    label = "SMGs" },
+            { key = "ar",     label = "Assault rifles" },
+            { key = "sniper", label = "Snipers / DMRs" },
+            { key = "shotgun", label = "Shotguns" },
+        }
+        for i, t in ipairs(types) do
+            if i > 1 then imgui.same_line() end
+            local c, v = imgui.checkbox(t.label .. "##rack_" .. t.key, rc[t.key] ~= false)
+            if c then rc[t.key] = v; changed = true end
+        end
+        -- how close the left controller must be to the slide / handle when the grip is pressed
+        local rgC, rgV = imgui.slider_float("  Rack Grab Radius (cm)##ptmrack", Config.rackGrabRadius or 12.0, 4.0, 30.0)
+        if rgC then Config.rackGrabRadius = rgV; changed = true end
+    end
+
+    -- Physical grenade / bolt throws on/off (tuning sliders live in Debug Dev Config > "Physical Throws")
+    do
+        local pt = Config.physicalThrow or {}
+        Config.physicalThrow = pt
+        local ptChanged, ptNew = imgui.checkbox("Physical Throws (grenades / bolts: hold trigger or grip, swing, release)", pt.enabled ~= false)
+        if ptChanged then pt.enabled = ptNew; changed = true end
+    end
+
+    -- Physical knife melee on/off (tuning sliders live in Debug Dev Config > "Physical Knife Melee")
+    do
+        local km = Config.knifeMelee or {}
+        Config.knifeMelee = km
+        local kmChanged, kmNew = imgui.checkbox("Physical Knife Melee (swing right hand = attack)", km.enabled ~= false)
+        if kmChanged then km.enabled = kmNew; changed = true end
+    end
 
     local hapticChanged, newHaptic = imgui.checkbox("Haptic Feedback (Gestures)", Config.hapticFeedback)
     if hapticChanged then Config.hapticFeedback = newHaptic; changed = true end
@@ -1873,19 +2644,6 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
     local shadowsChanged, newShadows = imgui.checkbox("VR Hand & Weapon Shadows", Config.vrShadowsEnabled)
     if shadowsChanged then Config.vrShadowsEnabled = newShadows; changed = true end
     imgui.text("Enables dynamic shadows cast by VR hands and weapons. May reduce performance.")
-
-    local stabChanged, newStab = imgui.checkbox("Renderer Stabilizer (Fake Flashlight)", Config.rendererStabilizerEnabled)
-    if stabChanged then
-        Config.rendererStabilizerEnabled = newStab
-        changed = true
-        -- Apply immediately: spawn or destroy the fake light
-        if newStab then
-            spawnRendererStabilizer()
-        else
-            destroyRendererStabilizer()
-        end
-    end
-    imgui.text("Attaches an invisible point light to the player to fix temporal 'trailing lines' glitches.")
 
     local rdChanged, newRD = imgui.checkbox("Enable custom Red Dot Reticule and scope material fix", Config.reflexEnabled ~= false)
     if rdChanged then Config.reflexEnabled = newRD; Config:save() end
@@ -1925,10 +2683,18 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
         local meleeWeaponChanged, newMeleeWeapon = imgui.checkbox("Melee Weapon (left hip using left hand)", Config.gestures.meleeWeapon)
         if meleeWeaponChanged then Config.gestures.meleeWeapon = newMeleeWeapon; changed = true end
 
+        -- Equipped items shown on the body (placement sliders live in Debug Dev Config > "Items On Body")
+        do
+            local bi = Config.bodyItems or {}
+            Config.bodyItems = bi
+            local biChanged, biNew = imgui.checkbox("Show Equipped Items On Body (sidearm, detector, grenade, bolt, reload ammo)", bi.enabled ~= false)
+            if biChanged then bi.enabled = biNew; changed = true end
+        end
+
         local boltActionChanged, newBoltAction = imgui.checkbox("Bolts (right chest using right hand)", Config.gestures.boltAction)
         if boltActionChanged then Config.gestures.boltAction = newBoltAction; changed = true end
 
-        local grenadeChanged, newGrenade = imgui.checkbox("Grenade (left chest using left hand)", Config.gestures.grenade)
+        local grenadeChanged, newGrenade = imgui.checkbox("Grenade (left chest using right hand)", Config.gestures.grenade)
         if grenadeChanged then Config.gestures.grenade = newGrenade; changed = true end
 
         local inventoryChanged, newInventory = imgui.checkbox("Inventory Backpack (right shoulder using left hand)", Config.gestures.inventory)
@@ -1937,7 +2703,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
         local scannerChanged, newScanner = imgui.checkbox("Detector (right chest using left hand)", Config.gestures.scanner)
         if scannerChanged then Config.gestures.scanner = newScanner; changed = true end
 
-        local pdaChanged, newPda = imgui.checkbox("PDA (left chest using right hand)", Config.gestures.pda)
+        local pdaChanged, newPda = imgui.checkbox("PDA (left chest using left hand)", Config.gestures.pda)
         if pdaChanged then Config.gestures.pda = newPda; changed = true end
 
         local reloadChanged, newReload = imgui.checkbox("Reload (magazine using off-hand)", Config.gestures.reload)
@@ -1948,6 +2714,9 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
 
         local weaponCustomChanged, newWeaponCustom = imgui.checkbox("Weapon Customization (left shoulder using left hand)", Config.gestures.weaponCustomization)
         if weaponCustomChanged then Config.gestures.weaponCustomization = newWeaponCustom; changed = true end
+
+        local escapeComboChanged, newEscapeCombo = imgui.checkbox("Escape Combo (right thumbrest touch + left stick click)", Config.gestures.escapeCombo)
+        if escapeComboChanged then Config.gestures.escapeCombo = newEscapeCombo; changed = true end
 
         if Config.pickupInventoryEnabled == nil then Config.pickupInventoryEnabled = true end
         local invChanged, invVal = imgui.checkbox("Add Item to Inventory (release grabbed item over left shoulder)", Config.pickupInventoryEnabled)
@@ -2064,8 +2833,9 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
             if fdChanged then Config.foliageDensity = newFd; set_cvar_float("foliage.DensityScale", newFd); changed = true end
             imgui.text("Lower values reduce foliage density. Performance gain in vegetated areas.")
 
-            local flChanged, newFl = imgui.slider_float("Foliage LOD Distance (foliage.LODDistanceScale)", Config.foliageLODScale or 1.0, 0.0, 3.0)
-            if flChanged then Config.foliageLODScale = newFl; set_cvar_float("foliage.LODDistanceScale", newFl); changed = true end
+            -- foliage.LODDistanceScale setting DISABLED - hard-freezes the game under the
+            -- upgraded UEVR build (render-flush deadlock; see apply_compatibility_cvars).
+            imgui.text("Foliage LOD Distance: disabled (freezes game under current UEVR)")
             imgui.text("Controls how far foliage LOD transitions occur. Lower = more aggressive LOD.")
 
             imgui.tree_pop()
@@ -2115,6 +2885,149 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
         end
         imgui.separator()
 
+        -- Flashlight Position Offset (IK Arms mode only, stalker2/ik_flashlight.lua)
+        if imgui.tree_node("Flashlight Position Offset (HMD, IK Arms)") then
+            imgui.text("Offsets the HMD-tracked spotlight along the look direction.")
+            imgui.text("Tip: increase Forward until the weapon shadow appears BEHIND the weapon.")
+            local flFwdC, newFlFwd = imgui.drag_float("Forward (cm)##fl", Config.flashlightForwardOffset or 0.0, 1.0, -200.0, 500.0)
+            if flFwdC then Config.flashlightForwardOffset = newFlFwd; changed = true end
+            local flUpC, newFlUp = imgui.drag_float("Up (cm)##fl", Config.flashlightUpOffset or 0.0, 1.0, -200.0, 200.0)
+            if flUpC then Config.flashlightUpOffset = newFlUp; changed = true end
+            local flRtC, newFlRt = imgui.drag_float("Right (cm)##fl", Config.flashlightRightOffset or 0.0, 1.0, -200.0, 200.0)
+            if flRtC then Config.flashlightRightOffset = newFlRt; changed = true end
+            imgui.tree_pop()
+        end
+
+        -- Left Hand Pose Cache (Two-Handing) - same effect as the NumPad-0 shortcut
+        -- (Entry.lua ~line 1303), just as a button instead of a key bind. Clears the
+        -- ADAPTIVE captured pose (Config.weaponProfiles[weapon].leftHandPose, saved
+        -- to settings.json by hands.capturePoseFromMesh ~500ms after equip) for the
+        -- current weapon, so the two-handed grip pose falls back to the static
+        -- weaponPoseMapping/hand_poses.lua/Config.twoHanded*HandPose tiers until a
+        -- fresh capture happens on next equip. Useful when the cached pose predates
+        -- a skeleton/InitialTransform change (e.g. the _meta bone fix) and is stale.
+        if imgui.tree_node("Left Hand Pose Cache (Two-Handing)") then
+            local blendChanged, newBlend = imgui.slider_float("Off-Hand Glide Time (s)", Config.supportHandBlendTime or 0.12, 0.0, 0.5)
+            if blendChanged then Config.supportHandBlendTime = newBlend; changed = true end
+            imgui.text("How long the off hand takes to move onto / off the weapon. 0 = instant snap.")
+
+            local curlChanged, newCurl = imgui.slider_float("Finger Curl Time (s)", Config.fingerCurlTime or 0.3, 0.0, 1.0)
+            if curlChanged then Config.fingerCurlTime = newCurl; changed = true end
+            imgui.text("How long the off hand's fingers take to curl into the two-handed grip. 0 = instant.")
+            imgui.separator()
+
+            imgui.text("Clears the captured two-handed left hand pose for the")
+            imgui.text("current weapon, so it re-captures fresh on next equip.")
+            if currentWeaponName and Config.weaponProfiles[currentWeaponName] and Config.weaponProfiles[currentWeaponName].leftHandPose then
+                imgui.text("Status: cached pose present for " .. currentWeaponName)
+            elseif currentWeaponName then
+                imgui.text("Status: no cached pose for " .. currentWeaponName)
+            else
+                imgui.text("Status: no weapon equipped")
+            end
+            if imgui.button("Clear Cached Left Hand Pose (this weapon)") then
+                if currentWeaponName and Config.weaponProfiles[currentWeaponName] then
+                    Config.weaponProfiles[currentWeaponName].leftHandPose = nil
+                    cachedLHPose = getSpecificHandPose(currentWeaponName) -- Re-load from JSON fallback
+                    if cachedLHPose then
+                        hands.setHandPose(0, cachedLHPose)
+                    end
+                    saveWeaponProfile()
+                    lhTuningLoadedFor = nil -- force the tuning sliders to re-read the new value
+                end
+            end
+
+            imgui.separator()
+            imgui.text("Manually tune a finger bone for this weapon's grip pose.")
+            imgui.text("Applies live every frame this section is open.")
+
+            local lhBoneChanged, newLhBoneIndex = imgui.combo("Bone##lhpose", lhTuningBoneIndex, LEFT_HAND_POSE_TUNING_LABELS)
+            if lhBoneChanged then lhTuningBoneIndex = newLhBoneIndex end
+
+            local lhKey = tostring(currentWeaponName) .. ":" .. tostring(lhTuningBoneIndex)
+            if lhTuningLoadedFor ~= lhKey then
+                loadLHPoseTuningSliders()
+            end
+
+            if imgui.button("Reload Current Value##lhpose") then loadLHPoseTuningSliders() end
+
+            local lhPChanged, newLhP = imgui.drag_float("Pitch##lhpose", lhTuningPitch, 0.2, -180.0, 180.0)
+            if lhPChanged then lhTuningPitch = newLhP end
+            local lhYChanged, newLhY = imgui.drag_float("Yaw##lhpose", lhTuningYaw, 0.2, -180.0, 180.0)
+            if lhYChanged then lhTuningYaw = newLhY end
+            local lhRChanged, newLhR = imgui.drag_float("Roll##lhpose", lhTuningRoll, 0.2, -180.0, 180.0)
+            if lhRChanged then lhTuningRoll = newLhR end
+
+            applyLHPoseTuningLive()
+
+            if imgui.button("Save This Bone to Weapon Profile##lhpose") then
+                saveWeaponProfile()
+            end
+
+            imgui.tree_pop()
+        end
+
+        -- Mag/Shell Grip Pose (Manual Reload) - per-weapon override of Config.ptmMagGripPose,
+        -- the pose applied while PTM holds the proxy mag/shell. See getMagGripPose().
+        if imgui.tree_node("Mag/Shell Grip Pose (Manual Reload)") then
+            local magProfile = currentWeaponName and Config.weaponProfiles[currentWeaponName]
+            if not currentWeaponName then
+                imgui.text("Status: no weapon equipped")
+            elseif magProfile and magProfile.magGripPose then
+                imgui.text("Status: custom grip pose saved for " .. currentWeaponName)
+            else
+                imgui.text("Status: using default pose for " .. currentWeaponName)
+            end
+            imgui.text("Tune the left hand while holding a mag/shell, or tick Preview")
+            imgui.text("to pose the hand now. Save writes it to this weapon's profile.")
+
+            local prevChanged, newPrev = imgui.checkbox("Preview pose on left hand (while not holding)", magGripPreview)
+            if prevChanged then
+                magGripPreview = newPrev
+                if not magGripPreview then
+                    hands.invalidatePoseCache(1 - Config.dominantHand)
+                    hands.setInitialTransform(1 - Config.dominantHand)
+                end
+            end
+
+            local mgBoneChanged, newMgBoneIndex = imgui.combo("Bone##magpose", magGripTuningBoneIndex, LEFT_HAND_POSE_TUNING_LABELS)
+            if mgBoneChanged then magGripTuningBoneIndex = newMgBoneIndex end
+
+            local mgKey = tostring(currentWeaponName) .. ":" .. tostring(magGripTuningBoneIndex)
+            if magGripTuningLoadedFor ~= mgKey then
+                loadMagGripTuningSliders()
+            end
+
+            if imgui.button("Reload Current Value##magpose") then loadMagGripTuningSliders() end
+
+            local mgPChanged, newMgP = imgui.drag_float("Pitch##magpose", magGripTuningPitch, 0.2, -180.0, 180.0)
+            if mgPChanged then magGripTuningPitch = newMgP end
+            local mgYChanged, newMgY = imgui.drag_float("Yaw##magpose", magGripTuningYaw, 0.2, -180.0, 180.0)
+            if mgYChanged then magGripTuningYaw = newMgY end
+            local mgRChanged, newMgR = imgui.drag_float("Roll##magpose", magGripTuningRoll, 0.2, -180.0, 180.0)
+            if mgRChanged then magGripTuningRoll = newMgR end
+
+            if mgPChanged or mgYChanged or mgRChanged then
+                applyMagGripTuningLive()
+            end
+
+            if imgui.button("Save Pose to Weapon Profile##magpose") then
+                ensureMagGripTuningTarget()
+                saveWeaponProfile()
+            end
+            if imgui.button("Return to Default##magpose") then
+                if magProfile then magProfile.magGripPose = nil end
+                saveWeaponProfile()
+                magGripTuningLoadedFor = nil
+                hands.invalidatePoseCache(1 - Config.dominantHand)
+                if ptmReload.isHolding() or magGripPreview then
+                    hands.setHandPose(1 - Config.dominantHand, Config.ptmMagGripPose)
+                end
+            end
+
+            imgui.tree_pop()
+        end
+
         -- Weapon Hand Alignment (Main Hand)
         if imgui.tree_node("Weapon Hand Alignment (Main Hand)") then
             local socketChanged, newSocket = imgui.input_text("Weapon Attach Socket", Config.weaponSocketName)
@@ -2160,6 +3073,155 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
                 if currentWeaponMesh ~= nil then
                      hands.attachHandToMesh(Config.dominantHand, currentWeaponMesh, Config.weaponSocketName, Config.weaponHandRotation, Config.weaponHandLocation)
                 end
+            end
+            imgui.tree_pop()
+        end
+
+        -- Melee / Throwable Mesh Offset. The knife, bolt and grenades are NOT handled by the
+        -- attachments system (Entry.lua never registers them); Base/basic.lua places them on the
+        -- controller, and reads this per-item offset from _G.weaponMeshUserOffset every frame.
+        if imgui.tree_node("Melee / Throwable Mesh Offset (knife, bolt, grenade)") then
+            if not (currentWeaponName and isMeleeItem(currentWeaponName)) then
+                imgui.text("Equip the knife, the bolt or a grenade to adjust it.")
+                imgui.text("(Firearms are positioned by the attachments system instead.)")
+            else
+                imgui.text("Item: " .. tostring(currentWeaponName))
+                imgui.text("Moves and rotates the ITEM in your hand. X forward, Y right, Z up (cm).")
+                imgui.text("The hand itself is tuned in 'Weapon Hand Alignment (Main Hand)' above.")
+                if not Config.weaponProfiles[currentWeaponName] then Config.weaponProfiles[currentWeaponName] = {} end
+                local meshProfile = Config.weaponProfiles[currentWeaponName]
+                local saved = meshProfile.meshOffset
+                local loc = (saved and saved.location) or {0.0, 0.0, 0.0}
+                local rot = (saved and saved.rotation) or {0.0, 0.0, 0.0}
+                local lx, ly, lz = loc[1] or 0.0, loc[2] or 0.0, loc[3] or 0.0
+                local rp, ry, rr = rot[1] or 0.0, rot[2] or 0.0, rot[3] or 0.0
+
+                local c1, v1 = imgui.drag_float("Item Loc X##meshoff", lx, 0.1, -50.0, 50.0)
+                local c2, v2 = imgui.drag_float("Item Loc Y##meshoff", ly, 0.1, -50.0, 50.0)
+                local c3, v3 = imgui.drag_float("Item Loc Z##meshoff", lz, 0.1, -50.0, 50.0)
+                local c4, v4 = imgui.drag_float("Item Pitch##meshoff", rp, 0.5, -180.0, 180.0)
+                local c5, v5 = imgui.drag_float("Item Yaw##meshoff", ry, 0.5, -180.0, 180.0)
+                local c6, v6 = imgui.drag_float("Item Roll##meshoff", rr, 0.5, -180.0, 180.0)
+                if c1 or c2 or c3 or c4 or c5 or c6 then
+                    meshProfile.meshOffset = {
+                        location = { c1 and v1 or lx, c2 and v2 or ly, c3 and v3 or lz },
+                        rotation = { c4 and v4 or rp, c5 and v5 or ry, c6 and v6 or rr },
+                    }
+                    _G.weaponMeshUserOffset = meshProfile.meshOffset
+                end
+
+                if imgui.button("Save Item Offset##meshoff") then
+                    if meshProfile.meshOffset == nil then
+                        meshProfile.meshOffset = { location = {lx, ly, lz}, rotation = {rp, ry, rr} }
+                        _G.weaponMeshUserOffset = meshProfile.meshOffset
+                    end
+                    saveWeaponProfile()
+                end
+                if imgui.button("Reset Item Offset to Zero##meshoff") then
+                    meshProfile.meshOffset = { location = {0.0, 0.0, 0.0}, rotation = {0.0, 0.0, 0.0} }
+                    _G.weaponMeshUserOffset = meshProfile.meshOffset
+                    saveWeaponProfile()
+                end
+            end
+            imgui.tree_pop()
+        end
+
+        -- Physical knife melee tuning (stalker2/knife_melee.lua). On/off lives in Gestures Toggles.
+        if imgui.tree_node("Physical Knife Melee (swing tuning)") then
+            local km = Config.knifeMelee or {}
+            Config.knifeMelee = km
+            local kmChanged, kmNew = imgui.checkbox("Enabled", km.enabled ~= false)
+            if kmChanged then km.enabled = kmNew; changed = true end
+            local spChanged, spNew = imgui.slider_float("Swing Speed Threshold (cm/s)", km.minSpeed or 180.0, 60.0, 500.0)
+            if spChanged then km.minSpeed = spNew; changed = true end
+            local cdChanged, cdNew = imgui.slider_float("Swing Cooldown (s)", km.cooldown or 0.35, 0.05, 1.5)
+            if cdChanged then km.cooldown = cdNew; changed = true end
+            local arChanged, arNew = imgui.slider_float("Melee Anim Rate (x)", km.animRate or 20.0, 1.0, 50.0)
+            if arChanged then km.animRate = arNew; changed = true end
+            local lgChanged, lgNew = imgui.checkbox("Log swings / montages to log.txt", km.log == true)
+            if lgChanged then km.log = lgNew; changed = true end
+            local ls = knifeMelee.getLastSwing()
+            if ls and ls.at and ls.at > 0 then
+                imgui.text(string.format("Last swing: %s  %.0f cm/s  %.1fs ago", tostring(ls.kind), ls.speed or 0, os.clock() - ls.at))
+            else
+                imgui.text("Last swing: none yet")
+            end
+            imgui.text("Accepted: down / left / right / forward stab. Ignored: upward, pull-back.")
+            imgui.tree_pop()
+        end
+
+        -- Physical throw tuning (stalker2/physical_throw.lua). On/off lives in Gestures Toggles.
+        if imgui.tree_node("Physical Throws (grenades / bolts)") then
+            local pt = Config.physicalThrow or {}
+            Config.physicalThrow = pt
+            local function ptSlider(label, key, default, lo, hi)
+                local c, v = imgui.slider_float(label, pt[key] or default, lo, hi)
+                if c then pt[key] = v; changed = true end
+            end
+            local enChanged, enNew = imgui.checkbox("Enabled##physicalThrow", pt.enabled ~= false)
+            if enChanged then pt.enabled = enNew; changed = true end
+            ptSlider("Throw Speed (x hand speed)", "speedScale", 3.5, 1.0, 8.0)
+            ptSlider("Slowest Throw (cm/s)", "floorSpeed", 600.0, 100.0, 1700.0)
+            ptSlider("Underarm (Right Grip): Throw Speed (x hand speed)", "underSpeedScale", 2.0, 0.5, 8.0)
+            ptSlider("Underarm (Right Grip): Slowest Throw (cm/s)", "underFloorSpeed", 250.0, 50.0, 1700.0)
+            ptSlider("Fastest Throw (cm/s)", "maxSpeed", 2500.0, 800.0, 4000.0)
+            ptSlider("Slowest Hand Speed That Still Throws (cm/s)", "minSpeed", 120.0, 30.0, 400.0)
+            ptSlider("Aim Assist (0 = hand only, 1 = where you look)", "assist", 0.5, 0.0, 1.0)
+            ptSlider("Extra Upward Angle (deg)", "arc", 8.0, 0.0, 30.0)
+            ptSlider("Start This Far From The Hand (cm)", "spawnDist", 20.0, 0.0, 120.0)
+            ptSlider("Throw Anim Rate Until Projectile Appears (x)", "animRate", 20.0, 1.0, 50.0)
+            local cuChanged, cuNew = imgui.checkbox("Start the projectile where it would be by now", pt.catchUp ~= false)
+            if cuChanged then pt.catchUp = cuNew; changed = true end
+            local scChanged, scNew = imgui.checkbox("No camera shake during the throw", pt.stabilizeCamera ~= false)
+            if scChanged then pt.stabilizeCamera = scNew; changed = true end
+            local lgChanged, lgNew = imgui.checkbox("Write data/physical_throw_log.txt", pt.debugLog == true)
+            if lgChanged then pt.debugLog = lgNew; changed = true end
+            local lt = physicalThrow.getLastThrow()
+            imgui.text("Last throw: " .. tostring(lt.text))
+            imgui.text("Trigger = overarm throw, right grip = underarm throw. Release with the hand still = nothing thrown.")
+            imgui.tree_pop()
+        end
+
+        -- Items shown on the body (stalker2/body_items.lua). On/off lives in Gestures Toggles.
+        if imgui.tree_node("Items On Body (placement)") then
+            imgui.text("Each item sits at the centre of its gesture zone plus these offsets.")
+            imgui.text("Location: X forward, Y right, Z up (cm). An item appears once it has been drawn.")
+            for _, slot in ipairs(bodyItems.SLOTS) do
+                if imgui.tree_node(slot.label) then
+                    local id = "##bodyItem_" .. slot.key
+                    local en = bodyItems.slotCfg(slot.key)
+                    local enChanged, enNew = imgui.checkbox("Show" .. id, en.enabled ~= false)
+                    if enChanged then en.enabled = enNew; changed = true end
+                    imgui.text("Status: " .. tostring(bodyItems.getStatus(slot.key)))
+                    -- external slots (reload ammo pouch) keep one placement per ammo type: the shown one is edited
+                    local s, placementType = bodyItems.placementCfg(slot.key)
+                    if placementType ~= nil then
+                        imgui.text("Editing placement for: " .. placementType)
+                        id = id .. "_" .. placementType
+                    end
+                    local labels = { "Forward", "Right", "Up" }
+                    for i = 1, 3 do
+                        local c, v = imgui.slider_float(labels[i] .. " (cm)" .. id, s.location[i] or 0.0, -60.0, 60.0)
+                        if c then s.location[i] = v; changed = true end
+                    end
+                    local rotLabels = { "Pitch", "Yaw", "Roll" }
+                    for i = 1, 3 do
+                        local c, v = imgui.slider_float(rotLabels[i] .. " (deg)" .. id, s.rotation[i] or 0.0, -180.0, 180.0)
+                        if c then s.rotation[i] = v; changed = true end
+                    end
+                    local scChanged, scNew = imgui.slider_float("Scale" .. id, s.scale or 1.0, 0.2, 2.0)
+                    if scChanged then s.scale = scNew; changed = true end
+                    if not slot.external and imgui.button("Forget item" .. id) then
+                        bodyItems.forgetSlot(slot.key)
+                        changed = true
+                    end
+                    imgui.tree_pop()
+                end
+            end
+            do
+                local bi = Config.bodyItems or {}
+                local dlChanged, dlNew = imgui.checkbox("Write data/body_items_log.txt##bodyItems", bi.debugLog == true)
+                if dlChanged then bi.debugLog = dlNew; changed = true end
             end
             imgui.tree_pop()
         end
@@ -2292,7 +3354,13 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
             if oyC then bc.magOffY = newOY; bcChanged = true end
             if ozC then bc.magOffZ = newOZ; bcChanged = true end
 
-            if bcChanged then magReload.set_config(bc) end
+            if bcChanged then magReload.set_config(bc); saveWeaponProfile() end
+
+            imgui.separator()
+            imgui.text("Fresh mag insert (all weapons): releasing within this distance of the magwell inserts,")
+            imgui.text("further away drops it. Measured from the held mag to its seat (Rhino: to the mag box).")
+            local idC, idV = imgui.slider_float("Insert Distance (cm)##ptmdist", Config.ptmInsertDistance or 12.0, 2.0, 30.0)
+            if idC then Config.ptmInsertDistance = idV; changed = true end
             imgui.tree_pop()
         end
 
@@ -2361,6 +3429,11 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
         end
 
         -- Scope Settings
+        if imgui.tree_node("Binoculars (PiP lenses)") then
+            pcall(binoculars.drawUI)
+            imgui.tree_pop()
+        end
+
         if imgui.tree_node("Scope Settings") then
             if currentScopeName then
                 imgui.text("Scope: " .. currentScopeName)
@@ -2372,8 +3445,18 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
             end
             imgui.separator()
             
-            local bChanged, nB = imgui.slider_float("Scope Brightness", Config.scopeBrightnessAmplifier, 0.0, 3.0)
+            local bChanged, nB = imgui.slider_float("Scope Brightness", Config.scopeBrightnessAmplifier, 0.0, 100.0)
             if bChanged then Config.scopeBrightnessAmplifier = nB; changed = true end
+
+            -- Exposure bias acts on the capture BEFORE tonemapping (stops), so it brightens without
+            -- the white clipping the post-tonemap brightness multiplier causes. Saved per scope.
+            local ebChanged, nEb = imgui.slider_float("Scope Exposure Bias (stops)", Config.scopeExposureBias or 0.0, -5.0, 10.0, "%.2f")
+            if ebChanged then
+                Config.scopeExposureBias = nEb
+                changed = true
+                saveWeaponProfile()
+                if scopeController then pcall(function() scopeController:SetScopeExposureBias(nEb) end) end
+            end
             
             local dChanged, nD = imgui.drag_float("Scope Offset (X)", Config.cylinderDepth, 0.1, -30.0, 30.0, "%.3f")
             if dChanged then Config.cylinderDepth = nD; changed = true; saveWeaponProfile(); if scopeController then scopeController:SetScopePlaneScale(Config.cylinderDepth) end end
@@ -2398,6 +3481,18 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
 
             local efovChanged, nEfov = imgui.checkbox("Expanding FOV (closer = wider view, constant zoom)", Config.scopeExpandingFOV)
             if efovChanged then Config.scopeExpandingFOV = nEfov; changed = true end
+
+            -- Picture on the scope's own glass instead of the separate cylinder (Base/scope.lua hide_scope_glass)
+            local pogChanged, nPog = imgui.checkbox("Picture on the scope glass (switch weapon to apply)", Config.pipOnGlass ~= false)
+            if pogChanged then Config.pipOnGlass = nPog; changed = true end
+            if Config.pipOnGlass ~= false then
+                local rolls = { 0.0, 90.0, 180.0, 270.0 }
+                local curRoll = tonumber(Config.pipGlassCaptureRoll) or 0.0
+                local rollIdx = 1
+                for i, r in ipairs(rolls) do if math.abs(r - curRoll) < 0.5 then rollIdx = i end end
+                local rollChanged, nRollIdx = imgui.combo("Picture rotation on the glass", rollIdx, { "0", "90", "180", "270" })
+                if rollChanged and rolls[nRollIdx] then Config.pipGlassCaptureRoll = rolls[nRollIdx]; changed = true end
+            end
 
             imgui.spacing()
             imgui.separator()
@@ -2780,6 +3875,7 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
              local isVis = zoneDebug.is_visible()
              local chVis, nVis = imgui.checkbox("Show UE Debug Boxes for Zones", isVis)
              if chVis then zoneDebug.set_visible(nVis) end
+             pcall(bodyZoneDebug.drawUI)
              imgui.tree_pop()
         end
 
@@ -2914,6 +4010,283 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
                     pickup.setRadius(Config.pickupItemGrabRadius)
                 end
             end
+
+            -- Read by physical_pickup.lua at each grab, so no push needed
+            local pGlideC, pGlideV = imgui.slider_float("Grab Glide Time (s)##pickup", Config.pickupGlideTime or 0.15, 0.0, 0.5)
+            if pGlideC then Config.pickupGlideTime = pGlideV; changed = true end
+            imgui.text("How long a grabbed item takes to move into the hand. 0 = instant snap.")
+
+            local pKeepC, pKeepV = imgui.checkbox("Drop Keeps Held Pose##pickup", Config.pickupDropKeepsPose ~= false)
+            if pKeepC then Config.pickupDropKeepsPose = pKeepV; changed = true end
+            imgui.tree_pop()
+        end
+
+        -- Manual Reload Settings
+        if imgui.tree_node("Manual Reload Settings") then
+            imgui.text("Proxy mag offset relative to jnt_l_hand socket on the left hand PMC.")
+            do
+                local variant = ptmReload.getProxyVariant()
+                if variant ~= nil then
+                    imgui.text("This weapon has variants - editing the offsets for: " .. variant)
+                end
+            end
+            imgui.separator()
+
+            if Config.ptmMagProxyLocation == nil then Config.ptmMagProxyLocation = {-4.000, 4.000, -1.000} end
+            if Config.ptmMagProxyRotation == nil then Config.ptmMagProxyRotation = {-35.000, 0.000, 10.000} end
+
+            local mrChanged = false
+            local loc = Config.ptmMagProxyLocation
+            local rot = Config.ptmMagProxyRotation
+
+            local mrLXc, mrLXv = imgui.drag_float("Mag Loc X##ptmmag", loc[1], 0.1)
+            if mrLXc then loc[1] = mrLXv; mrChanged = true end
+            local mrLYc, mrLYv = imgui.drag_float("Mag Loc Y##ptmmag", loc[2], 0.1)
+            if mrLYc then loc[2] = mrLYv; mrChanged = true end
+            local mrLZc, mrLZv = imgui.drag_float("Mag Loc Z##ptmmag", loc[3], 0.1)
+            if mrLZc then loc[3] = mrLZv; mrChanged = true end
+
+            imgui.separator()
+
+            local mrRPc, mrRPv = imgui.drag_float("Mag Pitch##ptmmag", rot[1], 0.1)
+            if mrRPc then rot[1] = mrRPv; mrChanged = true end
+            local mrRYc, mrRYv = imgui.drag_float("Mag Yaw##ptmmag",   rot[2], 0.1)
+            if mrRYc then rot[2] = mrRYv; mrChanged = true end
+            local mrRRc, mrRRv = imgui.drag_float("Mag Roll##ptmmag",  rot[3], 0.1)
+            if mrRRc then rot[3] = mrRRv; mrChanged = true end
+
+            if mrChanged then
+                changed = true
+                saveWeaponProfile()
+                -- Live-push to the reload module so changes reflect immediately
+                pcall(function() ptmReload.setProxyOffset(loc, rot) end)
+            end
+
+            imgui.separator()
+            if imgui.button("Reset to Default##ptmmag") then
+                Config.ptmMagProxyLocation = {-4.000, 4.000, -1.000}
+                Config.ptmMagProxyRotation = {-35.000, 0.000, 10.000}
+                changed = true
+                saveWeaponProfile()
+                pcall(function() ptmReload.setProxyOffset(Config.ptmMagProxyLocation, Config.ptmMagProxyRotation) end)
+                changed = true
+            end
+
+            -- Hip grab glide: the mag / shell taken from the belt pouch (Items On Body > Reload ammo pouch) eases
+            -- from the pouch into the hand. Read at each grab. 0 = appears in the hand at once.
+            imgui.separator()
+            local hgC, hgV = imgui.slider_float("Hip Grab Glide Time (s)##ptmgrab", Config.ptmHipGrabGlideTime or 0.12, 0.0, 0.5)
+            if hgC then Config.ptmHipGrabGlideTime = hgV; changed = true end
+
+            -- Rack to chamber (per-type toggles + grab radius live in Stalker 2 VR Config). Travel is learned
+            -- per weapon in play (Config.rackLearned); "Forget" relearns every weapon from scratch.
+            if imgui.button("Forget learned rack travel (all weapons)##ptmrack") then
+                rackSlide.forgetLearned()
+            end
+
+            -- Rack grip pose: the left hand while it holds the slide / handle, per weapon. See getRackGripPose().
+            if imgui.tree_node("Rack Grip Pose (Rack to Chamber)") then
+                local rackProfile = currentWeaponName and Config.weaponProfiles[currentWeaponName]
+                if not currentWeaponName then
+                    imgui.text("Status: no weapon equipped")
+                elseif rackProfile and rackProfile.rackGripPose then
+                    imgui.text("Status: custom rack pose for " .. currentWeaponName)
+                else
+                    imgui.text("Status: default (this weapon's mag grip pose) for " .. currentWeaponName)
+                end
+                imgui.text("Tune the left hand while racking, or tick Preview to pose")
+                imgui.text("the hand now. Save writes it to this weapon's profile.")
+
+                local rpC, rpV = imgui.checkbox("Preview pose on left hand (while not holding)##rackpose", rackGripPreview)
+                if rpC then
+                    rackGripPreview = rpV
+                    if not rackGripPreview then
+                        hands.invalidatePoseCache(1 - Config.dominantHand)
+                        hands.setInitialTransform(1 - Config.dominantHand)
+                    end
+                end
+
+                if imgui.button("Get Current Hand Pose##rackpose") then
+                    captureRackGripPoseFromHand()
+                end
+                imgui.same_line()
+                imgui.text("(left hand's fingers as they are now -> this pose)")
+
+                local rbC, rbV = imgui.combo("Bone##rackpose", rackGripTuningBoneIndex, LEFT_HAND_POSE_TUNING_LABELS)
+                if rbC then rackGripTuningBoneIndex = rbV end
+
+                local rKey = tostring(currentWeaponName) .. ":" .. tostring(rackGripTuningBoneIndex)
+                if rackGripTuningLoadedFor ~= rKey then
+                    loadRackGripTuningSliders()
+                end
+
+                if imgui.button("Reload Current Value##rackpose") then loadRackGripTuningSliders() end
+
+                local rPC, rPV = imgui.drag_float("Pitch##rackpose", rackGripTuningPitch, 0.2, -180.0, 180.0)
+                if rPC then rackGripTuningPitch = rPV end
+                local rYC, rYV = imgui.drag_float("Yaw##rackpose", rackGripTuningYaw, 0.2, -180.0, 180.0)
+                if rYC then rackGripTuningYaw = rYV end
+                local rRC, rRV = imgui.drag_float("Roll##rackpose", rackGripTuningRoll, 0.2, -180.0, 180.0)
+                if rRC then rackGripTuningRoll = rRV end
+
+                if rPC or rYC or rRC then
+                    applyRackGripTuningLive()
+                end
+
+                if imgui.button("Save Pose to Weapon Profile##rackpose") then
+                    ensureRackGripTuningTarget()
+                    saveWeaponProfile()
+                end
+                if imgui.button("Return to Default##rackpose") then
+                    if rackProfile then rackProfile.rackGripPose = nil end
+                    saveWeaponProfile()
+                    rackGripTuningLoadedFor = nil
+                    hands.invalidatePoseCache(1 - Config.dominantHand)
+                    if rackGripPoseShown() then
+                        hands.setHandPose(1 - Config.dominantHand, getRackGripPose())
+                    end
+                end
+
+                -- Copy this weapon's rack pose into other weapon profiles. Done in the mod (not by editing
+                -- settings.json outside): the mod rewrites the whole file from memory on every save.
+                if currentWeaponName and imgui.tree_node("Copy this rack pose to other weapons##rackpose") then
+                    local names = {}
+                    for name, profile in pairs(Config.weaponProfiles) do
+                        if name ~= currentWeaponName and type(profile) == "table" then table.insert(names, name) end
+                    end
+                    table.sort(names, function(a, b) return string.lower(a) < string.lower(b) end)
+                    for _, name in ipairs(names) do
+                        local p = Config.weaponProfiles[name]
+                        local label = name .. (p.rackGripPose and "  (has custom rack pose)" or "")
+                        local cC, cV = imgui.checkbox(label .. "##rackcopy_" .. name, rackPoseCopyTargets[name] == true)
+                        if cC then rackPoseCopyTargets[name] = cV or nil end
+                    end
+                    if imgui.button("Copy to ticked weapons##rackpose") then
+                        local source = getRackGripPose() or {}
+                        local copied = 0
+                        for name in pairs(rackPoseCopyTargets) do
+                            local p = Config.weaponProfiles[name]
+                            if type(p) == "table" then
+                                local clone = {}
+                                for boneName, rot in pairs(source) do clone[boneName] = { rot[1], rot[2], rot[3] } end
+                                p.rackGripPose = clone
+                                copied = copied + 1
+                            end
+                        end
+                        rackPoseCopyTargets = {}
+                        if copied > 0 then
+                            Config:markDirty()
+                            Config:save()
+                            print("[RackPose] Copied " .. tostring(currentWeaponName) .. " rack pose to " .. copied .. " weapon(s)")
+                        end
+                    end
+                    imgui.tree_pop()
+                end
+
+                imgui.tree_pop()
+            end
+
+            -- Box-mag insert glide. Read by ptm_manual_reload.lua at each insert, so no push needed.
+            imgui.separator()
+            imgui.text("Mag insert glide (box mags): eases the fresh mag into the magwell.")
+            local igTc, igTv = imgui.slider_float("Insert Glide Time (s)##ptmins", Config.ptmInsertGlideTime or 0.16, 0.0, 0.5)
+            if igTc then Config.ptmInsertGlideTime = igTv; changed = true end
+            local igDc, igDv = imgui.slider_float("Insert Depth (cm)##ptmins", Config.ptmInsertDepth or 6.0, 0.0, 20.0)
+            if igDc then Config.ptmInsertDepth = igDv; changed = true end
+            if Config.ptmInsertAxis == nil then Config.ptmInsertAxis = {0.0, 0.0, -1.0} end
+            local ax = Config.ptmInsertAxis
+            imgui.text("Insert axis (weapon space, points OUT of the magwell):")
+            local igXc, igXv = imgui.slider_float("Axis X##ptmins", ax[1], -1.0, 1.0)
+            if igXc then ax[1] = igXv; changed = true end
+            local igYc, igYv = imgui.slider_float("Axis Y##ptmins", ax[2], -1.0, 1.0)
+            if igYc then ax[2] = igYv; changed = true end
+            local igZc, igZv = imgui.slider_float("Axis Z##ptmins", ax[3], -1.0, 1.0)
+            if igZc then ax[3] = igZv; changed = true end
+
+            -- Per-weapon overrides, saved in Config.weaponProfiles[currentWeaponName] and read by
+            -- ptm_manual_reload.lua at each insert.
+            imgui.separator()
+            imgui.text("This weapon: " .. tostring(currentWeaponName or "none equipped"))
+            if currentWeaponName then
+                if not Config.weaponProfiles[currentWeaponName] then Config.weaponProfiles[currentWeaponName] = {} end
+                local wp = Config.weaponProfiles[currentWeaponName]
+
+                local ovC, ovV = imgui.checkbox("Own Insert Glide Time##ptmwp", wp.ptmInsertGlideTime ~= nil)
+                if ovC then
+                    wp.ptmInsertGlideTime = ovV and (Config.ptmInsertGlideTime or 0.16) or nil
+                    changed = true
+                end
+                if wp.ptmInsertGlideTime ~= nil then
+                    local wgC, wgV = imgui.slider_float("Insert Glide Time (this weapon)##ptmwp", wp.ptmInsertGlideTime, 0.0, 0.5)
+                    if wgC then wp.ptmInsertGlideTime = wgV; changed = true end
+                end
+
+                -- Own insert axis + depth: copies the current global values as a starting point
+                local oaC, oaV = imgui.checkbox("Own Insert Axis / Depth##ptmwp", wp.ptmInsertAxis ~= nil)
+                if oaC then
+                    if oaV then
+                        local g = Config.ptmInsertAxis or {0.0, 0.0, -1.0}
+                        wp.ptmInsertAxis  = {g[1], g[2], g[3]}
+                        wp.ptmInsertDepth = Config.ptmInsertDepth or 6.0
+                    else
+                        wp.ptmInsertAxis  = nil
+                        wp.ptmInsertDepth = nil
+                    end
+                    changed = true
+                end
+                if wp.ptmInsertAxis ~= nil then
+                    local wa = wp.ptmInsertAxis
+                    local wdC, wdV = imgui.slider_float("Insert Depth (cm, this weapon)##ptmwp", wp.ptmInsertDepth or 6.0, 0.0, 20.0)
+                    if wdC then wp.ptmInsertDepth = wdV; changed = true end
+                    local wxC, wxV = imgui.slider_float("Axis X (this weapon)##ptmwp", wa[1], -1.0, 1.0)
+                    if wxC then wa[1] = wxV; changed = true end
+                    local wyC, wyV = imgui.slider_float("Axis Y (this weapon)##ptmwp", wa[2], -1.0, 1.0)
+                    if wyC then wa[2] = wyV; changed = true end
+                    local wzC, wzV = imgui.slider_float("Axis Z (this weapon)##ptmwp", wa[3], -1.0, 1.0)
+                    if wzC then wa[3] = wzV; changed = true end
+                end
+
+                -- Seat offset for bare-socket seats (seatOnSocket profiles: Rhino speedloader, RPG-7 rocket): where the proxy ends up
+                -- relative to the MagBox socket. Tune with Seat Preview Hold > 0 - the loader then
+                -- parks on the seat for that long and follows these sliders live.
+                if imgui.tree_node("Seat Offset (Rhino speedloader / RPG-7 rocket)##ptmwp") then
+                    if wp.ptmSeatLoc == nil then wp.ptmSeatLoc = {0.0, 0.0, 0.0} end
+                    if wp.ptmSeatRot == nil then wp.ptmSeatRot = {0.0, 0.0, 0.0} end
+                    local sl, sr = wp.ptmSeatLoc, wp.ptmSeatRot
+                    local slxC, slxV = imgui.drag_float("Seat X##ptmseat", sl[1], 0.05)
+                    if slxC then sl[1] = slxV; changed = true end
+                    local slyC, slyV = imgui.drag_float("Seat Y##ptmseat", sl[2], 0.05)
+                    if slyC then sl[2] = slyV; changed = true end
+                    local slzC, slzV = imgui.drag_float("Seat Z##ptmseat", sl[3], 0.05)
+                    if slzC then sl[3] = slzV; changed = true end
+                    local srpC, srpV = imgui.drag_float("Seat Pitch##ptmseat", sr[1], 0.2)
+                    if srpC then sr[1] = srpV; changed = true end
+                    local sryC, sryV = imgui.drag_float("Seat Yaw##ptmseat", sr[2], 0.2)
+                    if sryC then sr[2] = sryV; changed = true end
+                    local srrC, srrV = imgui.drag_float("Seat Roll##ptmseat", sr[3], 0.2)
+                    if srrC then sr[3] = srrV; changed = true end
+                    local shC, shV = imgui.slider_float("Seat Preview Hold (s)##ptmseat", Config.ptmSeatPreviewHold or 0.0, 0.0, 10.0)
+                    if shC then Config.ptmSeatPreviewHold = shV; changed = true end
+                    imgui.text("Preview hold > 0 parks the speedloader / rocket on the seat before the reload")
+                    imgui.text("completes, following these sliders live. Set back to 0 when done.")
+                    imgui.tree_pop()
+                end
+
+                -- Rhino: the seated speedloader waits for a right-hand flick to the right (closes the cylinder)
+                local fcC, fcV = imgui.checkbox("Flick Right Hand to Close (Rhino)##ptmflick", Config.ptmFlickToClose ~= false)
+                if fcC then Config.ptmFlickToClose = fcV; changed = true end
+                if Config.ptmFlickToClose ~= false then
+                    local fsC, fsV = imgui.slider_float("Flick Speed (cm/s)##ptmflick", Config.ptmFlickCloseSpeed or 150.0, 50.0, 500.0)
+                    if fsC then Config.ptmFlickCloseSpeed = fsV; changed = true end
+                    imgui.text("Lower = gentler flick closes it. Raise it if the cylinder closes by accident.")
+                end
+
+                local frC, frV = imgui.drag_float("Reload Finish Speed (x)##ptmwp", wp.ptmFinishRate or Config.ptmFinishRate or 100.0, 5.0, 10.0, 3000.0)
+                if frC then wp.ptmFinishRate = frV; changed = true end
+                imgui.text("How fast the game's reload animation is burned through after the mag seats.")
+                imgui.text("Higher = fewer visible sped-up frames. Default 100x.")
+            end
+
             imgui.tree_pop()
         end
     end
@@ -3000,20 +4373,21 @@ end)
 -- Re-spawn after level transitions: poll until pawn is ready again.
 -- Only fires when component is genuinely absent (post level-change or first load).
 uevrUtils.setInterval(5000, function()
-    if Config.rendererStabilizerEnabled and rendererStabilizerComponent == nil then
+    if rendererStabilizerComponent == nil then
         spawnRendererStabilizer()
     end
 end)
 
--- Initialize CVars on script start
-apply_compatibility_cvars()
+-- Automatic CVar application on script start DISABLED: applying these before the
+-- first scene frame black-screens the game under the upgraded UEVR build
+-- (r.DynamicGlobalIlluminationMethod=0 / r.GlobalDistanceField=0 disable Stalker 2's
+-- Lumen-based world rendering when set that early). The individual controls in the
+-- script panel remain available and apply on demand.
 
--- Spawn renderer stabilizer on script load if enabled in saved config
-if Config.rendererStabilizerEnabled then
-    delay(2000, function()
-        spawnRendererStabilizer()
-    end)
-end
+-- Spawn renderer stabilizer on script load (always on: the toggle was removed 2026-10-12 on request)
+delay(2000, function()
+    spawnRendererStabilizer()
+end)
 
 
 
@@ -3037,10 +4411,18 @@ uevrUtils.setInterval(1000, function()
         local ok, nm = pcall(function() return currentSkelMesh:get_full_name() end)
         if ok and nm then meshName = nm end
         print("[SuitDetect] SkeletalMesh changed to: " .. meshName .. " — rebuilding VR hands")
+        -- body items / reload pouch build nothing in the same frames as the suit swap or the rebuild
+        -- below (crash 2026-10-18, see body_items.lua holdBuilds)
+        pcall(bodyItems.holdBuilds)
         -- Small delay to ensure UE has fully finished swapping the mesh asset
         -- before we read bone data for the new poseable components.
         delay(500, function()
-            hands.rebuildHands()
+            pcall(bodyItems.holdBuilds)
+            if _G.getHandsMode ~= nil and _G.getHandsMode() == 2 and _G.ikRebuild ~= nil then
+                _G.ikRebuild() -- IK Arms mode: rebuild the rig from the new mesh
+            else
+                hands.rebuildHands()
+            end
         end)
     end
     lastSuitSkeletalMesh = currentSkelMesh

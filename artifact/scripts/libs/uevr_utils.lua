@@ -1163,6 +1163,17 @@ function M.cancelLerp(lerpID)
 	lerpList[lerpID] = nil
 end
 
+-- Cancels every lerp whose id starts with prefix (animation.lua keys its lerps "<animID>-<animName>").
+-- Ported from the OW2 profile with libs/ik.lua + hands_animation.lua (2026-10-04).
+function M.cancelLerpsWithPrefix(prefix)
+	if prefix == nil or prefix == "" then return end
+	for id, _ in pairs(lerpList) do
+		if type(id) == "string" and id:sub(1, #prefix) == prefix then
+			lerpList[id] = nil
+		end
+	end
+end
+
 -- Do Once 
 Once = {
     EVER = 0,
@@ -1370,13 +1381,24 @@ local function updateCurrentLevel()
 	if on_level_change ~= nil or hasUEVRCallbacks("on_pre_level_change") or hasUEVRCallbacks("on_level_change") then --don't bother doing anything if nothing is listening
 		local level = getCurrentLevel()
 		if level ~= nil and lastLevel ~= level then
+			-- Record the level as handled BEFORE running any callback (2026-09-21). This used
+			-- to happen only after they all returned, so a callback that threw (hands.lua's
+			-- on_level_change -> K2_AttachTo on a dying controller) skipped it, and the whole
+			-- level-change sequence - including creating a fresh hand mesh - re-ran on EVERY
+			-- tick: 3,800 exceptions in two minutes and ~5 fps until the game was paused.
+			lastLevel = level
 			resetPerLevelDoOnce()
 
 			local levelName = M.getShortName(level:get_outer())
 			executeUEVRCallbacks("on_pre_level_change", level, levelName)
 
 			if on_level_change ~= nil then
-				on_level_change(level, levelName)
+				-- The global handler is user code: never let it abort the registered callbacks
+				-- below (controllers.lua, input.lua ... create their components there).
+				local ok, err = pcall(on_level_change, level, levelName)
+				if not ok then
+					print("[uevr_utils] on_level_change threw: " .. tostring(err))
+				end
 			end
 
 			executeUEVRCallbacks("on_level_change", level, levelName)
@@ -1932,11 +1954,17 @@ local function rotatorToQuaternion(pitch, yaw, roll)
     local cr = math.cos(r * 0.5)
     local sr = math.sin(r * 0.5)
 
-    -- Quaternion components
-    local qw = cr * cp * cy + sr * sp * sy
-    local qx = sr * cp * cy - cr * sp * sy
-    local qy = cr * sp * cy + sr * cp * sy
-    local qz = cr * cp * sy - sr * sp * cy
+    -- Quaternion components - MUST match FRotator::Quaternion (UnrealMath.cpp), because the
+    -- result is written straight into an FTransform.Rotation (animation.initializeBones). The
+    -- previous body was the generic aerospace ZYX formula, which in UE's axis convention
+    -- negates X and Y: every pose applied through initializeBones came back with pitch and
+    -- roll sign-flipped while yaw survived. Finger curls are almost pure yaw so they looked
+    -- fine; the thumb (large pitch+roll) rendered mirrored during two-handing, PTM mag/shell
+    -- grabs and the detector pose (2026-09-11, verified by sampling the left PMC live).
+    local qx =  cr * sp * sy - sr * cp * cy
+    local qy = -cr * sp * cy - sr * cp * sy
+    local qz =  cr * cp * sy - sr * sp * cy
+    local qw =  cr * cp * cy + sr * sp * sy
 
     return {x = qx, y = qy, z = qz, w = qw}
 end
@@ -2135,6 +2163,11 @@ function M.getUEVRParam_int(paramName, default)
 end
 
 
+-- used by libs/input.lua (IK codebase 4.5 version, restored 2026-10-04)
+function M.setUEVRParam_int(paramName, value)
+	uevr.params.vr.set_mod_value(paramName, value)
+end
+
 function M.PositiveIntegerMask(text)
     return text:gsub("[^%-%d]", "")
 end
@@ -2193,9 +2226,26 @@ function M.stringFromTag(tag)
 	return tag and tag.TagName and tag.TagName:to_string() or ""
 end
 
+function M.get_game_engine()
+	if game_engine == nil then
+		-- Primary: UEVR's native engine getter. Under newer UEVR builds with
+		-- deferred UObject adoption, get_first_object_by_class(GameEngine) can
+		-- return nil forever (the engine object is never adopted), so the
+		-- UObjectHook scan below is only a fallback.
+		local ok, engine = pcall(function() return uevr.api:get_engine() end)
+		if ok and engine ~= nil then
+			game_engine = engine
+		else
+			game_engine = M.find_first_of("Class /Script/Engine.GameEngine")
+		end
+	end
+	return game_engine
+end
+
 function M.get_world()
-	if game_engine ~= nil then
-		local viewport = game_engine.GameViewport
+	local engine = M.get_game_engine()
+	if engine ~= nil then
+		local viewport = engine.GameViewport
 		if viewport ~= nil then
 			local world = viewport.World
 			return world
@@ -2210,9 +2260,16 @@ end
 
 
 function M.spawn_actor(transform, collisionMethod, owner, tag)
-	local viewport = game_engine.GameViewport
+	local engine = M.get_game_engine()
+	if engine == nil then
+		print("Game engine is nil")
+		return nil
+	end
+
+	local viewport = engine.GameViewport
 	if viewport == nil then
 		print("Viewport is nil")
+		return nil
 	end
 
 	local worldContext = viewport.World
@@ -2347,6 +2404,10 @@ function M.create_component_of_class(class, manualAttachment, relativeTransform,
 	if deferredFinish == nil then deferredFinish = false end
 	local baseActor = parent
 	if baseActor == nil then baseActor = M.spawn_actor( nil, 1, nil, tag) end
+	if baseActor == nil then
+		M.print("create_component_of_class: could not spawn base actor (world not ready?)", LogLevel.Warning)
+		return nil
+	end
 	local component = nil
 	if baseActor.AddComponentByClass == nil then
 		component = uevr.api:add_component_by_class(baseActor, class, deferredFinish)
@@ -2429,7 +2490,14 @@ function M.find_first_of(className, includeDefault)
 	if includeDefault == nil then includeDefault = false end
 	local class =  M.get_class(className)
 	if class ~= nil then
-		return UEVR_UObjectHook.get_first_object_by_class(class, includeDefault)
+		-- UEVR_UObjectHook.get_first_object_by_class is a native call that can throw
+		-- (sol: runtime error) in the transient window right after a script
+		-- reload/reset, before the object graph is fully queryable again. Callers
+		-- like Trackers.lua's on_pre_engine_tick run this uncached every tick with no
+		-- pcall of their own, so an uncaught throw here used to kill that tick
+		-- outright. Swallow it and return nil like the "class not found" path already does.
+		local ok, result = pcall(function() return UEVR_UObjectHook.get_first_object_by_class(class, includeDefault) end)
+		if ok then return result end
 	end
 	return nil
 end
@@ -2438,7 +2506,10 @@ function M.find_all_of(className, includeDefault)
 	if includeDefault == nil then includeDefault = false end
 	local class =  M.get_class(className)
 	if class ~= nil then
-		return UEVR_UObjectHook.get_objects_by_class(class, includeDefault)
+		-- See find_first_of above - same native-exception-right-after-reload issue,
+		-- this is the specific call in the "Exception in on_pre_engine_tick" reports.
+		local ok, result = pcall(function() return UEVR_UObjectHook.get_objects_by_class(class, includeDefault) end)
+		if ok then return result end
 	end
 	return {}
 end
@@ -2456,6 +2527,22 @@ end
 function M.find_instance_of(className, objectName)
 	--check if the objectName is a short name
 	local isShortName = string.find(objectName, '.', 1, true) == nil
+	-- Full-path fast path (2026-09-08): under the joeyhodge backend UObjectHook adoption is
+	-- deferred, so find_all_of/get_objects_by_class only returns objects that were already
+	-- adopted - engine assets like "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder" never
+	-- are, and this scan silently returned nil for them. That killed every
+	-- createStaticMeshComponent(pathString) caller (PiP scope cylinder, warmup sphere, red
+	-- dot). find_uobject is a name lookup that does not depend on adoption; the returned
+	-- object is adopted on demand. Only used for full "Type /Path.Name" strings so short-name
+	-- callers keep the old behaviour.
+	if not isShortName and string.find(objectName, " /", 1, true) ~= nil then
+		local okFU, direct = pcall(function() return uevr.api:find_uobject(objectName) end)
+		if okFU and direct ~= nil then
+			local cls = M.get_class(className)
+			local okIsA, isA = pcall(function() return cls == nil or direct:is_a(cls) end)
+			if okIsA and isA then return direct end
+		end
+	end
 	local instances = M.find_all_of(className, true)
 	for i, instance in ipairs(instances) do
 		if isShortName then
@@ -2472,9 +2559,17 @@ function M.find_instance_of(className, objectName)
 	return nil
 end
 
+-- PERF (2026-09-08): memoised. Conv_StringToName is a UFunction call (ProcessEvent) and this helper
+-- is hit ~95 times across the tree, ~30 of them per bone inside hand-pose application. FNames are
+-- process-stable, and the set of distinct bone/socket/param names is small and bounded.
+local fnameCache = {}
 function M.fname_from_string(str)
 	if str == nil then str = "" end
-	return kismet_string_library:Conv_StringToName(str)
+	local cached = fnameCache[str]
+	if cached ~= nil then return cached end
+	local fname = kismet_string_library:Conv_StringToName(str)
+	if fname ~= nil then fnameCache[str] = fname end
+	return fname
 end
 
 -- float values from 0.0 to 1.0
@@ -2934,10 +3029,16 @@ end
 function M.getChildComponent(parent, name)
 	local childComponent = nil
 	if M.validate_object(parent) ~= nil and name ~= nil then
-		local children = parent.AttachChildren
+		local children = nil
+		pcall(function() children = parent.AttachChildren end)
 		if children ~= nil then
 			for i, child in ipairs(children) do
-				if  string.find(child:get_full_name(), name) then
+				-- AttachChildren can still enumerate a component the engine has already
+				-- destroyed (seen every 200ms right after an in-game script reset, walking
+				-- the left controller's children); any method call on it throws a C++
+				-- exception straight out of on_pre_engine_tick. pcall the read, skip the dead.
+				local ok, fullName = pcall(function() return child:get_full_name() end)
+				if ok and fullName ~= nil and string.find(fullName, name) then
 					childComponent = child
 					break
 				end
@@ -3410,6 +3511,21 @@ function M.fixMeshFOV(mesh, propertyName, value, includeChildren, includeNiagara
 	end
 end
 
+-- The game renders its first-person meshes (VR hand PMCs, the weapon and its
+-- attachments) through a material "foreground FOV" projection (materials carry a
+-- ForegroundFOVEnabled parameter). Any mesh spawned at runtime only gets its asset's
+-- default material, where that parameter is unset, so it renders with the normal
+-- world projection and sits at the wrong depth relative to the hands/weapon. Call
+-- this on any StaticMeshComponent/SkeletalMeshComponent proxy attached near the
+-- hands or weapon (mag proxies, debug-visualization meshes standing in for a
+-- BoxComponent's own invisible native shape draw, etc).
+function M.applyForegroundFOV(comp)
+	if M.getValid(comp) == nil then return end
+	pcall(function()
+		M.fixMeshFOV(comp, "ForegroundFOVEnabled", 1.0, false, false, false)
+	end)
+end
+
 
 function M.cloneComponent(component, options)
 	if options == nil then options = {} end
@@ -3865,5 +3981,210 @@ hook_function("Class /Script/Engine.PlayerController", "ClientRestart", true, ni
 	end
 , true)
 
+-- Ported from the reference uevrlib (UEVR Libs/scripts/libs/uevr_utils.lua) to support
+-- libs/accessories.lua, which picks the highest-priority non-nil (value, priority) pair
+-- returned across all registered callbacks for a name (e.g. "active_right_accessory") —
+-- this project's fork only had the boolean-result variant, not this general-value one.
+-- Mirrors executeUEVRCallbacksWithPriorityBooleanResult below it, just without the
+-- boolean-specific "result = result or funcResult" merge (last-highest-priority wins outright).
+local function executeUEVRCallbacksWithPriorityResult(callbackName, ...)
+	local result = nil
+	local priority = 0
+	if uevrCallbacks[callbackName] ~= nil then
+		for i, entry in ipairs(uevrCallbacks[callbackName]) do
+			local funcResult, funcPriority = entry.func(table.unpack({...}))
+			if funcPriority == nil then funcPriority = 0 end
+			if funcResult ~= nil and funcPriority >= priority then
+				result = funcResult
+				priority = funcPriority
+			end
+		end
+	end
+	return result, priority
+end
+function M.executeUEVRCallbacksWithPriorityResult(callbackName, ...)
+	return executeUEVRCallbacksWithPriorityResult(callbackName, ...)
+end
+
+-- Ported from the reference uevrlib (UEVR Libs/scripts/libs/uevr_utils.lua) to support the
+-- upgraded libs/attachments.lua, which calls uevrUtils.profiler:wrap(...) at module-load time
+-- for several of its functions. Disabled by default so it's a zero-cost passthrough.
+M.profiler = {
+	enabled = false,
+	counts = {},
+	totalTimes = {},
+
+	toggle = function(self, enable)
+		self.enabled = enable
+		if not enable then
+			self.counts = {}
+			self.totalTimes = {}
+		end
+	end,
+
+	wrap = function(self, funcName, func)
+		return function(...)
+			if not self.enabled then
+				return func(...)
+			end
+
+			local startTime = os.clock()
+			local results = {func(...)}
+			local elapsed = (os.clock() - startTime) * 1000
+
+			self.counts[funcName] = (self.counts[funcName] or 0) + 1
+			self.totalTimes[funcName] = (self.totalTimes[funcName] or 0) + elapsed
+
+			return table.unpack(results)
+		end
+	end,
+
+	report = function(self)
+		if not self.enabled then return end
+		print("\n=== Profiling Report ===")
+		for name, count in pairs(self.counts) do
+			local total = self.totalTimes[name]
+			local avg = total / count
+			print(string.format("%s: %d calls, %.3f ms total, %.3f ms avg",
+				name, count, total, avg))
+		end
+		print("========================\n")
+	end
+}
+
+-- GetAllSocketNames is a plain blueprint-callable UFunction on SkeletalMeshComponent
+-- (returns both real Sockets and bone names) — called directly rather than through the
+-- reference version's "plugin" bridge, which this project's fork doesn't have wired up.
+-- Used by the accessories dev-UI "Socket Finder" (libs/attachments.lua's getSocketsForAttachmentID).
+function M.getSocketNames(object, callback)
+	local arr = {}
+	if object ~= nil and object.GetAllSocketNames ~= nil then
+		local ok, names = pcall(function() return object:GetAllSocketNames() end)
+		if ok and names ~= nil then
+			for i = 1, #names do
+				local n = names[i]
+				if type(n) == "userdata" and n.to_string ~= nil then
+					n = n:to_string()
+				end
+				table.insert(arr, tostring(n))
+			end
+		end
+	end
+	callback(arr)
+end
+
+-- Bone-hierarchy helpers used by libs/config/ik_config_dev.lua (IK dev panel). Ported verbatim from
+-- the OW2 profile's uevr_utils.lua (2026-10-04).
+function M.getAncestorBones(component, boneName)
+	if component == nil then return {} end
+	if boneName == nil or boneName == "" then return {component:GetBoneName(1)} end
+	local boneNames = {}
+	local fName = M.fname_from_string(boneName)
+	while fName:to_string() ~= "None" do
+		table.insert(boneNames, fName:to_string())
+		fName = component:GetParentBone(fName)
+	end
+	return boneNames
+end
+
+function M.findCommonAncestor(mesh, boneName1, boneName2)
+	if mesh == nil or boneName1 == "None" or boneName2 == "None" then
+		return nil
+	end
+	local ancestors1 = M.getAncestorBones(mesh, boneName1)
+	local ancestors2 = M.getAncestorBones(mesh, boneName2)
+	for _, ancestor1 in ipairs(ancestors1) do
+		for _, ancestor2 in ipairs(ancestors2) do
+			if ancestor1 == ancestor2 and ancestor1 ~= boneName1 and ancestor1 ~= boneName2 then
+				return ancestor1
+			end
+		end
+	end
+	return nil
+end
+
+-- Finds the opposite (left/right) bone in a list, handling various naming conventions
+-- bone_name: string, is_left: boolean, bone_list: table of strings
+function M.findOppositeBone(bone_name, is_left, bone_list)
+	-- Patterns for left/right detection (expanded for mid-string)
+	local left_right_pairs = {
+		{"_l_", "_r_"}, {"_L_", "_R_"},
+		{"_l$", "_r$"}, {"_L$", "_R$"},
+		{"_l", "_r"}, {"_L", "_R"},
+		{"left", "right"}, {"Left", "Right"}, {"LEFT", "RIGHT"},
+		{"\\.l$", ".r$"}, {"\\.L$", ".R$"},
+		{"-l$", "-r$"}, {"-L$", "-R$"},
+		{" l ", " r "}, {" L ", " R "},
+	}
+
+	local candidates = {}
+	local seen = {}
+
+	local function add_candidate(candidate)
+		if type(candidate) == "string" and candidate ~= bone_name and not seen[candidate] then
+			table.insert(candidates, candidate)
+			seen[candidate] = true
+		end
+	end
+
+	-- Try all left/right swaps
+	for _, pair in ipairs(left_right_pairs) do
+		local from_pat, to_pat = is_left and pair[1] or pair[2], is_left and pair[2] or pair[1]
+		local candidate = bone_name:gsub(from_pat, to_pat)
+		add_candidate(candidate)
+	end
+
+	-- Also try simple _l_ <-> _r_ anywhere in the string
+	if is_left then
+		add_candidate(bone_name:gsub("_l_", "_r_"))
+		add_candidate(bone_name:gsub("_L_", "_R_"))
+	else
+		add_candidate(bone_name:gsub("_r_", "_l_"))
+		add_candidate(bone_name:gsub("_R_", "_L_"))
+	end
+
+	-- Try swapping _l/_r or L/R anywhere in the name (but not if it's the only L/R in the string)
+	if is_left then
+		add_candidate(bone_name:gsub("([_.%-])l([_.%-])", "%1r%2"))
+		add_candidate(bone_name:gsub("([_.%-])L([_.%-])", "%1R%2"))
+		add_candidate(bone_name:gsub("l$", "r"))
+		add_candidate(bone_name:gsub("L$", "R"))
+	else
+		add_candidate(bone_name:gsub("([_.%-])r([_.%-])", "%1l%2"))
+		add_candidate(bone_name:gsub("([_.%-])R([_.%-])", "%1L%2"))
+		add_candidate(bone_name:gsub("r$", "l"))
+		add_candidate(bone_name:gsub("R$", "L"))
+	end
+
+	-- Try global L/R swap (last resort, only if above fails)
+	local swapped
+	if is_left then
+		swapped = bone_name:gsub("[lL]", function(c) return (c == "l" and "r") or "R" end)
+	else
+		swapped = bone_name:gsub("[rR]", function(c) return (c == "r" and "l") or "L" end)
+	end
+	add_candidate(swapped)
+
+	-- Search for any candidate in the bone_list
+	for _, candidate in ipairs(candidates) do
+		for _, b in ipairs(bone_list) do
+			if b == candidate then
+				return b
+			end
+		end
+	end
+
+	-- Not found
+	return nil
+end
+
+-- Used by the OW2-derived libs/input.lua (IK Arms mode, 2026-10-04).
+function M.ternary(cond, trueVal, falseVal)
+    if cond then
+        return trueVal
+    else
+        return falseVal
+    end
+end
 
 return M

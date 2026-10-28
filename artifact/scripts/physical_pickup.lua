@@ -27,9 +27,14 @@ local controllers = require("libs/controllers")
 local gameState   = require("stalker2.gamestate")
 local mc          = require("gestures.motioncontrollergestures")
 local hands       = require("libs/hands")
+local plugin      = require("libs/core/plugin")   -- TArray-capable engine calls (SphereOverlapComponents)
 require("libs/enums/unreal")
 
 local M = {}
+
+-- Declared up here (not in the Config block below) so resolvePrototypeID's
+-- debug print sees the local instead of a nil global.
+local DEBUG_PRINT = false
 
 -- ---------------------------------------------------------------------------
 -- Item Mapping: SM mesh name substrings → XCreateItemInInventoryByID PrototypeID
@@ -492,29 +497,52 @@ local function injectItem(protoID)
     _G.__pickup_lastInjectTime = _G.__pickup_lastInjectTime or 0
     local now = os.time()
     if (now - _G.__pickup_lastInjectTime) < 1.0 then
+        -- The second parallel script instance lands here on every pickup; it is
+        -- not a failure, so return nil (not false) so the caller stays quiet.
         print("[pickup] injectItem: skipped duplicate within 1s guard")
-        return false
+        return nil
     end
     _G.__pickup_lastInjectTime = now
+    local count = math.floor(AMMO_QUANTITIES[protoID] or 1)
+    local cmd   = string.format("XCreateItemInInventoryByID %s 0 %d 1", protoID, count)
     local ok = false
+
+    -- Primary path: the X* functions on CustomConsoleManagerRK are exec console
+    -- commands, so route through the engine's ExecuteConsoleCommand (same route
+    -- Entry.lua uses for cvars under the upgraded backend). This needs no object
+    -- discovery at all -- the live manager instance is never UObjectHook-adopted,
+    -- so the old find_all_of scan below returns nothing on this backend.
     pcall(function()
-        if consoleManagerClass == nil then
-            consoleManagerClass = uevrUtils.find_required_object(
-                "Class /Script/Stalker2.CustomConsoleManagerRK")
-        end
-        if consoleManagerClass == nil then return end
-        local instances = uevrUtils.find_all_of(
-            "Class /Script/Stalker2.CustomConsoleManagerRK", false)
-        if instances == nil or #instances == 0 then return end
-        local mgr = instances[1]
-        if mgr == nil then return end
-        local count = math.floor(AMMO_QUANTITIES[protoID] or 1)
-        print("[pickup] Injected: XCreateItemInInventoryByID " .. protoID .. " 0 " .. count .. " 1")
-        mgr:XCreateItemInInventoryByID(protoID, false, count, 1.0)
+        if kismet_system_library == nil then return end
+        local world = uevrUtils.get_world()
+        if world == nil then return end
+        kismet_system_library:ExecuteConsoleCommand(world, cmd, nil)
         ok = true
     end)
+
+    -- Legacy fallback: direct method call on a scanned manager instance.
+    -- Only reachable if the kismet library / world are unavailable.
     if not ok then
-        print("[pickup] WARNING: inject failed for " .. tostring(protoID) .. " (ConsoleManager unavailable?)")
+        pcall(function()
+            if consoleManagerClass == nil then
+                consoleManagerClass = uevrUtils.find_required_object(
+                    "Class /Script/Stalker2.CustomConsoleManagerRK")
+            end
+            if consoleManagerClass == nil then return end
+            local instances = uevrUtils.find_all_of(
+                "Class /Script/Stalker2.CustomConsoleManagerRK", false)
+            if instances == nil or #instances == 0 then return end
+            local mgr = instances[1]
+            if mgr == nil then return end
+            mgr:XCreateItemInInventoryByID(protoID, false, count, 1.0)
+            ok = true
+        end)
+    end
+
+    if ok then
+        print("[pickup] Injected: " .. cmd)
+    else
+        print("[pickup] WARNING: inject failed for " .. tostring(protoID) .. " (kismet library / world unavailable?)")
     end
     return ok
 end
@@ -522,9 +550,8 @@ end
 -- ---------------------------------------------------------------------------
 -- Config
 -- ---------------------------------------------------------------------------
-local GRAB_RADIUS       = 30.0  -- cm: max distance from hand centre to actor root
+local GRAB_RADIUS       = 30.0  -- cm: sphere-overlap radius around the left hand
 local CHECK_INTERVAL_MS = 80    -- ms tick rate
-local DEBUG_PRINT       = false
 
 -- Location offset (cm) and rotation offset (degrees) applied to held items,
 -- relative to the left VR controller origin. Adjustable via the config UI.
@@ -559,6 +586,124 @@ local grabbedItemNameLower = nil   -- cached string.lower() so syncActorToHand n
 local grabbedActorClassName = nil
 local cachedHookState      = nil   -- cached UEVR hook state, fetched once at grab time
 local grabbedIsPhysicsProp = false  -- true when holding a BP_DestructibleObject_Small_C (drop-only)
+-- Grab glide: nil when not gliding, else
+-- {pending, pendingTicks, elapsed, duration, relRot0, relLoc0, relRot1, relLoc1}
+local glide                = nil
+-- The held mesh's world pose, captured every frame in the post-stereo callback.
+-- Only valid there: on the game thread a hook-driven mesh reads back at its natural
+-- (pre-grab) place, so a drop built from game-thread reads lands at the pick-up spot.
+local heldMeshLoc          = nil   -- {X,Y,Z}
+local heldMeshRot          = nil   -- {Pitch,Yaw,Roll}
+local pendingDrop          = nil   -- drop pose still being re-applied after release
+local GLIDE_PENDING_FALLBACK_TICKS = 3
+
+-- ---------------------------------------------------------------------------
+-- Quaternion helpers for the grab glide. Quats are {w,x,y,z}; vectors {x,y,z}.
+--
+-- UEVR's UObjectHook places a hooked component at (UObjectHook.cpp):
+--   world_rot = hand_rot * inverse(rotation_offset)                (glm space)
+--   world_loc = hand_pos + quat_converter * (world_rot * location_offset)
+-- which works out to an ordinary transform RELATIVE to the controller:
+--   rotation_offset = inverse(glmFromUE(relRot))
+--   location_offset = ue4_to_glm(-inverse(relRot) * relLoc)
+-- The glide interpolates relRot/relLoc and converts every frame. Verified against
+-- a numeric re-implementation of the backend's glm code (round trip ~1e-13).
+-- ---------------------------------------------------------------------------
+local function qmul(a, b)
+    return {
+        w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+        x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+        y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+        z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+    }
+end
+
+local function qinv(q)
+    return {w = q.w, x = -q.x, y = -q.y, z = -q.z}
+end
+
+local function qrot(q, x, y, z)
+    -- v' = v + 2w(u x v) + 2u x (u x v)
+    local tx = 2 * (q.y * z - q.z * y)
+    local ty = 2 * (q.z * x - q.x * z)
+    local tz = 2 * (q.x * y - q.y * x)
+    return {
+        x = x + q.w * tx + (q.y * tz - q.z * ty),
+        y = y + q.w * ty + (q.z * tx - q.x * tz),
+        z = z + q.w * tz + (q.x * ty - q.y * tx),
+    }
+end
+
+local function axisQuat(rad, x, y, z)
+    local s = math.sin(rad / 2)
+    return {w = math.cos(rad / 2), x = x * s, y = y * s, z = z * s}
+end
+
+-- FRotator::Quaternion (degrees)
+local function rotatorToQuat(p, y, r)
+    local d = math.pi / 360
+    local sp, cp = math.sin(p * d), math.cos(p * d)
+    local sy, cy = math.sin(y * d), math.cos(y * d)
+    local sr, cr = math.sin(r * d), math.cos(r * d)
+    return {
+        x =  cr * sp * sy - sr * cp * cy,
+        y = -cr * sp * cy - sr * cp * sy,
+        z =  cr * cp * sy - sr * sp * cy,
+        w =  cr * cp * cy + sr * sp * sy,
+    }
+end
+
+-- Shortest-path slerp
+local function qslerp(a, b, t)
+    local bw, bx, by, bz = b.w, b.x, b.y, b.z
+    local dot = a.w * bw + a.x * bx + a.y * by + a.z * bz
+    if dot < 0 then
+        dot = -dot
+        bw, bx, by, bz = -bw, -bx, -by, -bz
+    end
+    local s0, s1
+    if dot > 0.9995 then
+        s0, s1 = 1 - t, t
+    else
+        local theta = math.acos(dot)
+        local sinTheta = math.sin(theta)
+        s0 = math.sin((1 - t) * theta) / sinTheta
+        s1 = math.sin(t * theta) / sinTheta
+    end
+    local w = s0 * a.w + s1 * bw
+    local x = s0 * a.x + s1 * bx
+    local y = s0 * a.y + s1 * by
+    local z = s0 * a.z + s1 * bz
+    local len = math.sqrt(w * w + x * x + y * y + z * z)
+    if len > 0 then w, x, y, z = w / len, x / len, y / len, z / len end
+    return {w = w, x = x, y = y, z = z}
+end
+
+-- UE-space rotation <-> UEVR glm-space rotation (UESDK Math.hpp ue4_to_glm, up to sign)
+local function glmFromUE(q) return {w = q.w, x = -q.y, y = -q.z, z = q.x} end
+local function ueFromGlm(g) return {w = g.w, x = g.z, y = -g.x, z = -g.y} end
+
+-- What the Lua binding builds from a Vector3f rotation offset:
+-- glm::quat(glm::yawPitchRoll(-e.y, e.x, -e.z))  ==  qY(-yaw) * qX(pitch) * qZ(-roll)
+local function glmFromEulerRad(pitch, yaw, roll)
+    return qmul(qmul(axisQuat(-yaw, 0, 1, 0), axisQuat(pitch, 1, 0, 0)), axisQuat(-roll, 0, 0, 1))
+end
+
+-- Profile offsets (cm / degrees, hook space) -> transform relative to the controller (UE space)
+local function relativeFromOffsets(lx, ly, lz, pitch, yaw, roll)
+    local relRot = ueFromGlm(qinv(glmFromEulerRad(math.rad(pitch), math.rad(yaw), math.rad(roll))))
+    -- glm_to_ue4(location_offset) = (-z, x, y)
+    local u = qrot(relRot, -lz, lx, ly)
+    return relRot, {x = -u.x, y = -u.y, z = -u.z}
+end
+
+-- Transform relative to the controller (UE space) -> hook offsets
+-- Returns location {x,y,z} (glm space) and rotation quat {w,x,y,z} (glm space)
+local function offsetsFromRelative(relRot, relLoc)
+    local u = qrot(qinv(relRot), -relLoc.x, -relLoc.y, -relLoc.z)
+    -- ue4_to_glm(u) = (y, z, -x)
+    return {x = u.y, y = u.z, z = -u.x}, qinv(glmFromUE(relRot))
+end
 -- ---------------------------------------------------------------------------
 -- Public API
 -- ---------------------------------------------------------------------------
@@ -576,116 +721,168 @@ local function dbg(msg)
 end
 
 -- ---------------------------------------------------------------------------
--- Overlap query — pure Lua distance check, NO physics/collision component.
--- Uses uevrUtils.find_all_of to iterate world instances of UIDActor_ItemContainer
--- and compares distance to the left hand position.
--- This is completely invisible to stalker2_uevr.dll (no overlap events generated).
+-- Grab candidate discovery -- engine-side sphere overlap around the left hand.
+--
+-- WHY NOT find_all_of / UEVR_UObjectHook.get_objects_by_class:
+--   Under the upgraded UEVR backend (game on UE 5.5.4) UObjectHook defers
+--   adoption of all pre-existing UObjects ("Deferring initial adoption of
+--   ~100k existing UObjects; using on-demand common-root tracking"). Class
+--   scans therefore only ever see objects the mod itself created or touched,
+--   so a scan for UIDActor_ItemContainer returned {} forever and pickups went
+--   silently dead. KismetSystemLibrary:SphereOverlapComponents is answered by
+--   the engine's physics scene and does not care about adoption. Its TArray
+--   out-param can't be marshalled by native Lua calls, so it goes through
+--   libs/core/plugin.lua (uevr_utils.dll), exactly like libs/collision.lua.
+--
+-- World items in v2.0 are BP_StaticItemContainer_C actors whose super chain is
+-- InteractableItemContainer -> UIDActor_ItemContainer -> Actor, so the class
+-- test below is an is_a() check, not an exact-class match.
 -- ---------------------------------------------------------------------------
-local itemClass = nil  -- cached lazily
+local itemClass               = nil  -- Class /Script/Stalker2.UIDActor_ItemContainer (cached)
+local physicsInteractionClass = nil  -- Class /Script/Stalker2.PhysicsInteractionComponent (cached)
+local primitiveClass          = nil  -- Class /Script/Engine.PrimitiveComponent (cached)
 
--- ---------------------------------------------------------------------------
--- findNearbyContainer: walks GUObjectArray to find the closest grabbable item.
--- ONLY called on grip-down (rising edge), so cost is ~zero during normal play.
--- ---------------------------------------------------------------------------
-local function findNearbyContainer(handLoc)
-    -- Cache the item class once
+-- EObjectTypeQuery indices to overlap against. Item meshes use collision profile
+-- "Items" with ObjectType 1 (WorldDynamic); physics props vary. 0..5 are the
+-- engine channels (WorldStatic, WorldDynamic, Pawn, PhysicsBody, Vehicle,
+-- Destructible), 6..23 are GameTraceChannel1..18 which this game defines.
+local OVERLAP_OBJECT_TYPES = {}
+for i = 0, 23 do OVERLAP_OBJECT_TYPES[#OVERLAP_OBJECT_TYPES + 1] = i end
+
+local function ensureFinderClasses()
     if itemClass == nil then
-        itemClass = uevrUtils.find_required_object(
-            "Class /Script/Stalker2.UIDActor_ItemContainer")
+        itemClass = uevrUtils.get_class("Class /Script/Stalker2.UIDActor_ItemContainer")
     end
-    if itemClass == nil then return nil end
+    if physicsInteractionClass == nil then
+        physicsInteractionClass = uevrUtils.get_class("Class /Script/Stalker2.PhysicsInteractionComponent")
+    end
+    if primitiveClass == nil then
+        primitiveClass = uevrUtils.get_class("Class /Script/Engine.PrimitiveComponent")
+    end
+    return itemClass ~= nil and primitiveClass ~= nil
+end
 
-    -- Fresh scan every time — this is acceptable because we only call this
-    -- function on the single frame the player presses grip, not every tick.
-    local containers = uevrUtils.find_all_of(
-        "Class /Script/Stalker2.UIDActor_ItemContainer", false)
-    if containers == nil or #containers == 0 then return nil end
+-- Returns the list of PrimitiveComponents overlapping a GRAB_RADIUS sphere at
+-- handLoc, or nil when the query could not run.
+local function sphereOverlapAtHand(handLoc)
+    if kismet_system_library == nil then
+        dbg("sphereOverlapAtHand: kismet_system_library is nil")
+        return nil
+    end
+    local world = uevrUtils.get_world()
+    if world == nil then
+        dbg("sphereOverlapAtHand: world is nil")
+        return nil
+    end
+    local ignoreActors = {}
+    if pawn ~= nil then ignoreActors[1] = pawn end
 
-    local bestActor, bestDist = nil, math.huge
+    local result = nil
+    local ok, err = pcall(function()
+        result = plugin.executeFunction(kismet_system_library, "SphereOverlapComponents",
+            world, handLoc, GRAB_RADIUS, OVERLAP_OBJECT_TYPES, primitiveClass, ignoreActors, {})
+    end)
+    if not ok then
+        dbg("sphereOverlapAtHand: executeFunction threw: " .. tostring(err))
+        return nil
+    end
+    if result == nil then
+        dbg("sphereOverlapAtHand: no result (plugin dll not loaded?)")
+        return nil
+    end
+    return result.OutComponents or {}
+end
 
-    for i = 1, #containers do
-        local actor = containers[i]
-        if actor ~= nil then
-            local isActive = true
-            pcall(function()
-                local ic = actor.InteractionComponent
-                if ic ~= nil and ic.bIsInteractionActive == false then
-                    isActive = false
-                end
-            end)
-            if isActive then
-                local pos = nil
-                pcall(function() pos = actor:K2_GetActorLocation() end)
-                if pos ~= nil then
-                    local dx = pos.X - handLoc.X
-                    local dy = pos.Y - handLoc.Y
-                    local dz = pos.Z - handLoc.Z
-                    local d  = math.sqrt(dx*dx + dy*dy + dz*dz)
-                    if d < GRAB_RADIUS and d < bestDist then
-                        bestDist  = d
-                        bestActor = actor
-                    end
-                end
-            end
-        end
+-- Classify one overlapped component's owner.
+-- Returns actor, kind ("container" | "prop") or nil when it is not grabbable.
+local function classifyOwner(comp)
+    local actor = nil
+    pcall(function() actor = comp:GetOwner() end)
+    if actor == nil then return nil end
+
+    -- 1. Inventory item containers (BP_StaticItemContainer_C etc.)
+    local isContainer = false
+    pcall(function() isContainer = actor:is_a(itemClass) end)
+    if isContainer then
+        local isActive = true
+        pcall(function()
+            local ic = actor.InteractionComponent
+            if ic ~= nil and ic.bIsInteractionActive == false then isActive = false end
+        end)
+        if not isActive then return nil end
+        return actor, "container"
     end
 
-    return bestActor
+    -- 2. World physics props (BP_DestructibleObject_Small_C: tin cans, buckets...).
+    --    They own a PhysicsInteractionComponent but have no InteractionComponent.
+    if physicsInteractionClass == nil then return nil end
+    local hasInteraction = false
+    pcall(function() hasInteraction = actor.InteractionComponent ~= nil end)
+    if hasInteraction then return nil end
+    local hasPhysicsInteraction = false
+    pcall(function()
+        local pic = actor:GetComponentByClass(physicsInteractionClass)
+        hasPhysicsInteraction = pic ~= nil
+    end)
+    if not hasPhysicsInteraction then
+        pcall(function() hasPhysicsInteraction = actor.PhysicsInteractionComponent ~= nil end)
+    end
+    if hasPhysicsInteraction then return actor, "prop" end
+    return nil
 end
 
 -- ---------------------------------------------------------------------------
--- findNearbyPhysicsProp: walks GUObjectArray for BP_DestructibleObject_Small_C actors.
--- Uses PhysicsInteractionComponent as the scan key (faster than scanning actor class).
--- ONLY called on grip-down when no ItemContainer was found nearby.
+-- findNearbyGrabbable: ONLY called on grip-down (rising edge).
+-- Returns actor, isPhysicsProp. Item containers take priority over props;
+-- within a kind, the actor whose root is closest to the hand wins.
 -- ---------------------------------------------------------------------------
-local physicsInteractionClass = nil  -- cached lazily
-
-local function findNearbyPhysicsProp(handLoc)
-    if physicsInteractionClass == nil then
-        physicsInteractionClass = uevrUtils.find_required_object(
-            "Class /Script/Stalker2.PhysicsInteractionComponent")
+local function findNearbyGrabbable(handLoc)
+    if not ensureFinderClasses() then
+        dbg("findNearbyGrabbable: required classes not found")
+        return nil, false
     end
-    if physicsInteractionClass == nil then return nil end
+    local comps = sphereOverlapAtHand(handLoc)
+    if comps == nil or #comps == 0 then
+        dbg("findNearbyGrabbable: no overlapping components")
+        return nil, false
+    end
 
-    local components = uevrUtils.find_all_of(
-        "Class /Script/Stalker2.PhysicsInteractionComponent", false)
-    if components == nil or #components == 0 then return nil end
+    local seen = {}
+    local bestContainer, bestContainerDist = nil, math.huge
+    local bestProp,      bestPropDist      = nil, math.huge
 
-    local bestActor, bestDist = nil, math.huge
-
-    for i = 1, #components do
-        local comp = components[i]
+    for i = 1, #comps do
+        local comp = comps[i]
         if comp ~= nil then
-            local actor = nil
-            pcall(function() actor = comp:GetOwner() end)
+            local actor, kind = classifyOwner(comp)
             if actor ~= nil then
-                -- Exclude UIDActor_ItemContainer actors: they also own a PhysicsInteractionComponent
-                -- but are handled separately by findNearbyContainer. We detect them by checking
-                -- for their InteractionComponent field (absent on BP_DestructibleObject_Small_C).
-                local isItemContainer = false
-                pcall(function()
-                    local ic = actor.InteractionComponent
-                    if ic ~= nil then isItemContainer = true end
-                end)
-                if not isItemContainer then
-                    local pos = nil
-                    pcall(function() pos = actor:K2_GetActorLocation() end)
-                    if pos ~= nil then
+                local addr = nil
+                pcall(function() addr = actor:get_address() end)
+                local key = addr or actor
+                if not seen[key] then
+                    seen[key] = true
+                    local d = math.huge
+                    pcall(function()
+                        local pos = actor:K2_GetActorLocation()
                         local dx = pos.X - handLoc.X
                         local dy = pos.Y - handLoc.Y
                         local dz = pos.Z - handLoc.Z
-                        local d  = math.sqrt(dx*dx + dy*dy + dz*dz)
-                        if d < GRAB_RADIUS and d < bestDist then
-                            bestDist  = d
-                            bestActor = actor
-                        end
+                        d = math.sqrt(dx*dx + dy*dy + dz*dz)
+                    end)
+                    if kind == "container" then
+                        if d < bestContainerDist then bestContainerDist, bestContainer = d, actor end
+                    elseif kind == "prop" then
+                        if d < bestPropDist then bestPropDist, bestProp = d, actor end
                     end
                 end
             end
         end
     end
 
-    return bestActor
+    if bestContainer ~= nil then return bestContainer, false end
+    if bestProp ~= nil then return bestProp, true end
+    dbg("findNearbyGrabbable: " .. #comps .. " components overlapped, none grabbable")
+    return nil, false
 end
 
 -- ---------------------------------------------------------------------------
@@ -693,8 +890,21 @@ end
 -- Hook mesh to left VR controller. Do NOT touch collision or physics --
 -- the game's item system may destroy the actor if it detects those changes.
 -- ---------------------------------------------------------------------------
+-- Hooks the mesh to the left controller and caches the state.
+local function startHook(mesh)
+    cachedHookState = nil
+    local ok = pcall(function()
+        local state = UEVR_UObjectHook.get_or_add_motion_controller_state(mesh)
+        state:set_hand(Handed.Left)
+        state:set_permanent(false)
+        cachedHookState = state
+    end)
+    return ok and cachedHookState ~= nil
+end
+
 local function doGrab(actor, isPhysicsProp)
     if actor == nil then return false end
+    pendingDrop = nil -- a new grab wins over a drop pose still being re-applied
 
     local mesh = nil
     -- UIDActor_ItemContainer exposes the mesh as .MeshComponent.
@@ -710,20 +920,18 @@ local function doGrab(actor, isPhysicsProp)
         return false
     end
 
-    -- Cache the hook state at grab time so syncActorToHand never calls
-    -- get_or_add_motion_controller_state (an allocation) on every tick.
-    local hookOk = false
-    pcall(function()
-        local state = UEVR_UObjectHook.get_or_add_motion_controller_state(mesh)
-        state:set_hand(Handed.Left)
-        state:set_permanent(false)
-        cachedHookState = state
-        hookOk = true
-    end)
-
-    if not hookOk then
-        dbg("doGrab: UEVR_UObjectHook failed")
-        return false
+    local glideTime = (Config and Config.pickupGlideTime) or 0.15
+    if glideTime > 0 then
+        -- The hook is started by the post-stereo callback, where the controller pose
+        -- is real, with offsets that keep the item exactly where it is; it then glides in.
+        glide = {pending = true, pendingTicks = 0, elapsed = 0, duration = glideTime}
+    else
+        -- Cache the hook state at grab time so syncActorToHand never calls
+        -- get_or_add_motion_controller_state (an allocation) on every tick.
+        if not startHook(mesh) then
+            dbg("doGrab: UEVR_UObjectHook failed")
+            return false
+        end
     end
 
     grabbed.actor       = actor
@@ -771,46 +979,23 @@ local function doGrab(actor, isPhysicsProp)
         end)
     end
 
-    -- Curl the left index finger while holding the item
-    pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE) end)
+    -- Curl the left index finger while holding the item. With a glide the curl is
+    -- eased in alongside the item (stepGlide); without one it snaps as before.
+    if glide == nil then
+        pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE) end)
+    end
 
     return true
 end
 
--- Sync the UEVR hook offsets to the sliders dynamically, and sync the actor's
--- world position to the mesh's visual position.
-local function syncActorToHand()
-    if not isGrabbing() then return end
-    local actor = grabbed.actor
-    local mesh  = grabbed.mesh
-    if actor == nil or mesh == nil then return end
-
-    -- CRASH GUARD: Validate the actor pointer is still alive before touching it.
-    -- A stale/GC'd actor pointer causes a hard engine crash, not a Lua error.
-    local actorAlive = false
-    pcall(function()
-        -- K2_GetActorLocation is a lightweight read; if the actor was GC'd this
-        -- pcall catches the access violation and we force a clean release.
-        local _ = actor:K2_GetActorLocation()
-        actorAlive = true
-    end)
-    if not actorAlive then
-        dbg("syncActorToHand: actor pointer went stale — forcing release")
-        grabbed.actor        = nil
-        grabbed.mesh         = nil
-        grabbedItemName      = nil
-        grabbedItemNameLower = nil
-        cachedHookState      = nil
-        releaseIsIntentional = false
-        grabbedIsPhysicsProp = false
-        pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE_CLEAR) end)
-        return
-    end
-
+-- Resolves the held item's hook offsets: per-mesh profile, then name heuristics,
+-- then the global pickupItemLocation/Rotation. Location in cm, rotation in degrees,
+-- both in UEVR motion-controller-state offset space (what set_location_offset /
+-- set_rotation_offset take).
+local function resolveItemOffsets()
     -- Use the pre-lowercased name cached at grab time (no per-tick string allocation).
     local nameLower = grabbedItemNameLower or ""
 
-    -- 1. Determine offsets
     local cLocX, cLocY, cLocZ = offsetLoc.X, offsetLoc.Y, offsetLoc.Z
     local cPitch, cYaw, cRoll = offsetRot.Pitch, offsetRot.Yaw, offsetRot.Roll
 
@@ -866,21 +1051,68 @@ local function syncActorToHand()
             end
         end
     end
+    return cLocX, cLocY, cLocZ, cPitch, cYaw, cRoll
+end
 
-    -- 2. Apply offsets using the hook state cached at grab time.
-    -- Avoids calling get_or_add_motion_controller_state (an allocation) every tick.
+-- Writes the resolved offsets to the hook state exactly as the profiles were tuned
+-- (Euler radians -> the binding's yawPitchRoll path).
+local function applyItemOffsets(state)
+    local cLocX, cLocY, cLocZ, cPitch, cYaw, cRoll = resolveItemOffsets()
+    state:set_location_offset(Vector3f.new(cLocX, cLocY, cLocZ))
+    state:set_rotation_offset(Vector3f.new(
+        math.rad(cPitch),
+        math.rad(cYaw),
+        math.rad(cRoll)))
+end
+
+local function clearGrabState()
+    grabbed.actor        = nil
+    grabbed.mesh         = nil
+    grabbedItemName      = nil
+    grabbedItemNameLower = nil
+    cachedHookState      = nil
+    releaseIsIntentional = false
+    grabbedIsPhysicsProp = false
+    glide                = nil
+    heldMeshLoc          = nil
+    heldMeshRot          = nil
+end
+
+-- Sync the UEVR hook offsets to the sliders dynamically, and sync the actor's
+-- world position to the mesh's visual position.
+local function syncActorToHand()
+    if not isGrabbing() then return end
+    local actor = grabbed.actor
+    local mesh  = grabbed.mesh
+    if actor == nil or mesh == nil then return end
+
+    -- CRASH GUARD: Validate the actor pointer is still alive before touching it.
+    -- A stale/GC'd actor pointer causes a hard engine crash, not a Lua error.
+    local actorAlive = false
     pcall(function()
-        local state = cachedHookState
-        if state ~= nil then
-            state:set_location_offset(Vector3f.new(cLocX, cLocY, cLocZ))
-            state:set_rotation_offset(Vector3f.new(
-                math.rad(cPitch),
-                math.rad(cYaw),
-                math.rad(cRoll)))
-        end
+        -- K2_GetActorLocation is a lightweight read; if the actor was GC'd this
+        -- pcall catches the access violation and we force a clean release.
+        local _ = actor:K2_GetActorLocation()
+        actorAlive = true
     end)
+    if not actorAlive then
+        dbg("syncActorToHand: actor pointer went stale — forcing release")
+        clearGrabState()
+        pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE_CLEAR) end)
+        return
+    end
 
-    -- 3. Sync the actor's underlying transform to the mesh's current visual transform.
+    -- Hook not started yet (glide waiting for the post-stereo callback): the mesh
+    -- is still where it was in the world, nothing to sync.
+    if cachedHookState == nil then return end
+
+    -- 1. Apply offsets using the hook state cached at grab time. Skipped while the
+    -- grab glide owns the offsets; it writes these exact values when it finishes.
+    if glide == nil then
+        pcall(function() applyItemOffsets(cachedHookState) end)
+    end
+
+    -- 2. Sync the actor's underlying transform to the mesh's current visual transform.
     pcall(function()
         local meshLoc = mesh:K2_GetComponentLocation()
         local meshRot = mesh:K2_GetComponentRotation()
@@ -893,6 +1125,162 @@ local function syncActorToHand()
         end
     end)
 end
+
+-- ---------------------------------------------------------------------------
+-- Grab glide
+-- Instead of the item jumping onto the hand, the hook starts with offsets that
+-- keep it exactly where it lies, then eases them to the profile offsets over
+-- Config.pickupGlideTime. The interpolation runs in controller space, so moving
+-- the hand during the glide never makes the item chase it.
+-- Runs from the post-stereo callback: the left MotionControllerComponent is only
+-- at its real pose there (UObjectHook writes it in pre-stereo).
+-- ---------------------------------------------------------------------------
+local function writeGlideOffsets(state, relRot, relLoc)
+    local loc, rot = offsetsFromRelative(relRot, relLoc)
+    state:set_location_offset(Vector3f.new(loc.x, loc.y, loc.z))
+    -- A Vector4f is cast straight onto UEVR_Quaternionf {w,x,y,z}, so pass w first
+    state:set_rotation_offset(Vector4f.new(rot.w, rot.x, rot.y, rot.z))
+end
+
+-- Fallback when the glide can't start properly: the old snap.
+local function snapInsteadOfGlide()
+    glide = nil
+    if cachedHookState == nil and not startHook(grabbed.mesh) then
+        dbg("glide: UEVR_UObjectHook failed, dropping grab")
+        clearGrabState()
+        pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE_CLEAR) end)
+        return
+    end
+    pcall(function() applyItemOffsets(cachedHookState) end)
+    pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE) end)
+end
+
+-- Finger curl blend: setHandPose walks each bone through UFunction calls, so the
+-- interpolated curl is pushed at most every FINGER_STEP_SECONDS, not every frame.
+local FINGER_STEP_SECONDS = 0.033
+
+local function applyFingerBlend(t)
+    local pose = {}
+    for bone, target in pairs(GRAB_FINGER_POSE) do
+        pose[bone] = {target[1] * t, target[2] * t, target[3] * t}
+    end
+    pcall(function() hands.setHandPose(Handed.Left, pose) end)
+end
+
+local function beginGlide()
+    local mesh = grabbed.mesh
+    local ctrl = controllers.getController(Handed.Left)
+    if mesh == nil or ctrl == nil then
+        snapInsteadOfGlide()
+        return
+    end
+
+    local ok = pcall(function()
+        local hLoc = ctrl:K2_GetComponentLocation()
+        local hRot = ctrl:K2_GetComponentRotation()
+        local iLoc = mesh:K2_GetComponentLocation()
+        local iRot = mesh:K2_GetComponentRotation()
+        local hQ = rotatorToQuat(hRot.Pitch, hRot.Yaw, hRot.Roll)
+        local iQ = rotatorToQuat(iRot.Pitch, iRot.Yaw, iRot.Roll)
+        local hQi = qinv(hQ)
+        glide.relRot0 = qmul(hQi, iQ)
+        glide.relLoc0 = qrot(hQi, iLoc.X - hLoc.X, iLoc.Y - hLoc.Y, iLoc.Z - hLoc.Z)
+        glide.relRot1, glide.relLoc1 = relativeFromOffsets(resolveItemOffsets())
+    end)
+    if not ok then
+        snapInsteadOfGlide()
+        return
+    end
+
+    if not startHook(mesh) then
+        snapInsteadOfGlide()
+        return
+    end
+    glide.pending = false
+    glide.elapsed = 0
+    -- Frame 0: the offsets that leave the item where it is
+    if not pcall(writeGlideOffsets, cachedHookState, glide.relRot0, glide.relLoc0) then
+        snapInsteadOfGlide()
+    end
+end
+
+local function stepGlide()
+    if glide == nil or not isGrabbing() then
+        glide = nil
+        return
+    end
+    if glide.pending then
+        beginGlide()
+        return
+    end
+    local state = cachedHookState
+    if state == nil then
+        glide = nil
+        return
+    end
+
+    local alpha = math.min(glide.elapsed / glide.duration, 1)
+    if alpha >= 1 then
+        -- Land exactly on the tuned profile offsets (same values syncActorToHand writes)
+        -- and the exact grab curl
+        glide = nil
+        pcall(function() applyItemOffsets(state) end)
+        pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE) end)
+        return
+    end
+
+    local eased = 1 - (1 - alpha) ^ 3 -- ease-out cubic
+
+    if glide.lastFingerAt == nil or glide.elapsed - glide.lastFingerAt >= FINGER_STEP_SECONDS then
+        glide.lastFingerAt = glide.elapsed
+        applyFingerBlend(eased)
+    end
+    local a, b = glide.relLoc0, glide.relLoc1
+    local relLoc = {
+        x = a.x + (b.x - a.x) * eased,
+        y = a.y + (b.y - a.y) * eased,
+        z = a.z + (b.z - a.z) * eased,
+    }
+    if not pcall(writeGlideOffsets, state, qslerp(glide.relRot0, glide.relRot1, eased), relLoc) then
+        glide = nil
+        pcall(function() applyItemOffsets(state) end)
+        pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE) end)
+    end
+end
+
+local glideSteppedThisFrame = false
+
+uevr.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
+    glideSteppedThisFrame = false
+    if glide == nil then return end
+    if glide.pending then
+        glide.pendingTicks = glide.pendingTicks + 1
+        if glide.pendingTicks >= GLIDE_PENDING_FALLBACK_TICKS then
+            -- No stereo callback (no HMD / view callbacks not firing): don't leave
+            -- the item unhooked, just snap it like before.
+            snapInsteadOfGlide()
+        end
+    else
+        glide.elapsed = glide.elapsed + (delta or 0)
+    end
+end)
+
+uevrUtils.registerPostCalculateStereoViewCallback(function(device, view_index)
+    if glideSteppedThisFrame or (glide == nil and cachedHookState == nil) then return end
+    glideSteppedThisFrame = true
+    if glide ~= nil then stepGlide() end
+
+    -- Remember where the held item really is this frame, for the drop
+    local mesh = grabbed.mesh
+    if cachedHookState ~= nil and mesh ~= nil then
+        pcall(function()
+            local l = mesh:K2_GetComponentLocation()
+            local r = mesh:K2_GetComponentRotation()
+            heldMeshLoc = {X = l.X, Y = l.Y, Z = l.Z}
+            heldMeshRot = {Pitch = r.Pitch, Yaw = r.Yaw, Roll = r.Roll}
+        end)
+    end
+end)
 
 -- ---------------------------------------------------------------------------
 -- Inventory Shoulder Zone
@@ -939,6 +1327,32 @@ end
 -- Otherwise:
 --   → drop item in world (existing behaviour)
 -- ---------------------------------------------------------------------------
+-- Drop pose re-application (see the world-drop branch of doRelease). Counted on both
+-- pre- and post-engine tick, so 6 = ~3 frames.
+local DROP_REAPPLY_TICKS = 6
+
+local function applyDropPose(drop)
+    pcall(function()
+        if drop.rot ~= nil then
+            drop.actor:K2_SetActorRotation(uevrUtils.rotator(drop.rot.Pitch, drop.rot.Yaw, drop.rot.Roll), false)
+        end
+        if drop.loc ~= nil then
+            drop.actor:K2_SetActorLocation(uevrUtils.vector(drop.loc.X, drop.loc.Y, drop.loc.Z), false, {}, false)
+        end
+    end)
+end
+
+local function stepPendingDrop()
+    local drop = pendingDrop
+    if drop == nil then return end
+    applyDropPose(drop)
+    drop.ticks = drop.ticks - 1
+    if drop.ticks <= 0 then pendingDrop = nil end
+end
+
+uevr.sdk.callbacks.on_pre_engine_tick(function(engine, delta) stepPendingDrop() end)
+uevr.sdk.callbacks.on_post_engine_tick(function(engine, delta) stepPendingDrop() end)
+
 local function doRelease()
     if not isGrabbing() then return end
 
@@ -956,14 +1370,12 @@ local function doRelease()
         protoID = (intentional and inShoulderZone and invEnabled) and resolvePrototypeID(itemName, mesh) or nil
     end
 
-    -- Clear state now (safe to do before the branch)
-    grabbed.actor          = nil
-    grabbed.mesh           = nil
-    grabbedItemName        = nil
-    grabbedItemNameLower   = nil
-    cachedHookState        = nil
-    releaseIsIntentional   = false
-    grabbedIsPhysicsProp   = false
+    -- Snapshot what the drop path needs, then clear state (safe before the branch).
+    -- hookActive is false when the grab glide never got to start the hook (grip
+    -- released within a frame or two): the item never moved, so leave it alone.
+    local hookActive = cachedHookState ~= nil
+    local dropLoc, dropRot = heldMeshLoc, heldMeshRot
+    clearGrabState()
 
     -- Restore index finger regardless of path
     pcall(function() hands.setHandPose(Handed.Left, GRAB_FINGER_POSE_CLEAR) end)
@@ -990,8 +1402,9 @@ local function doRelease()
                 uevrUtils.triggerHapticVibration(Handed.Left, 0.0, 0.3, 1.0, 100.0)
             end)
             
-        else
-            print("[pickup] WARNING: inject failed for " .. protoID .. " (ConsoleManager unavailable?)")
+        elseif injected == false then
+            -- nil = duplicate-guard skip (other script instance already injected); only warn on a real failure
+            print("[pickup] WARNING: inject failed for " .. protoID .. " (kismet library / world unavailable?)")
         end
     else
         -- OUT OF ZONE (or non-intentional / unmapped): sync actor to hand one
@@ -999,15 +1412,34 @@ local function doRelease()
         if intentional and not inShoulderZone then
             print("[pickup] Released outside shoulder zone -- dropping in world")
         end
-        pcall(function()
-            local handLoc = controllers.getControllerLocation(Handed.Left)
-            if handLoc ~= nil then
-                actor:K2_SetActorLocation(handLoc, false, {}, false)
+        if hookActive then
+            -- Keep the held pose: drop from where the item actually was in the hand
+            -- (post-stereo capture) instead of the controller origin. Rotation first,
+            -- then the same K2_SetActorLocation call as before so the drop itself is
+            -- unchanged. pickupDropKeepsPose = false restores the old origin drop.
+            local keepPose = (Config == nil) or (Config.pickupDropKeepsPose ~= false)
+            local drop = {actor = actor, ticks = DROP_REAPPLY_TICKS}
+            if keepPose and dropRot ~= nil then
+                drop.rot = {Pitch = dropRot.Pitch, Yaw = dropRot.Yaw, Roll = dropRot.Roll}
             end
-        end)
-        pcall(function()
-            UEVR_UObjectHook.remove_motion_controller_state(mesh)
-        end)
+            pcall(function()
+                if keepPose and dropLoc ~= nil then
+                    drop.loc = {X = dropLoc.X, Y = dropLoc.Y, Z = dropLoc.Z}
+                else
+                    local c = controllers.getControllerLocation(Handed.Left)
+                    if c ~= nil then drop.loc = {X = c.X, Y = c.Y, Z = c.Z} end
+                end
+            end)
+            applyDropPose(drop)
+            pcall(function()
+                UEVR_UObjectHook.remove_motion_controller_state(mesh)
+            end)
+            -- A non-permanent hook queues a game-thread job on every stereo pass that writes the
+            -- item's ORIGINAL transform back, and a job queued before the unhook can still run
+            -- after it (it only checks the component exists) -> the item snapped back to where it
+            -- was picked up. Re-assert the drop pose for a few ticks so it lands after any of those.
+            pendingDrop = drop
+        end
     end
 end
 
@@ -1040,18 +1472,11 @@ local function tick()
             doRelease()
         end
     elseif gripDown and handLoc ~= nil then
-        -- Only scan GUObjectArray on the single frame grip is pressed.
-        -- Cost: one scan per grab attempt instead of 12 scans/sec.
-        -- 1. Inventory item containers take priority.
-        local container = findNearbyContainer(handLoc)
-        if container ~= nil then
-            doGrab(container, false)
-        else
-            -- 2. Fallback: world physics props (tin cans, buckets, etc.)
-            local prop = findNearbyPhysicsProp(handLoc)
-            if prop ~= nil then
-                doGrab(prop, true)
-            end
+        -- One engine sphere-overlap on the single frame grip is pressed.
+        -- Item containers take priority over world physics props.
+        local target, isProp = findNearbyGrabbable(handLoc)
+        if target ~= nil then
+            doGrab(target, isProp)
         end
     end
 
@@ -1077,6 +1502,15 @@ end)
 -- ---------------------------------------------------------------------------
 function M.isGrabbing()     return isGrabbing() end
 function M.getGrabbedItem() return grabbed.actor end
+-- The mesh while it is hooked to the left controller (nil before the grab glide has started the hook).
+-- stalker2/ik_weapon_sync.lua draws it locked to the left IK hand; this script exists twice (UEVR auto-load +
+-- Entry.lua's require), so every instance registers its getter.
+function M.getHeldMesh()
+    if cachedHookState == nil then return nil end
+    return grabbed.mesh
+end
+_G.PickupHeldMeshGetters = _G.PickupHeldMeshGetters or {}
+table.insert(_G.PickupHeldMeshGetters, M.getHeldMesh)
 function M.getGrabbedItemName() return grabbedItemName end
 function M.getGrabbedActorClassName() return grabbedActorClassName end
 function M.setDebug(val)    DEBUG_PRINT = val end

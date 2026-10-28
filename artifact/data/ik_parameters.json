@@ -11,27 +11,34 @@
             0.0,
             0.0
         ],
-        "animation_mesh": "Custom",
+        "animation_mesh": "",
         "animation_rotation_offset": [
             0.0,
             0.0,
             0.0
         ],
-        "mesh": "Custom",
+        "enhanced_stabilization": false,
+        "hide_body": true,
+        "left_shoulder_bone_name": "jnt_l_shoulder",
+        "mesh": "Pawn.Mesh",
         "mesh_location_offset": [
-            -5.0,
+            -16.799999237060547,
             0.0,
-            -95.0
+            -35.79999923706055
         ],
         "mesh_rotation_offset": [
             0.0,
             0.0,
             0.0
         ],
+        "parent_type": 1,
+        "right_shoulder_bone_name": "jnt_r_shoulder",
+        "shoulder_width_scale": 1.0,
+        "show_debug_meshes": false,
         "solvers": {
             "left_arm": {
                 "active": true,
-                "allow_stretch": false,
+                "allow_stretch": true,
                 "allow_wrist_affects_elbow": true,
                 "end_bone": "jnt_l_hand",
                 "end_bone_offset": [
@@ -45,16 +52,18 @@
                     -20.0
                 ],
                 "end_control_type": 0,
+                "enhanced_stability": true,
                 "forearm_twist_max": 100.0,
+                "incremental_forearm_twist": false,
                 "joint_bone": "jnt_l_fore_arm",
                 "label": "Left Arm",
-                "max_stretch_scale": 1.1,
+                "max_stretch_scale": 1.25,
                 "rot_smoothing": 0.85,
                 "smoothing": 0.0,
                 "solver_type": 1,
                 "sort_order": 1,
-                "start_bone": "jnt_l_shoulder",
-                "start_stretch_ratio": 0.9,
+                "start_bone": "jnt_l_arm",
+                "start_stretch_ratio": 1.0,
                 "twist_bones": [
                     {
                         "bone": "jnt_l_fore_arm_roll",
@@ -62,12 +71,12 @@
                     }
                 ],
                 "wrist_bone": "",
-                "wrist_twist_influence": 0.35,
+                "wrist_twist_influence": 0.25699999928474426,
                 "wrist_twist_max": 75.0
             },
             "right_arm": {
                 "active": true,
-                "allow_stretch": false,
+                "allow_stretch": true,
                 "allow_wrist_affects_elbow": true,
                 "end_bone": "jnt_r_hand",
                 "end_bone_offset": [
@@ -81,26 +90,30 @@
                     180.0
                 ],
                 "end_control_type": 1,
+                "enhanced_stability": true,
                 "forearm_twist_max": 100.0,
                 "joint_bone": "jnt_r_fore_arm",
                 "label": "Right Arm",
-                "max_stretch_scale": 1.1,
+                "max_stretch_scale": 1.25,
                 "rot_smoothing": 0.85,
                 "smoothing": 0.0,
                 "solver_type": 1,
                 "sort_order": 0,
-                "start_bone": "jnt_r_shoulder",
-                "start_stretch_ratio": 0.9,
+                "start_bone": "jnt_r_arm",
+                "start_stretch_ratio": 1.0,
                 "twist_bones": [
                     {
                         "bone": "jnt_r_fore_arm_roll",
-                        "fraction": 0.5
+                        "pitch": 0.0,
+                        "roll": 0.5,
+                        "yaw": 0.0
                     }
                 ],
                 "wrist_bone": "",
-                "wrist_twist_influence": 0.35,
+                "wrist_twist_influence": 0.25,
                 "wrist_twist_max": 75.0
             }
-        }
+        },
+        "spine_bone_name": "jnt_spine_03"
     }
 }

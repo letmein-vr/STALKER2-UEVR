@@ -8,29 +8,37 @@
     "default": {
         "adjustForAnimation": false,
         "adjustForEyeOffset": false,
-        "aimMethod": 1,
+        "aimCamera": "None",
+        "aimMethod": 2,
         "eyeOffset": 0,
         "fixSpatialAudio": true,
         "headBoneName": "",
         "headOffset": {
-            "X": 0,
-            "Y": 0,
-            "Z": 0
+            "X": 0.4000000059604645,
+            "Y": 0.0,
+            "Z": -20.399999618530273
         },
         "isDisabledOverride": false,
-        "pawnControlRotationCamera": "",
+        "optimizeBodyRotationCalculations": false,
+        "orientRotationToMovement": 1,
         "pawnPositionAnimationScale": 0.2,
         "pawnPositionMode": 2,
         "pawnPositionSweepMovement": true,
-        "pawnRotationMode": 2,
+        "pawnRotationLockedSmoothTime": 0.07500000298023224,
+        "pawnRotationMode": 5,
         "rootBoneName": "",
         "rootOffset": {
-            "X": 0,
-            "Y": 0,
-            "Z": 0
+            "X": -2.200000047683716,
+            "Y": -0.4000000059604645,
+            "Z": 6.900000095367432
         },
-        "smoothTurnSpeed": 50,
+        "smoothTurnSpeed": 35,
         "snapAngle": 30,
+        "useControllerDesiredRotation": 1,
+        "useControllerRotationPitch": 1,
+        "useControllerRotationRoll": 1,
+        "useControllerRotationYaw": 3,
+        "usePawnControlRotation": 3,
         "useSnapTurn": false
     }
 }

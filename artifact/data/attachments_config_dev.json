@@ -1,7 +1,37 @@
 {
+    "attachment_CharacterMesh_SK_AK74_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_AK74_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_AK74_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_AK74_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_AK74_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_AK74_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_AK74_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_AK74_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_AK74_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_AK74_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_AK74_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_AK74_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_AK74_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_AK74_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_AK74_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_AK74_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_AK74_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_AK74_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_AK74_any_child": true,
     "attachment_CharacterMesh_SK_AK74_any_parent": false,
-    "attachment_CharacterMesh_SK_AK74_grip_animation": 15,
+    "attachment_CharacterMesh_SK_AK74_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_AK74_grip_animation": 12,
+    "attachment_CharacterMesh_SK_AK74_is_melee": false,
+    "attachment_CharacterMesh_SK_AK74_is_scoped": false,
+    "attachment_CharacterMesh_SK_AK74_is_two_handed": false,
     "attachment_CharacterMesh_SK_AK74_melee_rotation_offset": [
         0.0,
         0.0,
@@ -22,9 +52,644 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_AK74_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_AK74_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_AK74_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_AK74_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_AK74_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_AK74_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_AK74_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_AK74_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_AK74_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_AK74_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_AK74_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_AK74_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_AK74_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_AK74_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_AK74_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_AK74_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_AK74_use_laser": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_activation_distance": 8.300000190734863,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_activation_hand": 2,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_attach_type": 3,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_id": "774f0c89-26e1-4b6c-87f5-3acf8053e05a",
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_label": "New Accessory",
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_location": [
+        -8.0,
+        2.0,
+        1.899999976158142
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_rotation": [
+        -16.0,
+        147.0,
+        -9.800000190734863
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_socket_name": "jnt_l_hand",
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_01_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_SK_DevBinocular_01_any_child": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_any_parent": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_grip_animation": 2,
+    "attachment_CharacterMesh_SK_DevBinocular_01_is_melee": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_is_scoped": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_is_two_handed": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_DevBinocular_01_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_DevBinocular_01_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_01_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_DevBinocular_01_use_laser": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_02_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_any_child": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_any_parent": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_grip_animation": 2,
+    "attachment_CharacterMesh_SK_DevBinocular_02_is_melee": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_is_scoped": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_is_two_handed": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_DevBinocular_02_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_DevBinocular_02_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_02_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_DevBinocular_02_use_laser": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_DevBinocular_03_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_any_child": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_any_parent": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_grip_animation": 2,
+    "attachment_CharacterMesh_SK_DevBinocular_03_is_melee": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_is_scoped": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_is_two_handed": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_DevBinocular_03_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_DevBinocular_03_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_DevBinocular_03_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_DevBinocular_03_use_laser": false,
+    "attachment_CharacterMesh_SK_Fora230_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_Fora230_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_Fora230_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_Fora230_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_Fora230_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_Fora230_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_SK_Fora230_any_child": false,
+    "attachment_CharacterMesh_SK_Fora230_any_parent": false,
+    "attachment_CharacterMesh_SK_Fora230_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_Fora230_grip_animation": 4,
+    "attachment_CharacterMesh_SK_Fora230_is_melee": false,
+    "attachment_CharacterMesh_SK_Fora230_is_scoped": false,
+    "attachment_CharacterMesh_SK_Fora230_is_two_handed": false,
+    "attachment_CharacterMesh_SK_Fora230_melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_position": [
+        -0.6000000238418579,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_Fora230_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_Fora230_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_Fora230_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_Fora230_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_Fora230_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_Fora230_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_Fora230_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_Fora230_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_Fora230_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Fora230_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_Fora230_use_laser": false,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_Gp3a_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_SK_Gp3a_any_child": false,
+    "attachment_CharacterMesh_SK_Gp3a_any_parent": false,
+    "attachment_CharacterMesh_SK_Gp3a_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_Gp3a_grip_animation": 38,
+    "attachment_CharacterMesh_SK_Gp3a_is_melee": false,
+    "attachment_CharacterMesh_SK_Gp3a_is_scoped": false,
+    "attachment_CharacterMesh_SK_Gp3a_is_two_handed": false,
+    "attachment_CharacterMesh_SK_Gp3a_melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_Gp3a_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_Gp3a_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_Gp3a_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_Gp3a_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_Gp3a_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_Gp3a_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_Gp3a_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_Gp3a_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_Gp3a_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Gp3a_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_Gp3a_use_laser": false,
+    "attachment_CharacterMesh_SK_Skp_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_Skp_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_Skp_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_Skp_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_Skp_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_Skp_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_Skp_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_Skp_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_Skp_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_Skp_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_Skp_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_Skp_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_Skp_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_Skp_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_Skp_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_Skp_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_SK_Skp_any_child": false,
+    "attachment_CharacterMesh_SK_Skp_any_parent": false,
+    "attachment_CharacterMesh_SK_Skp_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_Skp_grip_animation": 38,
+    "attachment_CharacterMesh_SK_Skp_is_melee": false,
+    "attachment_CharacterMesh_SK_Skp_is_scoped": false,
+    "attachment_CharacterMesh_SK_Skp_is_two_handed": false,
+    "attachment_CharacterMesh_SK_Skp_melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_Skp_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_Skp_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_Skp_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_Skp_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_Skp_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_Skp_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_Skp_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_Skp_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_Skp_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Skp_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_Skp_use_laser": false,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_ThreeLine_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_ThreeLine_any_child": true,
     "attachment_CharacterMesh_SK_ThreeLine_any_parent": false,
-    "attachment_CharacterMesh_SK_ThreeLine_grip_animation": 10,
+    "attachment_CharacterMesh_SK_ThreeLine_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_ThreeLine_grip_animation": 5,
+    "attachment_CharacterMesh_SK_ThreeLine_is_melee": false,
+    "attachment_CharacterMesh_SK_ThreeLine_is_scoped": false,
+    "attachment_CharacterMesh_SK_ThreeLine_is_two_handed": false,
     "attachment_CharacterMesh_SK_ThreeLine_melee_rotation_offset": [
         0.0,
         0.0,
@@ -45,10 +710,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_ThreeLine_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_ThreeLine_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_ThreeLine_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_ThreeLine_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_ThreeLine_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_ThreeLine_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_ThreeLine_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ThreeLine_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_ThreeLine_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ThreeLine_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_ThreeLine_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_ThreeLine_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_ThreeLine_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_ThreeLine_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ThreeLine_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ThreeLine_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_ThreeLine_use_laser": false,
+    "attachment_CharacterMesh_SK_Toz34_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_Toz34_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_Toz34_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_Toz34_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_Toz34_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_Toz34_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_Toz34_any_child": true,
     "attachment_CharacterMesh_SK_Toz34_any_parent": false,
-    "attachment_CharacterMesh_SK_Toz34_grip_animation": 40,
+    "attachment_CharacterMesh_SK_Toz34_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_Toz34_grip_animation": 6,
+    "attachment_CharacterMesh_SK_Toz34_is_melee": false,
     "attachment_CharacterMesh_SK_Toz34_is_scoped": false,
+    "attachment_CharacterMesh_SK_Toz34_is_two_handed": false,
     "attachment_CharacterMesh_SK_Toz34_melee_rotation_offset": [
         0.0,
         0.0,
@@ -69,9 +804,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_Toz34_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_Toz34_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_Toz34_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_Toz34_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_Toz34_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_Toz34_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_Toz34_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Toz34_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_Toz34_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Toz34_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_Toz34_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_Toz34_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_Toz34_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_Toz34_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Toz34_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_Toz34_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_Toz34_use_laser": false,
+    "attachment_CharacterMesh_SK_aku_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_aku_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_aku_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_aku_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_aku_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_aku_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_aku_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_aku_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_aku_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_aku_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_aku_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_aku_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_aku_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_aku_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_aku_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_aku_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_aku_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_aku_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_aku_any_child": true,
     "attachment_CharacterMesh_SK_aku_any_parent": false,
-    "attachment_CharacterMesh_SK_aku_grip_animation": 11,
+    "attachment_CharacterMesh_SK_aku_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_aku_grip_animation": 25,
+    "attachment_CharacterMesh_SK_aku_is_melee": false,
+    "attachment_CharacterMesh_SK_aku_is_scoped": false,
+    "attachment_CharacterMesh_SK_aku_is_two_handed": false,
     "attachment_CharacterMesh_SK_aku_melee_rotation_offset": [
         0.0,
         0.0,
@@ -92,9 +898,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_aku_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_aku_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_aku_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_aku_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_aku_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_aku_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_aku_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_aku_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_aku_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_aku_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_aku_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_aku_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_aku_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_aku_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_aku_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_aku_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_aku_use_laser": false,
+    "attachment_CharacterMesh_SK_apb_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_apb_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_apb_accessory_item_activation_distance": 5.400000095367432,
+    "attachment_CharacterMesh_SK_apb_accessory_item_activation_hand": 2,
+    "attachment_CharacterMesh_SK_apb_accessory_item_attach_type": 3,
+    "attachment_CharacterMesh_SK_apb_accessory_item_grip_animation": 16,
+    "attachment_CharacterMesh_SK_apb_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_apb_accessory_item_id": "c67378e8-d296-4405-8847-a5cb50d64dca",
+    "attachment_CharacterMesh_SK_apb_accessory_item_label": "Left Hand",
+    "attachment_CharacterMesh_SK_apb_accessory_item_location": [
+        -10.199999809265137,
+        5.0,
+        1.100000023841858
+    ],
+    "attachment_CharacterMesh_SK_apb_accessory_item_rotation": [
+        -25.799999237060547,
+        138.6999969482422,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_apb_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_apb_accessory_item_socket_name": "jnt_l_hand",
+    "attachment_CharacterMesh_SK_apb_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_apb_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_apb_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_apb_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_apb_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_apb_any_child": true,
     "attachment_CharacterMesh_SK_apb_any_parent": false,
-    "attachment_CharacterMesh_SK_apb_grip_animation": 19,
+    "attachment_CharacterMesh_SK_apb_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_apb_grip_animation": 17,
+    "attachment_CharacterMesh_SK_apb_is_melee": false,
+    "attachment_CharacterMesh_SK_apb_is_scoped": false,
+    "attachment_CharacterMesh_SK_apb_is_two_handed": false,
     "attachment_CharacterMesh_SK_apb_melee_rotation_offset": [
         0.0,
         0.0,
@@ -115,9 +992,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_apb_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_apb_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_apb_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_apb_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_apb_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_apb_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_apb_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_apb_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_apb_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_apb_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_apb_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_apb_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_apb_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_apb_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_apb_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_apb_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_apb_use_laser": false,
+    "attachment_CharacterMesh_SK_bucket0_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_bucket0_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_bucket0_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_bucket0_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_bucket0_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_bucket0_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_bucket0_any_child": true,
     "attachment_CharacterMesh_SK_bucket0_any_parent": false,
-    "attachment_CharacterMesh_SK_bucket0_grip_animation": 4,
+    "attachment_CharacterMesh_SK_bucket0_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_bucket0_grip_animation": 14,
+    "attachment_CharacterMesh_SK_bucket0_is_melee": false,
+    "attachment_CharacterMesh_SK_bucket0_is_scoped": false,
+    "attachment_CharacterMesh_SK_bucket0_is_two_handed": false,
     "attachment_CharacterMesh_SK_bucket0_melee_rotation_offset": [
         0.0,
         0.0,
@@ -138,9 +1086,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_bucket0_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_bucket0_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_bucket0_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_bucket0_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_bucket0_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_bucket0_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_bucket0_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_bucket0_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_bucket0_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_bucket0_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_bucket0_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_bucket0_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_bucket0_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_bucket0_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_bucket0_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_bucket0_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_bucket0_use_laser": false,
+    "attachment_CharacterMesh_SK_d1200_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_d1200_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_d1200_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_d1200_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_d1200_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_d1200_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_d1200_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_d1200_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_d1200_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_d1200_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_d1200_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_d1200_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_d1200_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_d1200_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_d1200_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_d1200_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_d1200_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_d1200_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_d1200_any_child": true,
     "attachment_CharacterMesh_SK_d1200_any_parent": false,
-    "attachment_CharacterMesh_SK_d1200_grip_animation": 14,
+    "attachment_CharacterMesh_SK_d1200_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_d1200_grip_animation": 9,
+    "attachment_CharacterMesh_SK_d1200_is_melee": false,
+    "attachment_CharacterMesh_SK_d1200_is_scoped": false,
+    "attachment_CharacterMesh_SK_d1200_is_two_handed": false,
     "attachment_CharacterMesh_SK_d1200_melee_rotation_offset": [
         0.0,
         0.0,
@@ -161,9 +1180,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_d1200_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_d1200_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_d1200_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_d1200_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_d1200_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_d1200_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_d1200_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_d1200_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_d1200_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_d1200_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_d1200_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_d1200_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_d1200_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_d1200_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_d1200_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_d1200_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_d1200_use_laser": false,
+    "attachment_CharacterMesh_SK_dnipro_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_dnipro_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_dnipro_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_dnipro_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_dnipro_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_dnipro_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_dnipro_any_child": true,
     "attachment_CharacterMesh_SK_dnipro_any_parent": false,
-    "attachment_CharacterMesh_SK_dnipro_grip_animation": 35,
+    "attachment_CharacterMesh_SK_dnipro_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_dnipro_grip_animation": 34,
+    "attachment_CharacterMesh_SK_dnipro_is_melee": false,
+    "attachment_CharacterMesh_SK_dnipro_is_scoped": false,
+    "attachment_CharacterMesh_SK_dnipro_is_two_handed": false,
     "attachment_CharacterMesh_SK_dnipro_melee_rotation_offset": [
         0.0,
         0.0,
@@ -184,9 +1274,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_dnipro_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_dnipro_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_dnipro_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_dnipro_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_dnipro_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_dnipro_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_dnipro_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_dnipro_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_dnipro_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_dnipro_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_dnipro_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_dnipro_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_dnipro_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_dnipro_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_dnipro_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_dnipro_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_dnipro_use_laser": false,
+    "attachment_CharacterMesh_SK_fora0_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_fora0_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_fora0_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_fora0_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_fora0_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_fora0_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_fora0_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_fora0_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_fora0_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_fora0_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_fora0_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_fora0_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_fora0_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_fora0_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_fora0_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_fora0_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_fora0_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_fora0_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_fora0_any_child": true,
     "attachment_CharacterMesh_SK_fora0_any_parent": false,
+    "attachment_CharacterMesh_SK_fora0_delete_accessory_override": false,
     "attachment_CharacterMesh_SK_fora0_grip_animation": 18,
+    "attachment_CharacterMesh_SK_fora0_is_melee": false,
+    "attachment_CharacterMesh_SK_fora0_is_scoped": false,
+    "attachment_CharacterMesh_SK_fora0_is_two_handed": false,
     "attachment_CharacterMesh_SK_fora0_melee_rotation_offset": [
         0.0,
         0.0,
@@ -207,9 +1368,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_fora0_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_fora0_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_fora0_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_fora0_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_fora0_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_fora0_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_fora0_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_fora0_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_fora0_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_fora0_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_fora0_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_fora0_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_fora0_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_fora0_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_fora0_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_fora0_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_fora0_use_laser": false,
+    "attachment_CharacterMesh_SK_gauss_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_gauss_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_gauss_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_gauss_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_gauss_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_gauss_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_gauss_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_gauss_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_gauss_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_gauss_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gauss_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gauss_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_gauss_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_gauss_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_gauss_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_gauss_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_gauss_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_gauss_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_gauss_any_child": true,
     "attachment_CharacterMesh_SK_gauss_any_parent": false,
-    "attachment_CharacterMesh_SK_gauss_grip_animation": 36,
+    "attachment_CharacterMesh_SK_gauss_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_gauss_grip_animation": 11,
+    "attachment_CharacterMesh_SK_gauss_is_melee": false,
+    "attachment_CharacterMesh_SK_gauss_is_scoped": false,
+    "attachment_CharacterMesh_SK_gauss_is_two_handed": false,
     "attachment_CharacterMesh_SK_gauss_melee_rotation_offset": [
         0.0,
         0.0,
@@ -230,9 +1462,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_gauss_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_gauss_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_gauss_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_gauss_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_gauss_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_gauss_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_gauss_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gauss_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_gauss_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gauss_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_gauss_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_gauss_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_gauss_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_gauss_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gauss_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gauss_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_gauss_use_laser": false,
+    "attachment_CharacterMesh_SK_gp37_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_gp37_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_gp37_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_gp37_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_gp37_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_gp37_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_gp37_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_gp37_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_gp37_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_gp37_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gp37_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gp37_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_gp37_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_gp37_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_gp37_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_gp37_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_gp37_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_gp37_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_gp37_any_child": true,
     "attachment_CharacterMesh_SK_gp37_any_parent": false,
-    "attachment_CharacterMesh_SK_gp37_grip_animation": 16,
+    "attachment_CharacterMesh_SK_gp37_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_gp37_grip_animation": 3,
+    "attachment_CharacterMesh_SK_gp37_is_melee": false,
+    "attachment_CharacterMesh_SK_gp37_is_scoped": false,
+    "attachment_CharacterMesh_SK_gp37_is_two_handed": false,
     "attachment_CharacterMesh_SK_gp37_melee_rotation_offset": [
         0.0,
         0.0,
@@ -253,9 +1556,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_gp37_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_gp37_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_gp37_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_gp37_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_gp37_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_gp37_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_gp37_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gp37_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_gp37_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gp37_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_gp37_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_gp37_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_gp37_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_gp37_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gp37_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gp37_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_gp37_use_laser": false,
+    "attachment_CharacterMesh_SK_grim0_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_grim0_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_grim0_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_grim0_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_grim0_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_grim0_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_grim0_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_grim0_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_grim0_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_grim0_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_grim0_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_grim0_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_grim0_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_grim0_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_grim0_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_grim0_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_grim0_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_grim0_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_grim0_any_child": true,
     "attachment_CharacterMesh_SK_grim0_any_parent": false,
-    "attachment_CharacterMesh_SK_grim0_grip_animation": 34,
+    "attachment_CharacterMesh_SK_grim0_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_grim0_grip_animation": 31,
+    "attachment_CharacterMesh_SK_grim0_is_melee": false,
+    "attachment_CharacterMesh_SK_grim0_is_scoped": false,
+    "attachment_CharacterMesh_SK_grim0_is_two_handed": false,
     "attachment_CharacterMesh_SK_grim0_melee_rotation_offset": [
         0.0,
         0.0,
@@ -276,9 +1650,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_grim0_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_grim0_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_grim0_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_grim0_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_grim0_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_grim0_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_grim0_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_grim0_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_grim0_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_grim0_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_grim0_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_grim0_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_grim0_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_grim0_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_grim0_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_grim0_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_grim0_use_laser": false,
+    "attachment_CharacterMesh_SK_gvi_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_gvi_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_gvi_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_gvi_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_gvi_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_gvi_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_gvi_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_gvi_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_gvi_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_gvi_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gvi_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gvi_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_gvi_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_gvi_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_gvi_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_gvi_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_gvi_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_gvi_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_gvi_any_child": true,
     "attachment_CharacterMesh_SK_gvi_any_parent": false,
-    "attachment_CharacterMesh_SK_gvi_grip_animation": 25,
+    "attachment_CharacterMesh_SK_gvi_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_gvi_grip_animation": 8,
+    "attachment_CharacterMesh_SK_gvi_is_melee": false,
+    "attachment_CharacterMesh_SK_gvi_is_scoped": false,
+    "attachment_CharacterMesh_SK_gvi_is_two_handed": false,
     "attachment_CharacterMesh_SK_gvi_melee_rotation_offset": [
         0.0,
         0.0,
@@ -299,9 +1744,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_gvi_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_gvi_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_gvi_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_gvi_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_gvi_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_gvi_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_gvi_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gvi_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_gvi_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gvi_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_gvi_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_gvi_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_gvi_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_gvi_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gvi_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_gvi_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_gvi_use_laser": false,
+    "attachment_CharacterMesh_SK_integ_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_integ_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_integ_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_integ_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_integ_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_integ_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_integ_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_integ_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_integ_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_integ_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_integ_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_integ_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_integ_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_integ_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_integ_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_integ_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_integ_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_integ_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_integ_any_child": true,
     "attachment_CharacterMesh_SK_integ_any_parent": false,
-    "attachment_CharacterMesh_SK_integ_grip_animation": 9,
+    "attachment_CharacterMesh_SK_integ_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_integ_grip_animation": 35,
+    "attachment_CharacterMesh_SK_integ_is_melee": false,
+    "attachment_CharacterMesh_SK_integ_is_scoped": false,
+    "attachment_CharacterMesh_SK_integ_is_two_handed": false,
     "attachment_CharacterMesh_SK_integ_melee_rotation_offset": [
         0.0,
         0.0,
@@ -322,9 +1838,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_integ_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_integ_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_integ_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_integ_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_integ_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_integ_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_integ_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_integ_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_integ_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_integ_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_integ_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_integ_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_integ_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_integ_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_integ_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_integ_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_integ_use_laser": false,
+    "attachment_CharacterMesh_SK_kharod000_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_kharod000_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_kharod000_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_kharod000_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_kharod000_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_kharod000_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_kharod000_any_child": true,
     "attachment_CharacterMesh_SK_kharod000_any_parent": false,
-    "attachment_CharacterMesh_SK_kharod000_grip_animation": 41,
+    "attachment_CharacterMesh_SK_kharod000_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_kharod000_grip_animation": 7,
+    "attachment_CharacterMesh_SK_kharod000_is_melee": false,
+    "attachment_CharacterMesh_SK_kharod000_is_scoped": false,
+    "attachment_CharacterMesh_SK_kharod000_is_two_handed": false,
     "attachment_CharacterMesh_SK_kharod000_melee_rotation_offset": [
         0.0,
         0.0,
@@ -345,9 +1932,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_kharod000_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_kharod000_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_kharod000_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_kharod000_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_kharod000_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_kharod000_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_kharod000_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kharod000_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_kharod000_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kharod000_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_kharod000_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_kharod000_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_kharod000_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_kharod000_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kharod000_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kharod000_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_kharod000_use_laser": false,
+    "attachment_CharacterMesh_SK_kora_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_kora_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_kora_accessory_item_activation_distance": 6.400000095367432,
+    "attachment_CharacterMesh_SK_kora_accessory_item_activation_hand": 2,
+    "attachment_CharacterMesh_SK_kora_accessory_item_attach_type": 3,
+    "attachment_CharacterMesh_SK_kora_accessory_item_grip_animation": 19,
+    "attachment_CharacterMesh_SK_kora_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_kora_accessory_item_id": "ad061ee1-95f4-448b-b306-c7c8dce42142",
+    "attachment_CharacterMesh_SK_kora_accessory_item_label": "Left Hand",
+    "attachment_CharacterMesh_SK_kora_accessory_item_location": [
+        -8.5,
+        4.400000095367432,
+        0.20000000298023224
+    ],
+    "attachment_CharacterMesh_SK_kora_accessory_item_rotation": [
+        -41.70000076293945,
+        128.60000610351563,
+        3.799999952316284
+    ],
+    "attachment_CharacterMesh_SK_kora_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_kora_accessory_item_socket_name": "jnt_l_hand",
+    "attachment_CharacterMesh_SK_kora_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_kora_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_kora_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_kora_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_kora_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_kora_any_child": true,
     "attachment_CharacterMesh_SK_kora_any_parent": false,
-    "attachment_CharacterMesh_SK_kora_grip_animation": 17,
+    "attachment_CharacterMesh_SK_kora_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_kora_grip_animation": 20,
+    "attachment_CharacterMesh_SK_kora_is_melee": false,
+    "attachment_CharacterMesh_SK_kora_is_scoped": false,
+    "attachment_CharacterMesh_SK_kora_is_two_handed": false,
     "attachment_CharacterMesh_SK_kora_melee_rotation_offset": [
         0.0,
         0.0,
@@ -368,9 +2026,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_kora_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_kora_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_kora_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_kora_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_kora_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_kora_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_kora_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kora_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_kora_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kora_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_kora_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_kora_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_kora_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_kora_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kora_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_kora_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_kora_use_laser": false,
+    "attachment_CharacterMesh_SK_lav_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_lav_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_lav_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_lav_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_lav_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_lav_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_lav_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_lav_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_lav_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_lav_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_lav_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_lav_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_lav_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_lav_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_lav_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_lav_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_lav_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_lav_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_lav_any_child": true,
     "attachment_CharacterMesh_SK_lav_any_parent": false,
-    "attachment_CharacterMesh_SK_lav_grip_animation": 22,
+    "attachment_CharacterMesh_SK_lav_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_lav_grip_animation": 41,
+    "attachment_CharacterMesh_SK_lav_is_melee": false,
+    "attachment_CharacterMesh_SK_lav_is_scoped": false,
+    "attachment_CharacterMesh_SK_lav_is_two_handed": false,
     "attachment_CharacterMesh_SK_lav_melee_rotation_offset": [
         0.0,
         0.0,
@@ -391,9 +2120,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_lav_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_lav_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_lav_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_lav_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_lav_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_lav_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_lav_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_lav_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_lav_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_lav_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_lav_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_lav_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_lav_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_lav_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_lav_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_lav_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_lav_use_laser": false,
+    "attachment_CharacterMesh_SK_m1000_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_m1000_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_m1000_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_m1000_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_m1000_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_m1000_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_m1000_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_m1000_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_m1000_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_m1000_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m1000_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m1000_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_m1000_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_m1000_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_m1000_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_m1000_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_m1000_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_m1000_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_m1000_any_child": true,
     "attachment_CharacterMesh_SK_m1000_any_parent": false,
-    "attachment_CharacterMesh_SK_m1000_grip_animation": 27,
+    "attachment_CharacterMesh_SK_m1000_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_m1000_grip_animation": 37,
+    "attachment_CharacterMesh_SK_m1000_is_melee": false,
+    "attachment_CharacterMesh_SK_m1000_is_scoped": false,
+    "attachment_CharacterMesh_SK_m1000_is_two_handed": false,
     "attachment_CharacterMesh_SK_m1000_melee_rotation_offset": [
         0.0,
         0.0,
@@ -414,9 +2214,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_m1000_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_m1000_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_m1000_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_m1000_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_m1000_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_m1000_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_m1000_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m1000_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_m1000_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m1000_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_m1000_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_m1000_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_m1000_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_m1000_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m1000_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m1000_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_m1000_use_laser": false,
+    "attachment_CharacterMesh_SK_m160_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_m160_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_m160_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_m160_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_m160_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_m160_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_m160_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_m160_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_m160_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_m160_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m160_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m160_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_m160_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_m160_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_m160_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_m160_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_m160_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_m160_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_m160_any_child": true,
     "attachment_CharacterMesh_SK_m160_any_parent": false,
-    "attachment_CharacterMesh_SK_m160_grip_animation": 37,
+    "attachment_CharacterMesh_SK_m160_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_m160_grip_animation": 36,
+    "attachment_CharacterMesh_SK_m160_is_melee": false,
+    "attachment_CharacterMesh_SK_m160_is_scoped": false,
+    "attachment_CharacterMesh_SK_m160_is_two_handed": false,
     "attachment_CharacterMesh_SK_m160_melee_rotation_offset": [
         0.0,
         0.0,
@@ -437,9 +2308,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_m160_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_m160_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_m160_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_m160_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_m160_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_m160_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_m160_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m160_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_m160_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m160_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_m160_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_m160_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_m160_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_m160_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m160_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m160_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_m160_use_laser": false,
+    "attachment_CharacterMesh_SK_m701_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_m701_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_m701_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_m701_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_m701_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_m701_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_m701_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_m701_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_m701_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_m701_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m701_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m701_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_m701_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_m701_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_m701_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_m701_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_m701_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_m701_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_m701_any_child": true,
     "attachment_CharacterMesh_SK_m701_any_parent": false,
-    "attachment_CharacterMesh_SK_m701_grip_animation": 7,
+    "attachment_CharacterMesh_SK_m701_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_m701_grip_animation": 21,
+    "attachment_CharacterMesh_SK_m701_is_melee": false,
+    "attachment_CharacterMesh_SK_m701_is_scoped": false,
+    "attachment_CharacterMesh_SK_m701_is_two_handed": false,
     "attachment_CharacterMesh_SK_m701_melee_rotation_offset": [
         0.0,
         0.0,
@@ -460,9 +2402,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_m701_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_m701_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_m701_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_m701_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_m701_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_m701_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_m701_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m701_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_m701_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m701_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_m701_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_m701_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_m701_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_m701_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m701_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m701_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_m701_use_laser": false,
+    "attachment_CharacterMesh_SK_m86000_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_m86000_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_m86000_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_m86000_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_m86000_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_m86000_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_m86000_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_m86000_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_m86000_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_m86000_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m86000_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m86000_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_m86000_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_m86000_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_m86000_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_m86000_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_m86000_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_m86000_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_m86000_any_child": true,
     "attachment_CharacterMesh_SK_m86000_any_parent": false,
-    "attachment_CharacterMesh_SK_m86000_grip_animation": 12,
+    "attachment_CharacterMesh_SK_m86000_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_m86000_grip_animation": 15,
+    "attachment_CharacterMesh_SK_m86000_is_melee": false,
+    "attachment_CharacterMesh_SK_m86000_is_scoped": false,
+    "attachment_CharacterMesh_SK_m86000_is_two_handed": false,
     "attachment_CharacterMesh_SK_m86000_melee_rotation_offset": [
         0.0,
         0.0,
@@ -483,9 +2496,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_m86000_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_m86000_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_m86000_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_m86000_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_m86000_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_m86000_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_m86000_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m86000_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_m86000_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m86000_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_m86000_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_m86000_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_m86000_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_m86000_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m86000_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_m86000_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_m86000_use_laser": false,
+    "attachment_CharacterMesh_SK_mar_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_mar_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_mar_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_mar_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_mar_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_mar_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_mar_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_mar_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_mar_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_mar_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_mar_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_mar_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_mar_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_mar_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_mar_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_mar_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_mar_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_mar_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_mar_any_child": true,
     "attachment_CharacterMesh_SK_mar_any_parent": false,
+    "attachment_CharacterMesh_SK_mar_delete_accessory_override": false,
     "attachment_CharacterMesh_SK_mar_grip_animation": 38,
+    "attachment_CharacterMesh_SK_mar_is_melee": false,
+    "attachment_CharacterMesh_SK_mar_is_scoped": false,
+    "attachment_CharacterMesh_SK_mar_is_two_handed": false,
     "attachment_CharacterMesh_SK_mar_melee_rotation_offset": [
         0.0,
         0.0,
@@ -506,9 +2590,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_mar_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_mar_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_mar_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_mar_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_mar_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_mar_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_mar_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_mar_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_mar_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_mar_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_mar_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_mar_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_mar_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_mar_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_mar_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_mar_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_mar_use_laser": false,
+    "attachment_CharacterMesh_SK_obrez_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_obrez_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_obrez_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_obrez_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_obrez_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_obrez_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_obrez_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_obrez_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_obrez_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_obrez_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_obrez_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_obrez_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_obrez_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_obrez_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_obrez_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_obrez_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_obrez_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_obrez_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_obrez_any_child": true,
     "attachment_CharacterMesh_SK_obrez_any_parent": false,
-    "attachment_CharacterMesh_SK_obrez_grip_animation": 39,
+    "attachment_CharacterMesh_SK_obrez_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_obrez_grip_animation": 28,
+    "attachment_CharacterMesh_SK_obrez_is_melee": false,
+    "attachment_CharacterMesh_SK_obrez_is_scoped": false,
+    "attachment_CharacterMesh_SK_obrez_is_two_handed": false,
     "attachment_CharacterMesh_SK_obrez_melee_rotation_offset": [
         0.0,
         0.0,
@@ -529,9 +2684,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_obrez_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_obrez_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_obrez_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_obrez_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_obrez_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_obrez_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_obrez_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_obrez_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_obrez_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_obrez_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_obrez_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_obrez_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_obrez_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_obrez_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_obrez_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_obrez_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_obrez_use_laser": false,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_pkp00000_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_pkp00000_any_child": true,
     "attachment_CharacterMesh_SK_pkp00000_any_parent": false,
-    "attachment_CharacterMesh_SK_pkp00000_grip_animation": 31,
+    "attachment_CharacterMesh_SK_pkp00000_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_pkp00000_grip_animation": 16,
+    "attachment_CharacterMesh_SK_pkp00000_is_melee": false,
+    "attachment_CharacterMesh_SK_pkp00000_is_scoped": false,
+    "attachment_CharacterMesh_SK_pkp00000_is_two_handed": false,
     "attachment_CharacterMesh_SK_pkp00000_melee_rotation_offset": [
         0.0,
         0.0,
@@ -552,9 +2778,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_pkp00000_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_pkp00000_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_pkp00000_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_pkp00000_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_pkp00000_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_pkp00000_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_pkp00000_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pkp00000_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_pkp00000_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pkp00000_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_pkp00000_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_pkp00000_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_pkp00000_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_pkp00000_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pkp00000_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pkp00000_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_pkp00000_use_laser": false,
+    "attachment_CharacterMesh_SK_pm_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_pm_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_pm_accessory_item_activation_distance": 9.0,
+    "attachment_CharacterMesh_SK_pm_accessory_item_activation_hand": 2,
+    "attachment_CharacterMesh_SK_pm_accessory_item_attach_type": 3,
+    "attachment_CharacterMesh_SK_pm_accessory_item_grip_animation": 3,
+    "attachment_CharacterMesh_SK_pm_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_pm_accessory_item_id": "450742a7-7fcc-4987-a1eb-8cc3e62c905a",
+    "attachment_CharacterMesh_SK_pm_accessory_item_label": "Left Hand",
+    "attachment_CharacterMesh_SK_pm_accessory_item_location": [
+        -9.0,
+        4.5,
+        1.0
+    ],
+    "attachment_CharacterMesh_SK_pm_accessory_item_rotation": [
+        -25.5,
+        129.5,
+        11.600000381469727
+    ],
+    "attachment_CharacterMesh_SK_pm_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_pm_accessory_item_socket_name": "jnt_l_hand",
+    "attachment_CharacterMesh_SK_pm_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_pm_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_pm_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_pm_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_pm_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_pm_any_child": true,
     "attachment_CharacterMesh_SK_pm_any_parent": false,
-    "attachment_CharacterMesh_SK_pm_grip_animation": 6,
+    "attachment_CharacterMesh_SK_pm_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_pm_grip_animation": 4,
+    "attachment_CharacterMesh_SK_pm_is_melee": false,
+    "attachment_CharacterMesh_SK_pm_is_scoped": false,
+    "attachment_CharacterMesh_SK_pm_is_two_handed": false,
     "attachment_CharacterMesh_SK_pm_melee_rotation_offset": [
         0.0,
         0.0,
@@ -575,9 +2872,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_pm_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_pm_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_pm_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_pm_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_pm_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_pm_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_pm_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pm_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_pm_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pm_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_pm_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_pm_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_pm_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_pm_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pm_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_pm_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_pm_use_laser": false,
+    "attachment_CharacterMesh_SK_ram2_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_ram2_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_ram2_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_ram2_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_ram2_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_ram2_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_ram2_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_ram2_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_ram2_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_ram2_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ram2_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ram2_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_ram2_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_ram2_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_ram2_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_ram2_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_ram2_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_ram2_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_ram2_any_child": true,
     "attachment_CharacterMesh_SK_ram2_any_parent": false,
-    "attachment_CharacterMesh_SK_ram2_grip_animation": 5,
+    "attachment_CharacterMesh_SK_ram2_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_ram2_grip_animation": 32,
+    "attachment_CharacterMesh_SK_ram2_is_melee": false,
+    "attachment_CharacterMesh_SK_ram2_is_scoped": false,
+    "attachment_CharacterMesh_SK_ram2_is_two_handed": false,
     "attachment_CharacterMesh_SK_ram2_melee_rotation_offset": [
         0.0,
         0.0,
@@ -598,9 +2966,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_ram2_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_ram2_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_ram2_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_ram2_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_ram2_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_ram2_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_ram2_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ram2_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_ram2_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ram2_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_ram2_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_ram2_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_ram2_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_ram2_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ram2_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_ram2_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_ram2_use_laser": false,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_activation_distance": 5.300000190734863,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_activation_hand": 2,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_attach_type": 3,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_grip_animation": 32,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_id": "b1e4a5ed-eb2b-4282-b81b-5fe60a0237f6",
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_label": "New Accessory",
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_location": [
+        -10.100000381469727,
+        4.699999809265137,
+        3.5999999046325684
+    ],
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_rotation": [
+        -27.100000381469727,
+        138.60000610351563,
+        5.0
+    ],
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_socket_name": "jnt_l_hand",
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_rhino00000_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_rhino00000_any_child": true,
     "attachment_CharacterMesh_SK_rhino00000_any_parent": false,
-    "attachment_CharacterMesh_SK_rhino00000_grip_animation": 26,
+    "attachment_CharacterMesh_SK_rhino00000_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_rhino00000_grip_animation": 33,
+    "attachment_CharacterMesh_SK_rhino00000_is_melee": false,
+    "attachment_CharacterMesh_SK_rhino00000_is_scoped": false,
+    "attachment_CharacterMesh_SK_rhino00000_is_two_handed": false,
     "attachment_CharacterMesh_SK_rhino00000_melee_rotation_offset": [
         0.0,
         0.0,
@@ -621,9 +3060,174 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_rhino00000_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_rhino00000_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_rhino00000_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_rhino00000_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_rhino00000_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_rhino00000_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_rhino00000_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rhino00000_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_rhino00000_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rhino00000_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_rhino00000_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_rhino00000_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_rhino00000_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_rhino00000_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rhino00000_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rhino00000_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_rhino00000_use_laser": false,
+    "attachment_CharacterMesh_SK_rpg7_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_rpg7_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_rpg7_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_rpg7_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_rpg7_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_rpg7_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_SK_rpg7_any_child": false,
+    "attachment_CharacterMesh_SK_rpg7_any_parent": false,
+    "attachment_CharacterMesh_SK_rpg7_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_rpg7_grip_animation": 1,
+    "attachment_CharacterMesh_SK_rpg7_is_melee": false,
+    "attachment_CharacterMesh_SK_rpg7_is_scoped": false,
+    "attachment_CharacterMesh_SK_rpg7_is_two_handed": false,
+    "attachment_CharacterMesh_SK_rpg7_melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_rpg7_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_rpg7_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_rpg7_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_rpg7_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_rpg7_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_rpg7_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_rpg7_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_rpg7_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_rpg7_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_rpg7_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_rpg7_use_laser": false,
+    "attachment_CharacterMesh_SK_spsa00_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_spsa00_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_spsa00_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_spsa00_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_spsa00_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_spsa00_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_spsa00_any_child": true,
     "attachment_CharacterMesh_SK_spsa00_any_parent": false,
-    "attachment_CharacterMesh_SK_spsa00_grip_animation": 8,
+    "attachment_CharacterMesh_SK_spsa00_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_spsa00_grip_animation": 22,
+    "attachment_CharacterMesh_SK_spsa00_is_melee": false,
+    "attachment_CharacterMesh_SK_spsa00_is_scoped": false,
+    "attachment_CharacterMesh_SK_spsa00_is_two_handed": false,
     "attachment_CharacterMesh_SK_spsa00_melee_rotation_offset": [
         0.0,
         0.0,
@@ -644,9 +3248,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_spsa00_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_spsa00_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_spsa00_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_spsa00_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_spsa00_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_spsa00_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_spsa00_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_spsa00_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_spsa00_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_spsa00_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_spsa00_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_spsa00_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_spsa00_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_spsa00_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_spsa00_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_spsa00_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_spsa00_use_laser": false,
+    "attachment_CharacterMesh_SK_svm_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_svm_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_svm_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_svm_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_svm_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_svm_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_svm_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_svm_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_svm_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_svm_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svm_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svm_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_svm_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_svm_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_svm_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_svm_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_svm_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_svm_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_svm_any_child": true,
     "attachment_CharacterMesh_SK_svm_any_parent": false,
-    "attachment_CharacterMesh_SK_svm_grip_animation": 32,
+    "attachment_CharacterMesh_SK_svm_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_svm_grip_animation": 30,
+    "attachment_CharacterMesh_SK_svm_is_melee": false,
+    "attachment_CharacterMesh_SK_svm_is_scoped": false,
+    "attachment_CharacterMesh_SK_svm_is_two_handed": false,
     "attachment_CharacterMesh_SK_svm_melee_rotation_offset": [
         0.0,
         0.0,
@@ -667,9 +3342,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_svm_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_svm_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_svm_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_svm_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_svm_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_svm_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_svm_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svm_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_svm_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svm_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_svm_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_svm_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_svm_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_svm_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svm_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svm_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_svm_use_laser": false,
+    "attachment_CharacterMesh_SK_svu_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_svu_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_svu_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_svu_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_svu_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_svu_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_svu_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_svu_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_svu_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_svu_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svu_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svu_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_svu_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_svu_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_svu_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_svu_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_svu_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_svu_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_svu_any_child": true,
     "attachment_CharacterMesh_SK_svu_any_parent": false,
-    "attachment_CharacterMesh_SK_svu_grip_animation": 20,
+    "attachment_CharacterMesh_SK_svu_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_svu_grip_animation": 24,
+    "attachment_CharacterMesh_SK_svu_is_melee": false,
+    "attachment_CharacterMesh_SK_svu_is_scoped": false,
+    "attachment_CharacterMesh_SK_svu_is_two_handed": false,
     "attachment_CharacterMesh_SK_svu_melee_rotation_offset": [
         0.0,
         0.0,
@@ -690,9 +3436,80 @@
         1.0,
         1.0
     ],
-    "attachment_CharacterMesh_SK_udp_any_child": true,
+    "attachment_CharacterMesh_SK_svu_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_svu_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_svu_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_svu_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_svu_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_svu_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_svu_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svu_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_svu_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svu_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_svu_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_svu_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_svu_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_svu_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svu_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_svu_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_svu_use_laser": false,
+    "attachment_CharacterMesh_SK_udp_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_udp_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_udp_accessory_item_activation_distance": 5.699999809265137,
+    "attachment_CharacterMesh_SK_udp_accessory_item_activation_hand": 2,
+    "attachment_CharacterMesh_SK_udp_accessory_item_attach_type": 3,
+    "attachment_CharacterMesh_SK_udp_accessory_item_grip_animation": 26,
+    "attachment_CharacterMesh_SK_udp_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_udp_accessory_item_id": "a3561359-c860-481a-b87e-e4654149978f",
+    "attachment_CharacterMesh_SK_udp_accessory_item_label": "Left Hand",
+    "attachment_CharacterMesh_SK_udp_accessory_item_location": [
+        -9.300000190734863,
+        4.599999904632568,
+        1.899999976158142
+    ],
+    "attachment_CharacterMesh_SK_udp_accessory_item_rotation": [
+        -19.399999618530273,
+        129.8000030517578,
+        5.0
+    ],
+    "attachment_CharacterMesh_SK_udp_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_udp_accessory_item_socket_name": "jnt_l_hand",
+    "attachment_CharacterMesh_SK_udp_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_udp_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_udp_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_udp_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_udp_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_SK_udp_any_child": false,
     "attachment_CharacterMesh_SK_udp_any_parent": false,
-    "attachment_CharacterMesh_SK_udp_grip_animation": 29,
+    "attachment_CharacterMesh_SK_udp_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_udp_grip_animation": 27,
+    "attachment_CharacterMesh_SK_udp_is_melee": false,
+    "attachment_CharacterMesh_SK_udp_is_scoped": false,
+    "attachment_CharacterMesh_SK_udp_is_two_handed": false,
     "attachment_CharacterMesh_SK_udp_melee_rotation_offset": [
         0.0,
         0.0,
@@ -713,9 +3530,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_udp_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_udp_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_udp_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_udp_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_udp_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_udp_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_udp_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_udp_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_udp_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_udp_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_udp_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_udp_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_udp_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_udp_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_udp_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_udp_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_udp_use_laser": false,
+    "attachment_CharacterMesh_SK_vip_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_vip_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_vip_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_vip_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_vip_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_vip_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_vip_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_vip_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_vip_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_vip_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_vip_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_vip_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_vip_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_vip_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_vip_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_vip_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_vip_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_vip_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_vip_any_child": true,
     "attachment_CharacterMesh_SK_vip_any_parent": false,
-    "attachment_CharacterMesh_SK_vip_grip_animation": 28,
+    "attachment_CharacterMesh_SK_vip_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_vip_grip_animation": 29,
+    "attachment_CharacterMesh_SK_vip_is_melee": false,
+    "attachment_CharacterMesh_SK_vip_is_scoped": false,
+    "attachment_CharacterMesh_SK_vip_is_two_handed": false,
     "attachment_CharacterMesh_SK_vip_melee_rotation_offset": [
         0.0,
         0.0,
@@ -736,9 +3624,80 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_vip_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_vip_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_vip_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_vip_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_vip_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_vip_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_vip_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_vip_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_vip_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_vip_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_vip_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_vip_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_vip_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_vip_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_vip_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_vip_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_vip_use_laser": false,
+    "attachment_CharacterMesh_SK_zubr0_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_SK_zubr0_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_id": "",
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_label": "",
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_SK_zubr0_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_SK_zubr0_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_SK_zubr0_accessory_picker": 1,
+    "attachment_CharacterMesh_SK_zubr0_accessory_start_time": 0.0,
     "attachment_CharacterMesh_SK_zubr0_any_child": true,
     "attachment_CharacterMesh_SK_zubr0_any_parent": false,
-    "attachment_CharacterMesh_SK_zubr0_grip_animation": 24,
+    "attachment_CharacterMesh_SK_zubr0_delete_accessory_override": false,
+    "attachment_CharacterMesh_SK_zubr0_grip_animation": 23,
+    "attachment_CharacterMesh_SK_zubr0_is_melee": false,
+    "attachment_CharacterMesh_SK_zubr0_is_scoped": false,
+    "attachment_CharacterMesh_SK_zubr0_is_two_handed": false,
     "attachment_CharacterMesh_SK_zubr0_melee_rotation_offset": [
         0.0,
         0.0,
@@ -759,5 +3718,258 @@
         1.0,
         1.0
     ],
+    "attachment_CharacterMesh_SK_zubr0_scope_brightness": 2.0,
+    "attachment_CharacterMesh_SK_zubr0_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_SK_zubr0_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_SK_zubr0_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_SK_zubr0_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_SK_zubr0_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_zubr0_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_zubr0_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_SK_zubr0_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_zubr0_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_SK_zubr0_scope_show_debug": false,
+    "attachment_CharacterMesh_SK_zubr0_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_SK_zubr0_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_SK_zubr0_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_zubr0_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_SK_zubr0_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_SK_zubr0_use_laser": false,
+    "attachment_CharacterMesh_Sk_arev_accessory_end_time": 0.0,
+    "attachment_CharacterMesh_Sk_arev_accessory_existing_guid": 1,
+    "attachment_CharacterMesh_Sk_arev_accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh_Sk_arev_accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh_Sk_arev_accessory_item_attach_type": 1,
+    "attachment_CharacterMesh_Sk_arev_accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh_Sk_arev_accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh_Sk_arev_accessory_item_id": "",
+    "attachment_CharacterMesh_Sk_arev_accessory_item_label": "",
+    "attachment_CharacterMesh_Sk_arev_accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_accessory_item_socket_list": 1,
+    "attachment_CharacterMesh_Sk_arev_accessory_item_socket_name": "",
+    "attachment_CharacterMesh_Sk_arev_accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh_Sk_arev_accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh_Sk_arev_accessory_marker_picker": 1,
+    "attachment_CharacterMesh_Sk_arev_accessory_picker": 1,
+    "attachment_CharacterMesh_Sk_arev_accessory_start_time": 0.0,
+    "attachment_CharacterMesh_Sk_arev_any_child": false,
+    "attachment_CharacterMesh_Sk_arev_any_parent": false,
+    "attachment_CharacterMesh_Sk_arev_delete_accessory_override": false,
+    "attachment_CharacterMesh_Sk_arev_grip_animation": 3,
+    "attachment_CharacterMesh_Sk_arev_is_melee": false,
+    "attachment_CharacterMesh_Sk_arev_is_scoped": false,
+    "attachment_CharacterMesh_Sk_arev_is_two_handed": false,
+    "attachment_CharacterMesh_Sk_arev_melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_scope_brightness": 2.0,
+    "attachment_CharacterMesh_Sk_arev_scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh_Sk_arev_scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh_Sk_arev_scope_max_fov": 20.0,
+    "attachment_CharacterMesh_Sk_arev_scope_min_fov": 2.0,
+    "attachment_CharacterMesh_Sk_arev_scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh_Sk_arev_scope_show_debug": false,
+    "attachment_CharacterMesh_Sk_arev_scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh_Sk_arev_scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh_Sk_arev_sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh_Sk_arev_strip_child_suffix_length": false,
+    "attachment_CharacterMesh_Sk_arev_use_laser": false,
+    "attachment_CharacterMesh__accessory_end_time": 0.0,
+    "attachment_CharacterMesh__accessory_existing_guid": 1,
+    "attachment_CharacterMesh__accessory_item_activation_distance": 0.0,
+    "attachment_CharacterMesh__accessory_item_activation_hand": 1,
+    "attachment_CharacterMesh__accessory_item_attach_type": 1,
+    "attachment_CharacterMesh__accessory_item_grip_animation": 1,
+    "attachment_CharacterMesh__accessory_item_grip_priority": "1",
+    "attachment_CharacterMesh__accessory_item_id": "",
+    "attachment_CharacterMesh__accessory_item_label": "",
+    "attachment_CharacterMesh__accessory_item_location": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__accessory_item_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__accessory_item_socket_list": 1,
+    "attachment_CharacterMesh__accessory_item_socket_name": "",
+    "attachment_CharacterMesh__accessory_item_test_left_hand": false,
+    "attachment_CharacterMesh__accessory_item_test_right_hand": false,
+    "attachment_CharacterMesh__accessory_marker_picker": 1,
+    "attachment_CharacterMesh__accessory_picker": 1,
+    "attachment_CharacterMesh__accessory_start_time": 0.0,
+    "attachment_CharacterMesh__any_child": false,
+    "attachment_CharacterMesh__any_parent": false,
+    "attachment_CharacterMesh__delete_accessory_override": false,
+    "attachment_CharacterMesh__grip_animation": 1,
+    "attachment_CharacterMesh__is_melee": false,
+    "attachment_CharacterMesh__is_scoped": false,
+    "attachment_CharacterMesh__is_two_handed": false,
+    "attachment_CharacterMesh__melee_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "attachment_CharacterMesh__scope_brightness": 2.0,
+    "attachment_CharacterMesh__scope_deactivate_distance": 50.0,
+    "attachment_CharacterMesh__scope_hide_ocular_lens_on_disable": true,
+    "attachment_CharacterMesh__scope_max_fov": 20.0,
+    "attachment_CharacterMesh__scope_min_fov": 2.0,
+    "attachment_CharacterMesh__scope_objective_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh__scope_objective_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__scope_ocular_lens_location": [
+        0.0,
+        0.0,
+        20.0
+    ],
+    "attachment_CharacterMesh__scope_ocular_lens_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__scope_ocular_lens_scale": 1.0,
+    "attachment_CharacterMesh__scope_show_debug": false,
+    "attachment_CharacterMesh__scope_zoom_exponential": 0.5,
+    "attachment_CharacterMesh__scope_zoom_speed": 1.0,
+    "attachment_CharacterMesh__sights_position_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__sights_rotation_offset": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "attachment_CharacterMesh__strip_child_suffix_length": false,
+    "attachment_CharacterMesh__use_laser": false,
+    "uevr_attachment_base_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_attachments_left_hand_flip_x": false,
+    "uevr_attachments_left_hand_flip_y": false,
+    "uevr_attachments_left_hand_flip_z": false,
+    "uevr_attachments_left_hand_position": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_attachments_left_hand_rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "uevr_attachments_left_hand_scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "uevr_attachments_use_left_hand_offsets": false,
     "use_uevr_attachments_strip_parent_name_numeric_suffix": false
 }

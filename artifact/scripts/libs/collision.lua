@@ -5,6 +5,7 @@ local controllers = require("libs/controllers")
 local linetracer = require("libs/linetracer")
 local plugin = require("libs/core/plugin")
 local mathLib = require("libs/core/math_lib")
+local hands = require("libs/hands")
 require("libs/enums/unreal")
 
 local M = {}
@@ -76,6 +77,112 @@ COLLISION_CLASS_TYPES = {
 }
 COLLISION_DETECTION_TYPE_STRINGS = {"GetOverlappingComponents", "ComponentOverlapComponents"}
 
+-- A BoxComponent's own native visualize-when-not-hidden debug draw is a
+-- collision-shape scene proxy, not a mesh - it has no material to carry the
+-- ForegroundFOVEnabled parameter the game's own first-person meshes carry (see
+-- uevrUtils.applyForegroundFOV), so making the box itself visible renders it with
+-- the normal world projection and it sits at the wrong depth relative to the
+-- hands/weapon (same issue the reload system's mag proxy meshes had - see
+-- stalker2/mag_reload.lua). Fix: for Box-shaped colliders only (Sphere/Capsule are
+-- out of scope here), keep the real box permanently hidden and show a small Cube
+-- static mesh instead, parented to the box (so it inherits the box's
+-- offset/rotation automatically) and rescaled to the box's own extents whenever
+-- they change, with the foreground-FOV fix applied.
+local CUBE_HALF_SIZE = 50.0
+
+local function isBoxShape(shape)
+    return shape == COLLISION_SHAPES.Box or shape == COLLISION_SHAPES.Box_Overlap_Only
+end
+
+-- find_instance_of/find_all_of (what createStaticMeshComponent uses internally
+-- when given a mesh path string) only search objects ALREADY resident in memory.
+-- Nothing else in this game references /Engine/BasicShapes/Cube, so a plain
+-- string lookup silently returns nil (component created with no mesh assigned -
+-- invisible even when shown).
+--
+-- Both uevrUtils.getLoadedAsset()'s own return value (AssetRegistryHelpers:GetAsset())
+-- AND a follow-up find_instance_of/find_all_of scan turned out unreliable here -
+-- confirmed live via MCP (a direct GUObjectArray search) that the Cube StaticMesh
+-- WAS genuinely resident in memory while find_all_of's class-enumeration
+-- (UEVR_UObjectHook.get_objects_by_class) still wasn't returning it, i.e. that
+-- enumeration doesn't reliably pick up an asset the instant it's force-loaded.
+-- uevr.api:find_uobject() (a direct by-name lookup, the same call M.get_class()
+-- already relies on everywhere) doesn't have that problem - use it instead, after
+-- getLoadedAsset's blocking call has forced the asset to actually be loaded, and
+-- pass the resolved object (not the path string) so createStaticMeshComponent
+-- skips its own (pre-load, same-scan-path) lookup.
+local cachedCubeMesh = nil
+local function getCubeMesh()
+    if uevrUtils.getValid(cachedCubeMesh) == nil then
+        cachedCubeMesh = nil
+        pcall(function()
+            uevrUtils.getLoadedAsset("StaticMesh /Engine/BasicShapes/Cube.Cube")
+            cachedCubeMesh = uevr.api:find_uobject("StaticMesh /Engine/BasicShapes/Cube.Cube")
+        end)
+    end
+    return cachedCubeMesh
+end
+
+-- uevrUtils.applyForegroundFOV (via fixMeshFOV) only converts a mesh's OWN
+-- material to a dynamic instance when that material is already a
+-- MaterialInstanceConstant - our cube's default material
+-- (/Engine/BasicShapes/BasicShapeMaterial) is a plain base Material, so that
+-- conversion silently never happens. And even if it did convert, BasicShapeMaterial
+-- almost certainly doesn't implement ForegroundFOVEnabled in its shader graph at
+-- all - it's a generic engine default, not one of this game's own materials - so
+-- setting the parameter on it would likely be a silent no-op anyway. Confirmed
+-- live via MCP (comparing both hand PoseableMeshComponents against the weapon
+-- mesh) that ForegroundFOVEnabled=1.0 baked into the material itself is what the
+-- game's own first-person meshes actually rely on (bForeground is false on both
+-- hands - a red herring). So instead of retrofitting our generic cube's own
+-- material, just borrow material slot 0 straight off the live left hand mesh -
+-- it's always present in VR and already has the parameter set correctly.
+local cachedForegroundMaterial = nil
+local function getForegroundMaterial()
+    if uevrUtils.getValid(cachedForegroundMaterial) == nil then
+        cachedForegroundMaterial = nil
+        pcall(function()
+            local handMesh = hands.getHandComponent(Handed.Left)
+            if uevrUtils.getValid(handMesh) ~= nil then
+                local materials = handMesh:GetMaterials()
+                if materials ~= nil and materials[1] ~= nil then
+                    cachedForegroundMaterial = materials[1]
+                end
+            end
+        end)
+    end
+    return cachedForegroundMaterial
+end
+
+local function createDebugVisualCube(collider, collisionParent)
+    local visual = nil
+    pcall(function()
+        visual = uevrUtils.createStaticMeshComponent(getCubeMesh(), {parent = collisionParent, visible = false, collisionEnabled = false})
+        if visual ~= nil then
+            visual:K2_AttachToComponent(collider, uevrUtils.fname_from_string("None"), 2, 2, 2, true)
+            local fovMaterial = getForegroundMaterial()
+            if fovMaterial ~= nil then
+                visual:SetMaterial(0, fovMaterial)
+            end
+            visual:SetHiddenInGame(true)
+            visual:SetVisibility(false, false)
+        end
+    end)
+    return visual
+end
+
+-- Keeps the visual cube's size matched to the box's own extents (which are
+-- independently configurable per collider profile, unlike mag_reload.lua's fixed
+-- default-extent boxes).
+local function resizeDebugVisualCube(visual, extents)
+    if visual == nil or extents == nil then return end
+    pcall(function()
+        visual.RelativeScale3D.X = extents[1] / CUBE_HALF_SIZE
+        visual.RelativeScale3D.Y = extents[2] / CUBE_HALF_SIZE
+        visual.RelativeScale3D.Z = extents[3] / CUBE_HALF_SIZE
+    end)
+end
+
 local paramManager = paramModule.new(parametersFileName, parameters, true)
 paramManager:load(true)
 
@@ -87,7 +194,7 @@ local function setParameter(key, value, persist)
     return paramManager:setInActiveProfile(key, value, persist)
 end
 
-local function setColliderProperties(collider, id)
+local function setColliderProperties(collider, id, collisionParent)
     local profileData = paramManager:get(id)
     if profileData ~= nil then
         print("Setting collider properties for ", id, "Radius", profileData.radius, "Shape", profileData.shape, "Collision Object Type", profileData.collision_object_type - 1, "Collision Enabled", profileData.collision_enabled - 1, "Channels", profileData.channels, "Visible", profileData.visible, "Generate Overlap Events", profileData.generate_overlap_events, "Attach To", profileData.attachTo)
@@ -96,6 +203,15 @@ local function setColliderProperties(collider, id)
         elseif collider.SetBoxExtent ~= nil then
             if profileData.extents == nil then profileData.extents = {10, 10, 10} end
             collider:SetBoxExtent(uevrUtils.vector(profileData.extents[1], profileData.extents[2], profileData.extents[3]), false)
+            if isBoxShape(profileData.shape) then
+                -- Lazily create the visual on first call (collisionParent is only
+                -- passed in from createCollider) - later property-change calls just
+                -- resize whatever visual creation already produced.
+                if status.colliders[id].visual == nil and collisionParent ~= nil then
+                    status.colliders[id].visual = createDebugVisualCube(collider, collisionParent)
+                end
+                resizeDebugVisualCube(status.colliders[id].visual, profileData.extents)
+            end
         elseif collider.SetCapsuleRadius ~= nil then
             if profileData.half_height == nil then profileData.half_height = 20 end
             collider:SetCapsuleRadius(profileData.radius, profileData.half_height, false)
@@ -111,7 +227,12 @@ local function setColliderProperties(collider, id)
             end
             collider.bGenerateOverlapEvents = profileData.generate_overlap_events
         end
-        collider:SetVisibility(profileData.visible)
+        if status.colliders[id].visual ~= nil then
+            collider:SetVisibility(false)
+            pcall(function() status.colliders[id].visual:SetVisibility(profileData.visible, false) end)
+        else
+            collider:SetVisibility(profileData.visible)
+        end
         --collider:SetMassOverrideInKg(uevrUtils.fname_from_string(""), 50, true)
         --uevrUtils.set_component_relative_transform(collider, profileData.position, profileData.rotation)
         --uevrUtils.set_component_relative_transform(collider, uevrUtils.vector(30,30,30), profileData.rotation)
@@ -135,7 +256,7 @@ local function createCollider(id, collisionParent)
         if collider ~= nil then
             if status.colliders == nil then status.colliders = {} end
             status.colliders[id] = {collider = collider, canDestoryParent = collisionParent == nil}
-            setColliderProperties(collider, id)
+            setColliderProperties(collider, id, collisionParent)
         end
     end
 end
@@ -246,6 +367,10 @@ end
 
 function M.destroy(id)
     if status.colliders == nil or status.colliders[id] == nil then return end
+	local visual = uevrUtils.getValid(status.colliders[id]["visual"])
+	if visual ~= nil then
+		uevrUtils.destroyComponent(visual, false, false)
+	end
 	local collider = uevrUtils.getValid(status.colliders[id]["collider"])
 	if collider ~= nil then
 		uevrUtils.destroyComponent(collider, status.colliders[id].canDestoryParent, false)

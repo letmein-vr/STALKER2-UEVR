@@ -98,19 +98,42 @@ function MotionControllerActors:Reset()
     self.hmd_component = nil
 end
 
+-- Forget the hand actors WITHOUT touching them. For a level change: the old world's actors
+-- were freed with it, and on this backend exists() still passes for freed objects (and the
+-- address may already belong to a new-world object), so Reset()'s K2_DestroyActor must not
+-- run on them. Update() respawns a fresh set in the new world on the next tick.
+function MotionControllerActors:Invalidate()
+    self.inited = false
+    self.left_hand_actor = nil
+    self.right_hand_actor = nil
+    self.hmd_actor = nil
+    self.left_hand_component = nil
+    self.right_hand_component = nil
+    self.hmd_component = nil
+end
+
 -- Check if any hand actors have been deleted and return if they need to be respawned
 function MotionControllerActors:Validate()
-    if self.left_hand_actor ~= nil and not UEVR_UObjectHook.exists(self.left_hand_actor) then
+    -- Check the components too, not just the actors: after an in-game script reset
+    -- the actor can still report alive while its component has been destroyed, and
+    -- any property access on the dead component throws a C++ exception.
+    local function alive(obj)
+        if obj == nil then return false end
+        local ok, exists = pcall(UEVR_UObjectHook.exists, obj)
+        return ok and exists
+    end
+
+    if self.left_hand_actor ~= nil and (not alive(self.left_hand_actor) or not alive(self.left_hand_component)) then
         self.left_hand_actor = nil
         self.left_hand_component = nil
     end
 
-    if self.right_hand_actor ~= nil and not UEVR_UObjectHook.exists(self.right_hand_actor) then
+    if self.right_hand_actor ~= nil and (not alive(self.right_hand_actor) or not alive(self.right_hand_component)) then
         self.right_hand_actor = nil
         self.right_hand_component = nil
     end
 
-    if self.hmd_actor ~= nil and not UEVR_UObjectHook.exists(self.hmd_actor) then
+    if self.hmd_actor ~= nil and (not alive(self.hmd_actor) or not alive(self.hmd_component)) then
         self.hmd_actor = nil
         self.hmd_component = nil
     end
@@ -188,7 +211,40 @@ function MotionControllerActors:Update(engine)
     if not self.inited or self:Validate() then
         self:Init(engine)
     end
+    self:EnsureHMDState()
 end
+
+-- Re-arm the HMD SceneComponent's UObjectHook motion-controller state (hand=2). On the
+-- joeyhodge/AFW backend a state is keyed by the component's GUObjectArray (index, serial)
+-- captured at get_or_add time; a fresh component has serial 0 until something takes a weak
+-- pointer to it, after which the backend prunes the state as "stale" (log: "Pruned N stale
+-- motion-controller attachment identities"). Validate() only checks the component is alive,
+-- so the loss went unnoticed: the HMD proxy froze wherever it was (seen live 2026-09-21: 11 m
+-- from the camera, state nil) and every HMD-relative body zone was measured against that
+-- stale point - the "gestures are hit and miss" bug. Same fix as libs/controllers.lua
+-- ensureHMDState: get_or_add re-keys a mismatched entry but returns a DEFAULT state, so
+-- hand/permanent are re-applied. Throttled; the getter is a cheap map lookup when present.
+local hmdStateCheckTick = 0
+function MotionControllerActors:EnsureHMDState()
+    hmdStateCheckTick = hmdStateCheckTick + 1
+    if hmdStateCheckTick % 30 ~= 0 then return end
+    local comp = self.hmd_component
+    if comp == nil then return end
+    pcall(function()
+        if not UEVR_UObjectHook.exists(comp) then return end
+        if UEVR_UObjectHook.get_motion_controller_state ~= nil
+           and UEVR_UObjectHook.get_motion_controller_state(comp) ~= nil then
+            return
+        end
+        local hmdstate = UEVR_UObjectHook.get_or_add_motion_controller_state(comp)
+        if hmdstate then
+            hmdstate:set_hand(2)
+            hmdstate:set_permanent(true)
+            print("[MotionControllerActors] Re-armed HMD motion-controller state")
+        end
+    end)
+end
+
 
 -- Get hand component by index (0=HMD, 1=Left, 2=Right)
 function MotionControllerActors:GetHandComponent(index)
@@ -205,8 +261,11 @@ end
 -- Get location by index (0=HMD, 1=Left, 2=Right)
 function MotionControllerActors:GetLocationByIndex(index)
     local component = self:GetHandComponent(index)
-    if component and component.K2_GetComponentLocation ~= nil then
+    if component then
+        -- The method-existence probe must be inside the pcall too: on a destroyed
+        -- component the __index metamethod itself throws.
         local success, result = pcall(function()
+            if component.K2_GetComponentLocation == nil then return nil end
             return component:K2_GetComponentLocation()
         end)
         if success then
@@ -219,8 +278,9 @@ end
 -- Get rotation by index (0=HMD, 1=Left, 2=Right)
 function MotionControllerActors:GetRotationByIndex(index)
     local component = self:GetHandComponent(index)
-    if component and component.K2_GetComponentRotation ~= nil then
+    if component then
         local success, result = pcall(function()
+            if component.K2_GetComponentRotation == nil then return nil end
             return component:K2_GetComponentRotation()
         end)
         if success then

@@ -9,6 +9,14 @@ M.AimMethod =
     LEFT_WEAPON = 6
 }
 
+-- M.MovementMethod =
+-- {
+--     UEVR = 1,
+--     HEAD = 2,
+--     RIGHT_CONTROLLER = 3,
+--     LEFT_CONTROLLER = 4
+-- }
+
 M.PawnRotationMode =
 {
     NONE = 1,

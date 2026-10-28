@@ -1,0 +1,165 @@
+--[[
+	Stalker 2 exposure source for libs/hud.lua (estimate from game state, no pixel readback).
+
+	Stalker's auto exposure is fully automatic (histogram -10..+25 EV) and exposes no live value, so the HUD
+	brightness is estimated:
+		outdoors  EV = log2(sun intensity x sin(sun elevation)) + outdoorOffset, never below nightEV
+		indoors   EV = indoorEV, inside BP_PPVIndoor_C volumes (the game switches to its interior exposure curve there)
+		          or where line traces find the sky above the camera covered (fallback for interiors without a volume);
+		          lit rooms: EV = log2(lamps + daylight through openings + flashlight, in lux) + indoorOffset, never below indoorEV
+		blended by how far the camera is inside an indoor volume (0..1, over the volume's blend radius)
+	The constants are calibrated in game with the "HUD Exposure (Stalker 2)" tab (shown in developer mode) and
+	saved to data/hud_exposure_stalker.json. hud.lua turns the EV into the panel brightness 1.2 x 2^EV.
+
+	Usage:
+		local hudExposure = require("stalker2.hud_exposure")
+		hud.setExposureSource(hudExposure.create(hud, isDeveloperMode))
+]]--
+
+local uevrUtils = require("libs/uevr_utils")
+local configui = require("libs/configui")
+
+local M = {}
+
+local WEATHER_CLASS = "BlueprintGeneratedClass /Game/light/WeatherController_BP.WeatherController_BP_C"
+local INDOOR_CLASS = "BlueprintGeneratedClass /Game/_Stalker_2/light/BP/BP_PPVIndoor.BP_PPVIndoor_C"
+local P = "hud_exposure_s2_"
+
+-- defaults from the 2026-10-13 measurements (clear open daylight needed about 2^9, interiors 2^-2.4 .. 2^-6.1,
+-- and panels set up at night outdoors without any compensation looked right, i.e. about 2^0)
+local defaults = { outdoorOffset = -5.6, nightEV = -0.3, indoorEV = -4.0, rainStops = -1.5, skyFrom = 0.75, skyTo = 0.95,
+	indoorOffset = -7.0, lampWeight = 1.0, bleedWeight = 0.02, flashlightLux = 30.0 }
+
+local readout = ""
+
+local function value(id, default)
+	local v = configui.getValue(P .. id)
+	if type(v) ~= "number" then return default end
+	return v
+end
+
+local function log2(x) return math.log(x) / math.log(2) end
+
+function M.create(hud, isDeveloperMode)
+	local insideIndoor = hud.exposure.createVolumeTester({
+		actorClass = INDOOR_CLASS, boxProperty = "Box", postProcessProperty = "PostProcess", refresh = 5.0,
+	})
+	-- fallback for interiors without an indoor volume: how much of the sky above the camera is covered
+	local skyBlocked = hud.exposure.createSkyTester({ length = 3000, interval = 0.5 })
+	-- indoor brightness: lamps and other lights with a line of sight to the camera
+	-- Stalker's lamps are Blueprints (BP_L_* -> BP_Light_Param_C -> BP_Light_Base_C, light in "MainLight", lumens),
+	-- fire barrels a plain Blueprint; only a handful of engine Light actors exist
+	local lightProbe = hud.exposure.createLightProbe({
+		range = 3000, refresh = 3.0, interval = 0.5, maxLights = 12,
+		sources = {
+			{ class = "BlueprintGeneratedClass /Game/_STALKER2/GameDesign/InteractiveObjects/LightBulb/BP_Light_Base.BP_Light_Base_C", components = { "MainLight" } },
+			{ class = "BlueprintGeneratedClass /Game/_Stalker_2/VFX/Environment/FireBarrel/Blueprint/BP_fireBarrel_2.BP_fireBarrel_2_C", components = { "MainLight", "AmbientLight" } },
+			{ class = "Class /Script/Engine.Light", components = { "LightComponent" } },
+		},
+	})
+	local weather, weatherWorld = nil, nil
+
+	if isDeveloperMode then
+		configui.create({ {
+			panelLabel = "HUD Exposure (Stalker 2)", saveFile = "hud_exposure_stalker",
+			layout = {
+				{ widgetType = "text", id = P .. "readout", label = "(waiting)" },
+				{ widgetType = "drag_float", id = P .. "outdoorOffset", label = "Outdoor offset (stops)", speed = 0.05, range = { -20, 10 }, initialValue = defaults.outdoorOffset, width = 120 },
+				{ widgetType = "drag_float", id = P .. "nightEV", label = "Darkest outdoor level (stops)", speed = 0.05, range = { -12, 8 }, initialValue = defaults.nightEV, width = 120 },
+				{ widgetType = "drag_float", id = P .. "indoorEV", label = "Pitch-black indoor level (stops)", speed = 0.05, range = { -12, 8 }, initialValue = defaults.indoorEV, width = 120 },
+				{ widgetType = "drag_float", id = P .. "indoorOffset", label = "Indoor offset (stops, lit rooms)", speed = 0.05, range = { -20, 10 }, initialValue = defaults.indoorOffset, width = 120 },
+				{ widgetType = "drag_float", id = P .. "lampWeight", label = "Lamp weight", speed = 0.01, range = { 0, 50 }, initialValue = defaults.lampWeight, width = 120 },
+				{ widgetType = "drag_float", id = P .. "bleedWeight", label = "Daylight through openings weight", speed = 0.001, range = { 0, 1 }, initialValue = defaults.bleedWeight, width = 120 },
+				{ widgetType = "drag_float", id = P .. "flashlightLux", label = "Flashlight (lux when on)", speed = 0.5, range = { 0, 2000 }, initialValue = defaults.flashlightLux, width = 120 },
+				{ widgetType = "checkbox", id = P .. "skyOn", label = "Sky test (indoors when the sky above is covered)", initialValue = true },
+				{ widgetType = "drag_float2", id = P .. "skyRange", label = "Sky covered: outdoors below / indoors from (0..1)", speed = 0.005, range = { 0, 1 }, initialValue = { defaults.skyFrom, defaults.skyTo }, width = 200 },
+				{ widgetType = "drag_float", id = P .. "rainStops", label = "Rain adjustment at full rain (stops)", speed = 0.05, range = { -6, 2 }, initialValue = defaults.rainStops, width = 120 },
+			},
+		} })
+	end
+
+	local function getWeather()
+		local world = uevrUtils.get_world()
+		if weather ~= nil and weatherWorld == world and uevrUtils.getValid(weather) ~= nil then return weather end
+		weather, weatherWorld = nil, world
+		local class = hud.exposure.getClass(WEATHER_CLASS) -- remembered per level, misses included (no repeated 400 ms scans)
+		if class == nil then return nil end
+		-- the engine's own actor lookup: UEVR's object listing misses objects it has not adopted in Stalker 2
+		local found = nil
+		pcall(function() found = Statics:GetActorOfClass(world, class) end)
+		weather = found
+		return weather
+	end
+
+	return function()
+		local ev = nil
+		local ok, err = pcall(function()
+			local outdoorEV = value("nightEV", defaults.nightEV)
+			local sunText, rainText = "sun ?", ""
+			local sunLux = 0.0
+			local w = getWeather()
+			if w ~= nil then
+				local sun = w.Sun
+				if sun ~= nil then
+					local intensity = sun.Intensity or 0
+					local forward = sun:GetForwardVector()
+					local elevation = -forward.Z -- the light points down at the ground: sin(elevation)
+					local illuminance = intensity * math.max(elevation, 0)
+					sunLux = illuminance
+					if illuminance > 0 then
+						outdoorEV = math.max(outdoorEV, log2(illuminance) + value("outdoorOffset", defaults.outdoorOffset))
+					end
+					sunText = string.format("sun %.0f x %.2f", intensity, elevation)
+				end
+				local rain = w.CurrentRainIntensity or 0
+				if rain > 0 then
+					outdoorEV = outdoorEV + rain * value("rainStops", defaults.rainStops)
+					rainText = string.format(" rain %.2f", rain)
+				end
+			end
+
+			local indoor, boxCount, volumeIndoor, covered, skyIndoor = 0.0, 0, 0.0, nil, 0.0
+			local lowOpen, lampLux, lightsSeen, lightsVisible, flashlightOn = 0.0, 0.0, 0, 0, false
+			local cameraManager = uevr.api:get_player_controller(0).PlayerCameraManager
+			if cameraManager ~= nil then
+				local c = cameraManager:GetCameraLocation()
+				volumeIndoor, boxCount = insideIndoor(c.X, c.Y, c.Z)
+				if configui.getValue(P .. "skyOn") ~= false then
+					covered, lowOpen = skyBlocked(c.X, c.Y, c.Z)
+					local range = configui.getNativeValue(configui.getValue(P .. "skyRange"))
+					local from = type(range) == "table" and (range[1] or range.x or range.X) or defaults.skyFrom
+					local to = type(range) == "table" and (range[2] or range.y or range.Y) or defaults.skyTo
+					if covered >= to then skyIndoor = 1.0
+					elseif covered > from and to > from then skyIndoor = (covered - from) / (to - from) end
+				end
+				indoor = math.max(volumeIndoor, skyIndoor)
+				if indoor > 0 then
+					lampLux, lightsSeen, lightsVisible = lightProbe(c.X, c.Y, c.Z)
+				end
+			end
+			-- the player's flashlight (pawn SpotLight) lights what the game exposes for in a dark room
+			pcall(function()
+				local spot = uevr.api:get_local_pawn(0).SpotLight
+				flashlightOn = spot ~= nil and spot:IsVisible() and (spot.Intensity or 0) > 0
+			end)
+			local indoorLux = lampLux * value("lampWeight", defaults.lampWeight)
+				+ (lowOpen or 0) * sunLux * value("bleedWeight", defaults.bleedWeight)
+				+ (flashlightOn and value("flashlightLux", defaults.flashlightLux) or 0)
+			local indoorEV = value("indoorEV", defaults.indoorEV)
+			if indoorLux > 0 then indoorEV = math.max(indoorEV, log2(indoorLux) + value("indoorOffset", defaults.indoorOffset)) end
+			ev = outdoorEV + (indoorEV - outdoorEV) * indoor
+			readout = string.format("%s%s | outdoor EV %.2f | indoor %.2f (volumes %.2f of %d, sky covered %s -> %.2f)\nindoor light: lamps %.1f lux (%d of %d visible), openings %.2f, flashlight %s -> %.1f lux, indoor EV %.2f | result EV %.2f = x%.3g",
+				sunText, rainText, outdoorEV, indoor, volumeIndoor, boxCount, covered and string.format("%.2f", covered) or "off", skyIndoor,
+				lampLux, lightsVisible, lightsSeen, lowOpen or 0, flashlightOn and "on" or "off", indoorLux, indoorEV, ev, 1.2 * 2 ^ ev)
+		end)
+		if not ok then readout = "error: " .. tostring(err) end
+		if isDeveloperMode then pcall(configui.setLabel, P .. "readout", readout) end
+		return ev
+	end
+end
+
+function M.getReadout()
+	return readout
+end
+
+return M

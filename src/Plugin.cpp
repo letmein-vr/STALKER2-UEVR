@@ -240,49 +240,153 @@ void Stalker2VR::on_initialize() {
 //     }
 // }
 
+void Stalker2VR::on_pre_engine_tick(API::UGameEngine* engine, float delta) {
+    // Only runs until the aim hook is placed (normally it already is, from on_initialize).
+    if(m_aim_hook_done || ++m_aim_retry_ticks < AIM_RETRY_INTERVAL_TICKS) return;
+    m_aim_retry_ticks = 0;
+    hook_aim();
+}
+
+namespace {
+    // Target of a direct (rel32) CALL or JMP.
+    std::optional<uintptr_t> get_direct_branch_target(const INSTRUX& ix, uintptr_t ip) {
+        if(ix.Instruction != ND_INS_CALLNR && ix.Instruction != ND_INS_JMPNR) return std::nullopt;
+        if(ix.OperandsCount < 1 || ix.Operands[0].Type != ND_OP_OFFS) return std::nullopt;
+        return ip + ix.Length + (intptr_t)ix.Operands[0].Info.RelativeOffset.Rel;
+    }
+
+    // __security_check_cookie starts with "cmp rcx, [rip+__security_cookie]".
+    bool is_security_cookie_check(uintptr_t fn) {
+        const auto ix = utility::decode_one((uint8_t*)fn);
+        return ix && ix->Instruction == ND_INS_CMP && ix->OperandsCount >= 2
+            && ix->Operands[0].Type == ND_OP_REG && ix->Operands[0].Info.Register.Reg == NDR_RCX
+            && ix->Operands[1].Type == ND_OP_MEM && ix->Operands[1].Info.Memory.IsRipRel;
+    }
+
+    bool is_function_start(uintptr_t addr) {
+        const auto mod = (uintptr_t)utility::get_executable();
+        const auto size = utility::get_module_size(utility::get_executable()).value_or(0);
+        if(addr <= mod || addr >= mod + size) return false;
+        const auto entry = utility::find_function_entry(addr);
+        return entry != nullptr && mod + entry->BeginAddress == addr;
+    }
+
+    // The C++ function an exec thunk (execFoo) forwards to: the last direct call in the thunk that is not the
+    // stack-cookie check. Parameter unpacking (FFrame::Step) always comes before it.
+    std::optional<uintptr_t> find_thunk_callee(uintptr_t thunk) {
+        // Skip jmp stubs at the entry (incremental-link / hot-patch thunks).
+        for(int i = 0; i < 4; ++i) {
+            const auto ix = utility::decode_one((uint8_t*)thunk);
+            if(!ix) return std::nullopt;
+            const auto target = get_direct_branch_target(*ix, thunk);
+            if(ix->Instruction != ND_INS_JMPNR || !target) break;
+            thunk = *target;
+        }
+
+        const auto mod = (uintptr_t)utility::get_executable();
+        const auto entry = utility::find_function_entry(thunk);
+        const auto end = entry != nullptr ? mod + entry->EndAddress : thunk + 0x200;
+
+        std::optional<uintptr_t> callee{};
+        for(auto ip = thunk; ip < end;) {
+            const auto ix = utility::decode_one((uint8_t*)ip);
+            if(!ix) break;
+            if(entry == nullptr && (ix->Instruction == ND_INS_RETN || ix->Instruction == ND_INS_INT3)) break;
+
+            const auto target = get_direct_branch_target(*ix, ip);
+            // A jmp that leaves the thunk is a tail call; one that stays inside is just control flow.
+            const auto leaves = target && (*target < thunk || *target >= end);
+            if(target && (ix->Instruction == ND_INS_CALLNR || leaves) && !is_security_cookie_check(*target)) {
+                callee = target;
+            }
+            ip += ix->Length;
+        }
+        return callee;
+    }
+
+    // Survives exe patches: the game's own reflection data names the exec thunk of PC::GetRawAimTransform, and
+    // the thunk calls the function we hook (the native aim-origin getter, also called directly from C++).
+    std::optional<uintptr_t> resolve_get_weapon_origin_from_reflection() {
+        const auto func = API::get()->find_uobject<API::UFunction>(L"Function /Script/Stalker2.PC.GetRawAimTransform");
+        if(!func) return std::nullopt;
+        const auto thunk = (uintptr_t)func->get_native_function();
+        if(!thunk) return std::nullopt;
+        const auto callee = find_thunk_callee(thunk);
+        if(!callee || !is_function_start(*callee)) return std::nullopt;
+        return callee;
+    }
+
+    // Fallback if reflection fails: the function's prologue in each exe it has been seen in, newest first.
+    std::optional<uintptr_t> resolve_get_weapon_origin_from_patterns() {
+        static const char* const patterns[] = {
+            // 2026-10-27 patch
+            "41 57 41 56 56 57 53 48 81 EC D0 00 00 00 0F 29 B4 24 C0 00 00 00 48 89 D3 48 8B 05 ? ? ? ? 48 31 E0 48 89 84 24 B8 00 00 00 4C 8B 35",
+            // 2026-09-03 (UE 5.5.4 engine upgrade)
+            "41 57 41 56 56 57 53 48 81 EC 00 01 00 00 66 44 0F 29 8C 24 F0 00 00 00 66 44 0F 29 84 24 E0 00 00 00 66 0F 29 BC 24 D0 00 00 00 0F 29 B4 24 C0 00 00 00 48 89 D3 48 8B 05 ? ? ? ? 48 31 E0",
+            // original
+            "48 89 5C 24 18 57 48 81 EC 90 00 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 84 24 80 00 00 00 48 8B FA 48 8B D9 48 8D 54",
+        };
+        for(const auto pattern : patterns) {
+            if(const auto addr = utility::scan(utility::get_executable(), pattern)) return addr;
+        }
+        return std::nullopt;
+    }
+}
+
+bool Stalker2VR::hook_aim() {
+    if(m_aim_hook_done) return true;
+
+    const char* method = "reflection";
+    auto target = resolve_get_weapon_origin_from_reflection();
+    if(!target) {
+        method = "pattern";
+        target = resolve_get_weapon_origin_from_patterns();
+    }
+
+    if(!target) {
+        if(++m_aim_resolve_attempts >= AIM_MAX_RESOLVE_ATTEMPTS) {
+            m_aim_hook_done = true;
+            PLUGIN_LOG_ONCE_ERROR("Failed to find get_weapon_origin function");
+        }
+        return false;
+    }
+
+    m_aim_hook_done = true;
+    m_on_get_weapon_forward_hook_id = API::get()->param()->functions->register_inline_hook((void*)*target, (void*)&on_get_weapon_forward, (void**)&m_original_on_get_weapon_forward);
+    if(m_on_get_weapon_forward_hook_id == -1) {
+        PLUGIN_LOG_ONCE_ERROR("Failed to hook on_get_weapon_forward");
+        return false;
+    }
+    API::get()->log_info("Hooked get_weapon_origin at exe+0x%llX (found via %s)", (unsigned long long)(*target - (uintptr_t)utility::get_executable()), method);
+    return true;
+}
+
 void Stalker2VR::hook() {
-    const auto mod      = utility::get_executable();
+    hook_aim();
 
-    // auto apc = (API::UClass*)API::get()->find_uobject(L"Class /Script/Stalker2.PC");
-    // auto obj = apc->get_class_default_object();
-    // auto vtable = *(uintptr_t**)obj;
-    //    auto source_of_damage = vtable[307];
-   // 48 89 5C 24 18 57 48 81 EC 90 00 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 84 24 80 00 00 00 48 8B FA 48 8B D9 48 8D 54
-   static auto const get_weapon_origin_pattern = "48 89 5C 24 18 57 48 81 EC 90 00 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 84 24 80 00 00 00 48 8B FA 48 8B D9 48 8D 54";
-   static auto get_weapon_origin_func_addr = utility::scan(mod, get_weapon_origin_pattern);
-
-   if(get_weapon_origin_func_addr) {
-        m_on_get_weapon_forward_hook_id = API::get()->param()->functions->register_inline_hook((void*)get_weapon_origin_func_addr.value(), (void*)&on_get_weapon_forward, (void**)&m_original_on_get_weapon_forward);
-        if(m_on_get_weapon_forward_hook_id == -1) {
-            PLUGIN_LOG_ONCE_ERROR("Failed to hook on_get_weapon_forward");
-        }
-   } else {
-        PLUGIN_LOG_ONCE_ERROR("Failed to find get_weapon_origin function");
-   }
-
-//    const auto func_addr = (uintptr_t )mod + 0x4aebaa0;
-    // UMaterialInstanceDynamic::SetScalarParameterValue
-    static const auto set_scalar_value_func_signature = "40 53 48 81 EC C0 00 00 00 48 8B D9 0F";
-    static auto set_scalar_value_func = utility::scan(mod, set_scalar_value_func_signature);
-    if(set_scalar_value_func) {
-        m_on_set_scalar_value_hook_id = API::get()->param()->functions->register_inline_hook((void*)set_scalar_value_func.value(), (void*)&on_set_scalar_value, (void**)&m_original_set_scalar_value);
-        if(m_on_set_scalar_value_hook_id == -1) {
-            PLUGIN_LOG_ONCE_ERROR("Failed to hook on_set_scalar_value");
-        }
-    } else {
-        PLUGIN_LOG_ONCE_ERROR("Failed to find set_scalar_value function");
-    }
-    // const auto func_addr2 = (uintptr_t )mod + 0x4b505d0; // 4b505d0
-    // UMaterialParameterCollectionInstance::SetScalarParameterValue
-    static const auto set_scalar_value_mci_func_signature = "F3 0F 11 54 24 18 48 89 54 24 10 53 55 56 48";
-    static auto set_scalar_value_mci_func = utility::scan(mod, set_scalar_value_mci_func_signature);
-    if(set_scalar_value_mci_func) {
-        m_on_set_scalar_value_mci_id = API::get()->param()->functions->register_inline_hook((void*)set_scalar_value_mci_func.value(), (void*)&on_set_scalar_value_mci, (void**)&m_original_set_scalar_value_mci);
-        if(m_on_set_scalar_value_mci_id == -1) {
-            PLUGIN_LOG_ONCE_ERROR("Failed to hook m_on_set_scalar_value_mci_id");
-        }
-    } else {
-        PLUGIN_LOG_ONCE_ERROR("Failed to find set_scalar_value_mci function");
-    }
-
+    // UMaterialInstanceDynamic::SetScalarParameterValue / UMaterialParameterCollectionInstance::SetScalarParameterValue
+    //
+    // DISABLED 2026-09-03: under UE 5.5.4 the nearest candidates for both read extra arguments (stack slot
+    // [rsp+0x140], xmm3) that the old 3-arg hooks never supply -> EXCEPTION_ACCESS_VIOLATION on level load.
+    // Until they are re-found correctly, the ADS scope material fix (flare/cutout) is inactive (cosmetic only).
+    // static const auto set_scalar_value_func_signature = "40 53 48 81 EC C0 00 00 00 48 8B D9 0F";
+    // static auto set_scalar_value_func = utility::scan(mod, set_scalar_value_func_signature);
+    // if(set_scalar_value_func) {
+    //     m_on_set_scalar_value_hook_id = API::get()->param()->functions->register_inline_hook((void*)set_scalar_value_func.value(), (void*)&on_set_scalar_value, (void**)&m_original_set_scalar_value);
+    //     if(m_on_set_scalar_value_hook_id == -1) {
+    //         PLUGIN_LOG_ONCE_ERROR("Failed to hook on_set_scalar_value");
+    //     }
+    // } else {
+    //     PLUGIN_LOG_ONCE_ERROR("Failed to find set_scalar_value function");
+    // }
+    // static const auto set_scalar_value_mci_func_signature = "F3 0F 11 54 24 18 48 89 54 24 10 53 55 56 48";
+    // static auto set_scalar_value_mci_func = utility::scan(mod, set_scalar_value_mci_func_signature);
+    // if(set_scalar_value_mci_func) {
+    //     m_on_set_scalar_value_mci_id = API::get()->param()->functions->register_inline_hook((void*)set_scalar_value_mci_func.value(), (void*)&on_set_scalar_value_mci, (void**)&m_original_set_scalar_value_mci);
+    //     if(m_on_set_scalar_value_mci_id == -1) {
+    //         PLUGIN_LOG_ONCE_ERROR("Failed to hook m_on_set_scalar_value_mci_id");
+    //     }
+    // } else {
+    //     PLUGIN_LOG_ONCE_ERROR("Failed to find set_scalar_value_mci function");
+    // }
 }

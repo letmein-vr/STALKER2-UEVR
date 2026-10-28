@@ -7,7 +7,9 @@ GamepadState = {
     -- State properties
     gamepadState = nil,
     leftGripAction = nil,
-    rightGripAction = nil
+    rightGripAction = nil,
+    triggerLT_LB = false,
+    triggerRT_LB = false
 }
 
 -- Constructor
@@ -44,11 +46,18 @@ function GamepadState:UpdateLH(state)
         end
     end
     self:unpressButton(XINPUT_GAMEPAD_RIGHT_SHOULDER)
+    
     if RTrigger > 125 then
+        self.triggerRT_LB = true
+    elseif RTrigger < 50 then
+        self.triggerRT_LB = false
+    end
+    if self.triggerRT_LB then
         self:pressButton(XINPUT_GAMEPAD_LEFT_SHOULDER)
     else
         self:unpressButton(XINPUT_GAMEPAD_LEFT_SHOULDER)
     end
+    
     self:setRightTrigger(LTrigger)
 end
 
@@ -74,7 +83,13 @@ function GamepadState:UpdateRH(state)
         end
     end
     self:unpressButton(XINPUT_GAMEPAD_RIGHT_SHOULDER)
+    
     if LTrigger > 125 then
+        self.triggerLT_LB = true
+    elseif LTrigger < 50 then
+        self.triggerLT_LB = false
+    end
+    if self.triggerLT_LB then
         self:pressButton(XINPUT_GAMEPAD_LEFT_SHOULDER)
     else
         self:unpressButton(XINPUT_GAMEPAD_LEFT_SHOULDER)

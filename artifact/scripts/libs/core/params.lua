@@ -45,6 +45,9 @@ end
 
 -- Sets a parameter value and marks as dirty for autosave
 function M:set(key, value, persist)
+    -- Vector/rotator userdata (e.g. the IK panel's mesh_location_offset drag widget) can't be
+    -- JSON-encoded and was saved as null. Store plain arrays instead, as the OW2 copy does.
+    value = uevrUtils.getNativeValue(value)
     if type(key) == "table" then
         local field = self.parameters
         for i = 1, #key-1 do

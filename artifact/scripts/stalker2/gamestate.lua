@@ -76,12 +76,27 @@ end
 function GameStateManager:GetWeaponCache(weaponMesh)
     if not weaponMesh then return nil end
     local address = weaponMesh:get_address()
-    
+
+    -- Stalker 2 RECYCLES a single WeaponInHandsMesh component across weapon switches,
+    -- swapping only its SkeletalMesh property. The component address is therefore NOT a
+    -- unique per-weapon key: caching on it alone pins .name to the first weapon ever held
+    -- (e.g. reporting "sk_gauss" while actually holding the UDP), which silently breaks every
+    -- downstream per-weapon lookup — hand poses, grip animation, reload profiles, accessories.
+    -- Verify the SkeletalMesh still matches and rebuild the entry if the component was reused.
+    local currentSkeletalMeshAddress = nil
+    if weaponMesh.SkeletalMesh then
+        currentSkeletalMeshAddress = weaponMesh.SkeletalMesh:get_address()
+    end
+    if self.weaponCache[address] and self.weaponCache[address].skeletalMeshAddress ~= currentSkeletalMeshAddress then
+        self.weaponCache[address] = nil
+    end
+
     -- Ensure info table exists
     if not self.weaponCache[address] then
         self.weaponCache[address] = {}
-        
-        -- 1. Get Name (Only needs to happen once per weapon mesh address)
+        self.weaponCache[address].skeletalMeshAddress = currentSkeletalMeshAddress
+
+        -- 1. Get Name (recomputed whenever the component is recycled onto a different mesh)
         if weaponMesh.SkeletalMesh then
              self.weaponCache[address].name = uevrUtils.getShortName(weaponMesh.SkeletalMesh)
         else
@@ -177,6 +192,26 @@ function GameStateManager:CheckMenuState()
                 end
             end
         end
+    end
+
+    -- 0. Engine pause flag (2026-09-21). Scan-free and independent of UIManagerEx: on the
+    -- joeyhodge/AFW backend get_objects_by_class only sees ADOPTED objects, so GetUIManager()
+    -- above returns nil for the whole session and neither OpenViews check ever fired - the
+    -- gameplay gamepad remap then kept running inside menus (only LT "worked", as LB).
+    -- Verified live: GameplayStatics:IsGamePaused is true while W_PauseMenuMainView_C is open.
+    -- NOTE: do NOT enumerate widgets here (WidgetBlueprintLibrary.GetAllWidgetsOfClass via
+    -- plugin.lua was tried the same day): polling it while a level streams in hung the game
+    -- thread permanently on load.
+    local enginePaused = false
+    pcall(function()
+        local world = uevrUtils.get_world()
+        if world ~= nil and Statics ~= nil then
+            enginePaused = Statics:IsGamePaused(world) == true
+        end
+    end)
+    if enginePaused then
+        self.inMenu = true
+        return
     end
 
     -- 1. Pause menu
@@ -582,7 +617,9 @@ function GameStateManager:get_scope_mesh(parent_mesh)
     -- Bug D fix: search grandchildren too so nested scopes (on rails) are found.
     local fallback = nil
     for _, component in ipairs(child_components) do
-        if sm_class and component:is_a(sm_class) and string.find(component:get_fname():to_string(), "scope") then
+        -- Case-insensitive (2026-09-08): DLC attachments use mixed-case component names
+        -- ("WeaponAttachmentSM_Wpn_Gp3a_Scope_01...") and were never detected before.
+        if sm_class and component:is_a(sm_class) and string.find(component:get_fname():to_string():lower(), "scope", 1, true) then
             if component:DoesSocketExist("OpticCutoutSocket") then
                 return component  -- best match, return immediately
             elseif not fallback then
@@ -592,7 +629,7 @@ function GameStateManager:get_scope_mesh(parent_mesh)
         -- Search one level deeper (grandchildren) — handles scopes on rails/silencers
         if component and component.AttachChildren then
             for _, grandchild in ipairs(component.AttachChildren) do
-                if sm_class and grandchild:is_a(sm_class) and string.find(grandchild:get_fname():to_string(), "scope") then
+                if sm_class and grandchild:is_a(sm_class) and string.find(grandchild:get_fname():to_string():lower(), "scope", 1, true) then
                     if grandchild:DoesSocketExist("OpticCutoutSocket") then
                         return grandchild
                     elseif not fallback then
@@ -619,8 +656,17 @@ function GameStateManager:get_all_scope_meshes(parent_mesh)
     end
 
     for _, component in ipairs(child_components) do
-        if sm_class and component:is_a(sm_class) and string.find(component:get_fname():to_string(), "scope") then
+        if sm_class and component:is_a(sm_class) and string.find(component:get_fname():to_string():lower(), "scope", 1, true) then
             table.insert(scope_meshes, component)
+        end
+        -- One level of grandchildren too (2026-09-08), mirroring get_scope_mesh so the glass-hide
+        -- and material-parameter passes see the same nested (rail-mounted) scopes the PiP attach does.
+        if component and component.AttachChildren then
+            for _, grandchild in ipairs(component.AttachChildren) do
+                if sm_class and grandchild:is_a(sm_class) and string.find(grandchild:get_fname():to_string():lower(), "scope", 1, true) then
+                    table.insert(scope_meshes, grandchild)
+                end
+            end
         end
     end
 
@@ -684,12 +730,27 @@ function GameStateManager:GetLocalPawn()
     return self.api:get_local_pawn(0)
 end
 
-function GameStateManager:IsLevelChanged(engine)
+-- Edge detector: true exactly once per PersistentLevel change, PER CONSUMER.
+-- This singleton is polled from two pre-engine-tick callbacks (Base/scope.lua, registered
+-- first, and Entry.lua). With a single shared last_level the first caller consumed the edge
+-- and the second NEVER saw a level change: Entry.lua's whole level-change handler (key
+-- release, gesture reset, motion-controller actor rebuild, aim-method hold) was dead code,
+-- so after an in-game save load the gesture layer kept its old-world actors (2026-10-12).
+-- Callers that own a level-change handler pass their own `consumer` key.
+function GameStateManager:IsLevelChanged(engine, consumer)
     local viewport = engine.GameViewport
     if viewport then
         local world = viewport.World
         if world then
             local level = world.PersistentLevel
+            if consumer ~= nil then
+                self._lastLevelByConsumer = self._lastLevelByConsumer or {}
+                if level ~= nil and self._lastLevelByConsumer[consumer] ~= level then
+                    self._lastLevelByConsumer[consumer] = level
+                    return true
+                end
+                return false
+            end
             if self.last_level ~= level then
                 self.last_level = level
                 return true
@@ -706,6 +767,16 @@ function GameStateManager:SendKeyPress(key_value, key_up)
         key_up_string = "up"
     end
 
+    -- Track which keys we currently hold DOWN so they can be force-released later
+    -- (see ReleaseAllKeys). A key we send 'down' and never send 'up' for stays
+    -- actuated inside UE's EnhancedInput forever, and every time a new
+    -- InputMappingContext is pushed (e.g. opening the weapon wheel, which adds
+    -- IMC_ItemSelector) UE rebuilds action instances and re-evaluates that still-held
+    -- key as a BRAND NEW press - firing whatever the new context maps it to, once per
+    -- context switch. That is how a single stuck key shows up as "the flashlight
+    -- toggles every time I open the weapon wheel".
+    self._heldKeys = self._heldKeys or {}
+
     -- Specialized handling for Reload: Pulse the key once to the game, but keep state for hand attachment
     if key_value == 'R' then
         if not key_up then
@@ -720,7 +791,32 @@ function GameStateManager:SendKeyPress(key_value, key_up)
         return -- Handled
     end
 
+    if key_up then
+        self._heldKeys[key_value] = nil
+    else
+        self._heldKeys[key_value] = true
+    end
+
     self.api:dispatch_custom_event(key_value, key_up_string)
+end
+
+-- Force-release every key this module currently believes is held DOWN.
+-- MUST be called from any path that discards gesture state without letting the
+-- gestures observe their own deactivation - specifically currentPreset:Reset(),
+-- which zeroes wasActive so JustDeactivated() can never fire again and the
+-- matching SendKeyUp is silently lost.
+function GameStateManager:ReleaseAllKeys()
+    if not self._heldKeys then return {} end
+    local released = {}
+    for k in pairs(self._heldKeys) do released[#released + 1] = k end
+    self._heldKeys = {}
+    for _, k in ipairs(released) do
+        pcall(function() self.api:dispatch_custom_event(k, "up") end)
+    end
+    if #released > 0 then
+        print("[GameState] ReleaseAllKeys: force-released stuck key(s): " .. table.concat(released, ", "))
+    end
+    return released
 end
 
 -- Send key down

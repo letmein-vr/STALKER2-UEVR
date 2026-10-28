@@ -2,6 +2,7 @@ require(".\\Base\\Trackers\\Trackers")
 require("Config.CONFIG")
 local GameState = require("stalker2.gamestate")
 local uevrUtils = require("libs/uevr_utils")
+local ikWeaponSync = require("stalker2.ik_weapon_sync")
 
 local api = uevr.api
 local vr = uevr.params.vr
@@ -61,6 +62,14 @@ local temp_vec3 = Vector3d.new(0, 0, 0)
 -- local left_hand_actor = nil
 local is_using_two_handed_weapon = false
 
+-- Rendering mode auto-detection.
+-- In Native Stereo the callback fires twice per frame: view_index=0 then view_index=1.
+-- In AFW (VR_RenderingMethod=3) the callback only ever fires with view_index=0.
+-- We track how many engine ticks ago we last saw view_index > 0.
+-- If recent (<= threshold), we're in Native Stereo; otherwise AFW.
+local _framesSinceHighViewIndex = 999  -- start high so first frames default to AFW path safely
+local _STEREO_DETECT_THRESHOLD = 5
+
 -- Helper function to get equipped weapon
 local function get_equipped_weapon(pawn)
     if not pawn then return nil end
@@ -87,8 +96,9 @@ local function is_aiming(pawn)
     return weapon_data.AimingData.bAiming
 end
 
-local function is_using_two_handed_w(pawn)
-    local weapon_mesh = get_equipped_weapon(pawn)
+-- weapon_mesh is optional: the tick already resolved it, so pass it in to skip a second lookup.
+local function is_using_two_handed_w(pawn, weapon_mesh)
+    weapon_mesh = weapon_mesh or get_equipped_weapon(pawn)
     if not weapon_mesh then return false end
     
     local wInfo = GameState:GetWeaponCache(weapon_mesh)
@@ -169,14 +179,44 @@ local function update_weapon_offset(weapon_mesh, pawn)
 
     -- from UE to UEVR X->Z Y->-X, Z->-Y
     -- Z - forward, X - negative right, Y - negative up
-    local lossy_offset = Vector3f.new(offset.y, offset.z+VertDiff, -offset.x)
+    -- Per-item user offset (2026-09-21). THIS function - not the attachments system - is what puts
+    -- the knife, bolt and grenades in the hand: Entry.lua never registers melee/throwable items
+    -- with libs/attachments, so their only placement is the motion-controller state below, and
+    -- there was no way to adjust it. Entry.lua publishes the equipped item's saved offset
+    -- (Config.weaponProfiles[name].meshOffset, dev panel "Melee / Throwable Mesh Offset") in
+    -- _G.weaponMeshUserOffset, and only for those items, so firearms - whose rotation offset the
+    -- attachments system owns - are never touched. Location is in the same hand-local UE axes as
+    -- jnt_offset (X forward, Y right, Z up, cm); rotation is pitch/yaw/roll in degrees.
+    local user = _G.weaponMeshUserOffset
+    local ux, uy, uz = 0, 0, 0
+    if user ~= nil and user.location ~= nil then
+        ux, uy, uz = user.location[1] or 0, user.location[2] or 0, user.location[3] or 0
+    end
+    local lossy_offset = Vector3f.new(offset.y + uy, offset.z + uz + VertDiff, -(offset.x + ux))
     -- Apply the offset to the weapon using motion controller state
-    UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh):set_hand(virtualGunstock and 2 or Config.dominantHand)
-    UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh):set_location_offset(lossy_offset)
-    UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh):set_permanent(true)
+    local state = UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh)
+    state:set_hand(virtualGunstock and 2 or Config.dominantHand)
+    state:set_location_offset(lossy_offset)
+    state:set_permanent(true)
+    if user ~= nil and user.rotation ~= nil and not virtualGunstock then
+        state:set_rotation_offset(Vector3f.new(
+            math.rad(user.rotation[1] or 0),
+            math.rad(user.rotation[2] or 0),
+            math.rad(user.rotation[3] or 0)))
+    end
 end
 
 local last_level = nil
+-- PERF (2026-09-08): fix_effects() does a full UEVR_UObjectHook.get_first_object_by_class scan plus a
+-- material-collection write. It used to run every tick; now it runs on level change and once per
+-- second, which is more than enough to keep IsFOVEnabled pinned to 0.
+local fix_effects_timer = 0
+local FIX_EFFECTS_INTERVAL = 1.0
+-- Weapon shadow flags: write-on-change state (see tick below)
+local last_shadow_key = nil
+local last_shadow_setting = nil
+local shadow_timer = 0
+local SHADOW_REAPPLY_INTERVAL = 1.0
 
 -- Tick callback for effects and creating hand components if needed
 uevr.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
@@ -185,7 +225,11 @@ uevr.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
         local world = viewport.World
         if world then
             local level = world.PersistentLevel
-            fix_effects(world)
+            fix_effects_timer = fix_effects_timer + (delta or 0)
+            if last_level ~= level or fix_effects_timer >= FIX_EFFECTS_INTERVAL then
+                fix_effects_timer = 0
+                fix_effects(world)
+            end
             if last_level ~= level then
                 print("Level changed ..")
                 -- reset_hand_actors() -- Handled by Trackers/Controllers
@@ -202,22 +246,49 @@ uevr.sdk.callbacks.on_pre_engine_tick(function(engine, delta)
     if pawn and pawn.Mesh then
         local weapon_mesh = get_equipped_weapon(pawn)
         if weapon_mesh then
-            weapon_mesh.CastShadow = false
-            weapon_mesh.bCastContactShadow = false
-            weapon_mesh.bCastDynamicShadow = Config.vrShadowsEnabled
-            weapon_mesh:SetCastShadow(Config.vrShadowsEnabled)
-            weapon_mesh.bCastStaticShadow = false
+            -- PERF (2026-09-08): the five shadow writes (incl. the SetCastShadow UFunction) used to run
+            -- every tick. Now they run when the equipped SkeletalMesh or the shadow setting changes,
+            -- plus a 1 s re-apply as a safety net. Keyed on SkeletalMesh address, not the component,
+            -- because Stalker 2 recycles one WeaponInHandsMesh component across weapon switches.
+            local sk = weapon_mesh.SkeletalMesh
+            local shadow_key = sk and sk:get_address() or 0
+            shadow_timer = shadow_timer + (delta or 0)
+            if shadow_key ~= last_shadow_key
+               or Config.vrShadowsEnabled ~= last_shadow_setting
+               or shadow_timer >= SHADOW_REAPPLY_INTERVAL then
+                shadow_timer = 0
+                last_shadow_key = shadow_key
+                last_shadow_setting = Config.vrShadowsEnabled
+                weapon_mesh.CastShadow = false
+                weapon_mesh.bCastContactShadow = false
+                weapon_mesh.bCastDynamicShadow = Config.vrShadowsEnabled
+                weapon_mesh:SetCastShadow(Config.vrShadowsEnabled)
+                weapon_mesh.bCastStaticShadow = false
+            end
             -- smg/pistols considered one-handed if you want 2-handed aim with smg use is_using_two_handed_w(pawn)
-            is_using_two_handed_weapon = is_using_two_handed_w(pawn)
+            is_using_two_handed_weapon = is_using_two_handed_w(pawn, weapon_mesh)
         end
+    end
+
+    -- Advance the stereo-detection counter once per game tick
+    if _framesSinceHighViewIndex < 999 then
+        _framesSinceHighViewIndex = _framesSinceHighViewIndex + 1
     end
 end)
 
 -- Moving weapon offset and two-handed logic to on_post_calculate_stereo_view_offset
 uevr.sdk.callbacks.on_post_calculate_stereo_view_offset(function(device, view_index, world_to_meters, position, rotation, is_double)
-    if not vr.is_hmd_active() or view_index ~= 1 then
-        return
+    if not vr.is_hmd_active() then return end
+
+    -- Auto-detect rendering mode. Reset counter when we see view_index > 0 (Native Stereo).
+    if view_index > 0 then
+        _framesSinceHighViewIndex = 0
     end
+
+    local isNativeStereo = (_framesSinceHighViewIndex <= _STEREO_DETECT_THRESHOLD)
+    -- Native Stereo: run only on the right-eye call (view_index=1), skip left-eye.
+    -- AFW: view_index is always 0, so run on that.
+    if isNativeStereo and view_index ~= 1 then return end
 
     local pawn = api:get_local_pawn(0)
     if not pawn or not pawn.Mesh then
@@ -234,6 +305,7 @@ uevr.sdk.callbacks.on_post_calculate_stereo_view_offset(function(device, view_in
 
     -- Globals from Trackers.lua
     if not left_hand_component or not right_hand_component then
+        ikWeaponSync.onWeaponPlaced(equipped_weapon)
         return
     end
     
@@ -274,13 +346,17 @@ uevr.sdk.callbacks.on_post_calculate_stereo_view_offset(function(device, view_in
         --detach_flashlight(my_pawn) -- Not gonna detach... for now
 
     end
+
+    -- IK Arms: the weapon has its final pose for this frame - draw it where the visible IK arm pose was solved
+    -- (stalker2/ik_weapon_sync.lua). No-op in Hands mode.
+    ikWeaponSync.onWeaponPlaced(equipped_weapon)
 end)
 
 -- Reset callback
 uevr.sdk.callbacks.on_script_reset(function()
     print("Resetting weapon offset and two-handed aiming script")
     -- Cleanup hand components
-    reset_hand_actors()
+    -- reset_hand_actors() -- REMOVED: Handled by Trackers/Controllers
 end)
 
 

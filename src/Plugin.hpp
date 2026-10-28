@@ -40,11 +40,21 @@ public:
     virtual ~Stalker2VR();
 
     void on_initialize() override;
+    void on_pre_engine_tick(uevr::API::UGameEngine* engine, float delta) override;
 private:
     static SDK::FTransform *on_get_weapon_forward(void *actor, SDK::FTransform *out_transform, int8_t type);
     static void on_set_scalar_value(void *materialInstance, uevr::API::FName name, float value);
     static char on_set_scalar_value_mci(void *materialCollectionInstance, uevr::API::FName name, float value);
     void hook();
+    bool hook_aim();
+
+    // If the aim function can't be resolved at startup, retry a few times from the engine tick.
+    // Few and far apart: a find_uobject miss costs ~400 ms.
+    static constexpr int AIM_RETRY_INTERVAL_TICKS = 300;
+    static constexpr int AIM_MAX_RESOLVE_ATTEMPTS = 5;
+    bool m_aim_hook_done{false};
+    int m_aim_retry_ticks{0};
+    int m_aim_resolve_attempts{0};
 
     int32_t m_on_get_weapon_forward_hook_id{};
     int32_t m_on_set_scalar_value_hook_id{};

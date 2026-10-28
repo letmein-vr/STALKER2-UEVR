@@ -1,0 +1,15 @@
+{
+    "hud_exposure_s2_bleedWeight": 0.09200000017881393,
+    "hud_exposure_s2_flashlightLux": 7.5,
+    "hud_exposure_s2_indoorEV": -4.300000190734863,
+    "hud_exposure_s2_indoorOffset": -3.8499999046325684,
+    "hud_exposure_s2_lampWeight": 0.9200000166893005,
+    "hud_exposure_s2_nightEV": -1.5499999523162842,
+    "hud_exposure_s2_outdoorOffset": -8.399999618530273,
+    "hud_exposure_s2_rainStops": -2.5999999046325684,
+    "hud_exposure_s2_skyOn": true,
+    "hud_exposure_s2_skyRange": [
+        0.75,
+        0.949999988079071
+    ]
+}

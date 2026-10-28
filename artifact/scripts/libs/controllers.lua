@@ -119,24 +119,33 @@ end
 
 local function getCachedController(controllerID)
 	local actor = actors[controllerID]
-	if actor ~= nil and UEVR_UObjectHook.exists(actor) then
-		local components = actor.BlueprintCreatedComponents
-		if components ~= nil then
-			for index, component in pairs(components) do
-				if component ~= nil then
-					if controllerID == 2 then 
-						return component
-					else
-						if component:is_a(uevrUtils.find_required_object("Class /Script/HeadMountedDisplay.MotionControllerComponent")) then
-							return component
-						end 
+	local found = nil
+	-- Property reads on an actor the engine is mid-destroying throw a C++ exception
+	-- (exists() alone doesn't rule that out on this UEVR build - see isLiveComponent).
+	pcall(function()
+		if actor ~= nil and UEVR_UObjectHook.exists(actor) then
+			local components = actor.BlueprintCreatedComponents
+			if components ~= nil then
+				for index, component in pairs(components) do
+					if component ~= nil then
+						if controllerID == 2 then
+							found = component
+							return
+						else
+							-- PERF (2026-09-08): get_class caches the find_uobject result; find_required_object did not,
+							-- and this runs per component per call from every per-tick getController(id, true) caller.
+							if component:is_a(uevrUtils.get_class("Class /Script/HeadMountedDisplay.MotionControllerComponent")) then
+								found = component
+								return
+							end
+						end
 					end
 				end
 			end
 		end
-	end
-	return nil
-end 
+	end)
+	return found
+end
 
 
 local function destroyActor(actor)
@@ -229,6 +238,7 @@ end
 
 local createAutoCreationMonitor = doOnce(function()
     uevrUtils.setInterval(1000, function()
+        M.ensureHMDState()
         if M.controllerExists(Handed.Left, false) == false then
             M.createController(Handed.Left)
         end
@@ -244,13 +254,77 @@ end
 
 function M.onLevelChange()
 	resetMotionControllers()
-    M.resetControllers()
+	-- Explicitly destroy the old actors (M.destroyControllers(), not just
+	-- M.resetControllers()) rather than only forgetting the Lua-side actors[]
+	-- references. This runs from the registered pre-level-change callback below,
+	-- while the old world is still valid - the safe moment to actually tear these
+	-- down. Skipping the destroy left a real deferred-GC race: the old
+	-- MotionControllerComponent can still pass UEVR_UObjectHook.exists() for a few
+	-- frames after the level change even though it's orphaned from the destroyed
+	-- world, and M.createController()'s uncached existence check
+	-- (M.controllerExists(id, false), a raw find_all_of scan independent of
+	-- actors[]) can rediscover it and have M.restoreExistingComponents() re-adopt
+	-- it into actors[id]. Any later K2_AttachTo onto that stale controller then
+	-- throws (matches "Exception in on_pre_engine_tick: ... in method
+	-- 'K2_AttachTo'" reports). Same class of bug already fixed for
+	-- BoxCompLH/MagBox in stalker2/mag_reload.lua - don't trust "still alive" to
+	-- mean "still valid" across a level transition, destroy and recreate instead.
+    M.destroyControllers()
 end
 
 function M.getHMDController()
 	return getCachedController(2)
 end
 
+
+-- A component can still be enumerated by find_all_of - and even pass exists(), which on
+-- this UEVR build ADOPTS unknown pointers rather than rejecting them (log.txt: "[UObjectHook]
+-- Adopted untracked UObject from plugin exists()") - for a few frames after the engine
+-- destroyed it. The gesture layer (gestures/motioncontrolleractors.lua) spawns its OWN
+-- left/right MotionControllerComponents, and Entry.lua's on_script_reset destroys them; if
+-- the uncached scan below then hands one of those corpses out as "the left controller",
+-- everything attached to it afterwards (hand PMC, detector) is orphaned the moment it
+-- finishes dying - a frozen-but-still-animating hand. KismetSystemLibrary::IsValid is the
+-- engine's canonical check (false for pending-kill objects, safe to call while the object
+-- is still allocated) and is the primary test here; bRegistered is kept as a cheap extra
+-- but is NOT in the reflected property set on this build (absent from live component
+-- dumps), so it reads nil and is a no-op - don't rely on it alone. Property/method calls
+-- on a dead component throw, so the whole check is pcall'd and a throw counts as dead.
+local function isLiveComponent(component)
+	local live = false
+	pcall(function()
+		if component == nil or not UEVR_UObjectHook.exists(component) then return end
+		if kismet_system_library ~= nil and kismet_system_library.IsValid ~= nil
+		   and not kismet_system_library:IsValid(component) then return end
+		if component.bRegistered == false then return end
+		live = true
+	end)
+	return live
+end
+
+-- Re-arm the HMD SceneComponent's UObjectHook motion-controller state (hand=2).
+-- On the joeyhodge/AFW backend (Stalker 2 lazy UObjectHook guard) every state is keyed by the
+-- component's GUObjectArray (InternalIndex, SerialNumber) captured at get_or_add time. A freshly
+-- spawned component has SerialNumber 0 - the engine only allocates one the first time something
+-- takes a TWeakObjectPtr to it. input.lua's SetAudioListenerOverride does exactly that a moment
+-- after we create the HMD component, so the captured (index, 0) identity stops matching and the
+-- per-tick prune drops the state ("Pruned 1 stale motion-controller attachment identities" in
+-- log.txt). The component then sits at world origin forever: the audio listener is ~600 km from
+-- the player (every spatialized sound inaudible), scope.lua's distance check never passes, etc.
+-- get_or_add re-keys a mismatched entry with the CURRENT identity but hands back a default state
+-- (hand 0, not permanent), so hand/permanent are re-applied every time. Idempotent and cheap.
+function M.ensureHMDState()
+	local comp = getCachedController(2)
+	if comp == nil or not isLiveComponent(comp) then return false end
+	local ok = pcall(function()
+		local state = UEVR_UObjectHook.get_or_add_motion_controller_state(comp)
+		if state ~= nil then
+			state:set_hand(2)
+			state:set_permanent(true)
+		end
+	end)
+	return ok
+end
 
 function M.getController(controllerID, useCached)
 	if useCached == true then
@@ -259,17 +333,38 @@ function M.getController(controllerID, useCached)
 		if controllerID == 2 then
 			return M.getHMDController()
 		else
+			-- Prefer our own component once actors[] holds a live one. The world scan
+			-- below returns the FIRST Left/Right-source MotionControllerComponent in
+			-- GUObjectArray order, and this project has two independent sets: ours, and
+			-- the gesture layer's (gestures/motioncontrolleractors.lua spawns its own).
+			-- Which set the scan hits first varies per reset cycle, so hands.lua, the
+			-- detector and Trackers.lua could each end up on a different "left controller"
+			-- - and the gesture layer's set is destroyed by Entry.lua's on_script_reset,
+			-- orphaning whatever got attached to it (the stuck-left-hand-after-reset bug).
+			-- Ours persist across a script reset (no reset handler here by design), so
+			-- resolving to them is both deterministic and reset-safe.
+			local own = getCachedController(controllerID)
+			if own ~= nil and isLiveComponent(own) then
+				return own
+			end
 			M.print("Getting controller without cache")
 			local controllers = uevrUtils.find_all_of("Class /Script/HeadMountedDisplay.MotionControllerComponent", false)
 			if controllers ~= nil then
 				for index, controller in pairs(controllers) do
-					if controller.Hand ~= nil then
-						if controller.Hand == controllerID then 
-							return controller 
-						end
-					else
-						if controller.MotionSource:to_string() == sourceNames[controllerID] then 
-							return controller 
+					-- find_all_of can return components the engine has already destroyed
+					-- (seen after an in-game script reset); touching one throws a C++
+					-- exception, so validate and pcall the property reads.
+					if isLiveComponent(controller) then
+						local matched = false
+						pcall(function()
+							if controller.Hand ~= nil then
+								matched = (controller.Hand == controllerID)
+							else
+								matched = (controller.MotionSource:to_string() == sourceNames[controllerID])
+							end
+						end)
+						if matched then
+							return controller
 						end
 					end
 				end
@@ -287,13 +382,22 @@ function M.restoreExistingComponents()
 		if getCachedController(i) == nil then
 			local controller = M.getController(i)
 			if controller ~= nil then
-				-- M.print isnt ready at this point so just use print
-				local owner = controller:GetOwner()
-				if owner then
-					print("Restoring existing controller " .. i .. ": " .. controller:get_full_name() .. " " .. owner:get_full_name())
-					actors[i] = owner
+				-- After a script reset the motion-controller state can still point at a
+				-- component the engine has since destroyed; any method call on it (even
+				-- get_full_name) throws a C++ exception. Validate first and pcall the rest.
+				if isLiveComponent(controller) then
+					pcall(function()
+						-- M.print isnt ready at this point so just use print
+						local owner = controller:GetOwner()
+						if owner then
+							print("Restoring existing controller " .. i .. ": " .. controller:get_full_name() .. " " .. owner:get_full_name())
+							actors[i] = owner
+						else
+							print("Restoring existing controller " .. i .. ": " .. controller:get_full_name() .. " (No Owner)")
+						end
+					end)
 				else
-					print("Restoring existing controller " .. i .. ": " .. controller:get_full_name() .. " (No Owner)")
+					print("Skipping restore of controller " .. i .. ": stale component after script reset")
 				end
 			end
 		end
@@ -378,7 +482,22 @@ function M.attachComponentToController(controllerID, childComponent, socketName,
 			controller = M.createController(controllerID)
 		end
 		if controller ~= nil then
-			return childComponent:K2_AttachTo(controller, uevrUtils.fname_from_string(socketName), attachType, weld)
+			-- Right after a script reset / level change the controller can pass isLiveComponent()
+			-- and still be mid-teardown (e.g. the gesture layer's set that Entry.lua's
+			-- on_script_reset destroys in the same moment, picked up by the uncached scan above
+			-- because our own actors[] is empty after the reset). K2_AttachTo then throws a C++
+			-- exception out of on_pre_engine_tick ("Last Script Error ... in method 'K2_AttachTo'")
+			-- and the caller never reaches its own failure handling, leaving the freshly created
+			-- hand mesh orphaned. Report it as "not attached" instead: hands.createComponent
+			-- already discards the component and retries on its 1 s timer when this returns false.
+			local ok, attached = pcall(function()
+				return childComponent:K2_AttachTo(controller, uevrUtils.fname_from_string(socketName), attachType, weld)
+			end)
+			if not ok then
+				M.print("K2_AttachTo threw for controller " .. controllerID .. " (component mid-teardown) - caller will retry", LogLevel.Warning)
+				return false
+			end
+			return attached
 		else
 			M.print("Could not attach component to controller " .. controllerID .. " because controller is nil")
 		end
@@ -389,10 +508,41 @@ function M.attachComponentToController(controllerID, childComponent, socketName,
 end
 
 -- returns an FVector or nil
+-- HMD fallback (2026-09-08): on the joeyhodge backend the mod-spawned HMD SceneComponent
+-- (createHMDControllerComponent, driven by UEVR_UObjectHook motion-controller state, hand=2)
+-- never moves - K2_GetComponentLocation and RelativeLocation both stay 0,0,0 while the
+-- Left/Right MotionControllerComponents track normally. Anything measuring distance to the
+-- head (PiP scope activation, parallax red dot) silently failed. The pawn camera component
+-- is placed at the HMD by UEVR every frame, so use it whenever the HMD component reads as
+-- the origin. Falls back to PlayerCameraManager if the pawn has no Camera field.
+local function hmdFallbackLocation()
+	local loc = nil
+	pcall(function()
+		local pawn = uevr.api:get_local_pawn(0)
+		if pawn ~= nil and pawn.Camera ~= nil then
+			loc = pawn.Camera:K2_GetComponentLocation()
+		end
+	end)
+	if loc == nil then
+		pcall(function()
+			local pc = uevr.api:get_player_controller(0)
+			if pc ~= nil and pc.PlayerCameraManager ~= nil then
+				loc = pc.PlayerCameraManager:GetCameraLocation()
+			end
+		end)
+	end
+	return loc
+end
+
 function M.getControllerLocation(controllerID)
 	local controller = M.getController(controllerID, true)
 	if controller ~= nil then
-		return controller:K2_GetComponentLocation()
+		local loc = controller:K2_GetComponentLocation()
+		if controllerID == 2 and loc ~= nil and loc.X == 0 and loc.Y == 0 and loc.Z == 0 then
+			local fb = hmdFallbackLocation()
+			if fb ~= nil then return fb end
+		end
+		return loc
 	-- else
 		-- --try getting the pose directly
 		-- local index = uevrUtils.getControllerIndex(controllerID)

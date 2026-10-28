@@ -14,7 +14,7 @@
     "pawnArmsWhenActivePriority": "0",
     "pawnBodyWhenActive": 1,
     "pawnBodyWhenActivePriority": "0",
-    "recentMontagesPlayed": "MG_fp_viper_shoot\nMG_fp_viper_shoot\nMG_fp_viper_shoot\nMG_fp_viper_shoot\nMG_fp_viper_shoot\nMG_fp_viper_shoot\nMG_fp_viper_shoot\nMG_fp_viper_shoot\nMG_fp_viper_shoot\nMG_fp_viper_shoot",
+    "recentMontagesPlayed": "AnimMontage_2147217363\nMG_fp_bh_equip\nMG_fp_pm_unequip\nMG_fp_pm_equip\nMG_fp_bh_lever_small_ver_down_160\nMG_fp_ar_fast_unequip\nMG_fp_pm_equip\nMG_fp_bh_lever_small_ver_up_160\nMG_fp_ar_fast_unequip\nMG_fp_pm_equip",
     "rightArmWhenActive": 1,
     "rightArmWhenActivePriority": "0"
 }

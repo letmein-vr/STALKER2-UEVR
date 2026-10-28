@@ -14,27 +14,22 @@ local motionControllers = require("gestures.motioncontrollergestures")
 local gameState = require("stalker2.gamestate")
 local GestureSet = require("gestures.gestureset")
 local uevrUtils = require("libs/uevr_utils")
+
+-- Key delivery (minimum hold, primer tap, verified weapon-slot retry) lives in one shared module.
+local GestureKeys = require("stalker2.gesturekeys")
+local ptmReload = require("stalker2.ptm_manual_reload")
+
 local function createKeyPresExecutionCB(key, gesture_config_key)
-    return function(gesture, context)
-        if gesture_config_key and not Config.gestures[gesture_config_key] then
-            return
-        end
-        if gesture:JustActivated() then
-            gameState:SendKeyDown(key)
-            gesture.gripGesture:Lock()
-        elseif gesture:JustDeactivated() then
-            gameState:SendKeyUp(key)
-            gesture.gripGesture:Unlock()
-        end
-    end
+    return GestureKeys.createKeyPressCB(key, gesture_config_key)
 end
 
 local function createKeyHoldExecutionCB(key, hold_duration, gesture_config_key)
     return function(gesture, context)
-        if gesture_config_key and not Config.gestures[gesture_config_key] then
-            return
-        end
         if gesture:JustActivated() then
+            -- Activation-only config gate (see createKeyPresExecutionCB above).
+            if gesture_config_key and not Config.gestures[gesture_config_key] then
+                return
+            end
             gameState:SendKeyDown(key)
             gesture.gripGesture:Lock()
             -- Auto-release after duration if it's a simulated long press
@@ -50,6 +45,15 @@ local function createKeyHoldExecutionCB(key, hold_duration, gesture_config_key)
                 gesture.gripGesture:Unlock()
             end
         end
+    end
+end
+
+-- Legacy-mode reload gesture (Config.enableManualReload = false): spoofs a short X press via
+-- the reload module instead of sending 'R' (which forced Keyboard/Mouse mode -> ghost inputs).
+-- spoofNativeReload is a no-op while manual reload is enabled.
+local function reloadSpoofCB(gesture, context)
+    if gesture:JustActivated() and Config.gestures.reload then
+        ptmReload.spoofNativeReload()
     end
 end
 
@@ -114,10 +118,11 @@ local function createPreset(bodyZones, weaponZones, sittingExperience)
         zone = bodyZones.leftChestZoneLH
     })
 
-    local grenadeGestureRH = GripGesture:new({
-        name = "Grenade Gesture (RH)",
-        gripGesture = motionControllers.RightGripAction,
-        zone = bodyZones.rightChestZoneRH
+    local grenadeGestureLH = GripGesture:new({
+        name = "Grenade Gesture (LH)",
+        gripGesture = motionControllers.LeftGripAction,
+        excludeAction = motionControllers.LeftTriggerAction,
+        zone = bodyZones.rightChestZoneLH
     })
 
     local inventoryGestureRH = GripGesture:new({
@@ -138,11 +143,10 @@ local function createPreset(bodyZones, weaponZones, sittingExperience)
         zone = bodyZones.leftChestZoneRH
     })
 
-    local pdaGestureLH = GripGesture:new({
-        name = "PDA Gesture (LH)",
-        gripGesture = motionControllers.LeftGripAction,
-        excludeAction = motionControllers.LeftTriggerAction,
-        zone = bodyZones.rightChestZoneLH
+    local pdaGestureRH = GripGesture:new({
+        name = "PDA Gesture (RH)",
+        gripGesture = motionControllers.RightGripAction,
+        zone = bodyZones.rightChestZoneRH
     })
 
     local reloadGestureLH = GripGesture:new({
@@ -168,16 +172,19 @@ local function createPreset(bodyZones, weaponZones, sittingExperience)
     flashlightGestureRH:SetExecutionCallback(createKeyPresExecutionCB('L', 'flashlight'))
     primaryWeaponGestureLH:SetExecutionCallback(createKeyPresExecutionCB('3', 'primaryWeapon'))
     secondaryWeaponGestureLH:SetExecutionCallback(createKeyPresExecutionCB('4', 'secondaryWeapon'))
-    sidearmWeaponGestureLH:SetExecutionCallback(createKeyPresExecutionCB('2', 'sidearmWeapon'))
+    -- sidearmWeaponGestureLH callback removed: left hip zone is now used exclusively
+    -- for the PTM manual reload mag-grab. Zone still evaluates (leftHipZoneLH.isActive).
+    -- sidearmWeaponGestureLH:SetExecutionCallback(createKeyPresExecutionCB('2', 'sidearmWeapon'))
     meleeWeaponGestureRH:SetExecutionCallback(createKeyPresExecutionCB('1', 'meleeWeapon'))
     boltActionGestureLH:SetExecutionCallback(createKeyPresExecutionCB('6', 'boltAction'))
-    grenadeGestureRH:SetExecutionCallback(createKeyPresExecutionCB('5', 'grenade'))
+    grenadeGestureLH:SetExecutionCallback(createKeyPresExecutionCB('5', 'grenade'))
 
     inventoryGestureRH:SetExecutionCallback(createKeyPresExecutionCB('I', 'inventory'))
     -- dpadLeftGestureRH:SetExecutionCallback(createKeyPresExecutionCB('D'))
     scannerGestureRH:SetExecutionCallback(createKeyPresExecutionCB('7', 'scanner'))
-    pdaGestureLH:SetExecutionCallback(createKeyPresExecutionCB('M', 'pda'))
-    reloadGestureLH:SetExecutionCallback(createKeyPresExecutionCB('R', 'reload'))
+    pdaGestureRH:SetExecutionCallback(createKeyPresExecutionCB('M', 'pda'))
+    -- reloadGestureLH:SetExecutionCallback(createKeyPresExecutionCB('R', 'reload'))
+    reloadGestureLH:SetExecutionCallback(reloadSpoofCB)
     modeSwitchZoneLH:SetExecutionCallback(createKeyPresExecutionCB('B', 'modeSwitch'))
 
     twoHandedAimGestureLH:SetExecutionCallback(twoHandedAimingCB)
@@ -193,10 +200,10 @@ local function createPreset(bodyZones, weaponZones, sittingExperience)
                 sidearmWeaponGestureLH,
                 meleeWeaponGestureRH,
                 boltActionGestureLH,
-                grenadeGestureRH,
+                grenadeGestureLH,
                 inventoryGestureRH,
                 scannerGestureRH,
-                pdaGestureLH,
+                pdaGestureRH,
                 reloadGestureLH,
                 modeSwitchZoneLH
             }
@@ -212,10 +219,10 @@ local function createPreset(bodyZones, weaponZones, sittingExperience)
                 sidearmWeaponGestureLH,
                 meleeWeaponGestureRH,
                 boltActionGestureLH,
-                grenadeGestureRH,
+                grenadeGestureLH,
                 inventoryGestureRH,
                 scannerGestureRH,
-                pdaGestureLH,
+                pdaGestureRH,
                 reloadGestureLH,
                 modeSwitchZoneLH
             }

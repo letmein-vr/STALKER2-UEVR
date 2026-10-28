@@ -2,11 +2,26 @@
 -- Physical magazine reload via left-hand BoxComponent overlap + Left Grip
 
 local utils = require("common/utils")
+local uevrUtils = require("libs/uevr_utils")
+local hands = require("libs/hands")
 
 local M = {}
 
 local BoxCompLH = nil  -- Box on left VR hand
+local boxOwnerPawnAddr = nil  -- pawn address BoxCompLH was created for (reuse guard, see M.init)
 local MagBox    = nil  -- Box on weapon magazine socket
+
+-- Visual-only stand-ins for BoxCompLH/MagBox's debug display. A BoxComponent's own
+-- native wireframe/solid debug draw is a collision-shape scene proxy, not a mesh -
+-- it has no material to give the ForegroundFOVEnabled parameter the game's own
+-- first-person meshes carry (see uevrUtils.applyForegroundFOV), so toggling
+-- SetVisibility/SetHiddenInGame on the box itself renders it with the normal world
+-- projection and it sits at the wrong depth relative to the hand/weapon - the same
+-- issue the mag proxy meshes had. Fix: keep the real boxes permanently hidden and
+-- show a small Cube static mesh, parented to the box (so it inherits the box's
+-- offset/rotation/scale automatically), with the foreground-FOV fix applied.
+local BoxCompLH_Visual = nil
+local MagBox_Visual    = nil
 
 local debugMode = false
 local lastReloadTime = 0
@@ -18,6 +33,11 @@ local wasGripHeld = false  -- for rising-edge detection
 -- injected X, so it can call SendKeyDown('R') (with isReloading) instead of
 -- SendReloadKey() (without isReloading). Physical X presses never set this flag.
 local gestureFired = false
+
+-- Cached result of BoxCompLH:IsOverlappingComponent(MagBox), updated once per
+-- engine tick by M.updateOverlapState(). Both on_xinput_get_state and
+-- tryInterceptReload read this flag to gate manual reload activation.
+local handOverlapsMag = false
 
 function M.consumeGestureFired()
     if gestureFired then
@@ -44,6 +64,143 @@ local function isAlive(obj)
     if obj == nil then return false end
     local ok, alive = pcall(function() return UEVR_UObjectHook.exists(obj) end)
     return ok and alive
+end
+
+-- Engine's default StaticMesh Cube (/Engine/BasicShapes/Cube.Cube) is 100uu across
+-- (half-size 50). A freshly-constructed BoxComponent's default BoxExtent (half-size)
+-- is 32 - neither box here ever calls SetBoxExtent, so this ratio holds for both.
+-- The visual's own RelativeScale3D is set to this constant; the box's own
+-- RelativeScale3D/offset/rotation (cfg.handX/handY/handZ etc) is inherited on top of
+-- it automatically via the parent-child attachment, so it stays in sync with no
+-- extra per-tick code.
+local BOX_TO_CUBE_SCALE = 32.0 / 50.0
+
+local function getSmClass()
+    local cls = nil
+    pcall(function()
+        cls = utils.find_required_object("Class /Script/Engine.StaticMeshComponent")
+    end)
+    return cls
+end
+
+-- find_instance_of/find_all_of only search objects ALREADY resident in memory -
+-- unlike /Engine/BasicShapes/Cylinder (which Base/scope.lua's PiP scope already
+-- loads for its own tube mesh), nothing else in this game references the Cube
+-- asset, so it was never loaded and a plain find_instance_of lookup silently
+-- returned nil (SetStaticMesh(nil) - visual created but with no mesh, invisible
+-- even when shown).
+--
+-- Both uevrUtils.getLoadedAsset()'s own return value (AssetRegistryHelpers:GetAsset())
+-- AND a follow-up find_instance_of/find_all_of scan turned out unreliable here -
+-- confirmed live via MCP (a direct GUObjectArray search) that the Cube StaticMesh
+-- WAS genuinely resident in memory while find_all_of's class-enumeration
+-- (UEVR_UObjectHook.get_objects_by_class) still wasn't returning it, i.e. that
+-- enumeration doesn't reliably pick up an asset the instant it's force-loaded.
+-- uevr.api:find_uobject() (a direct by-name lookup, the same call M.get_class()
+-- already relies on everywhere) doesn't have that problem - use it instead, after
+-- getLoadedAsset's blocking call has forced the asset to actually be loaded.
+local cachedCubeMesh = nil
+local function getCubeMesh()
+    if not isAlive(cachedCubeMesh) then
+        cachedCubeMesh = nil
+        pcall(function()
+            uevrUtils.getLoadedAsset("StaticMesh /Engine/BasicShapes/Cube.Cube")
+            cachedCubeMesh = uevr.api:find_uobject("StaticMesh /Engine/BasicShapes/Cube.Cube")
+        end)
+    end
+    return cachedCubeMesh
+end
+
+-- uevrUtils.applyForegroundFOV (via fixMeshFOV) only converts a mesh's OWN material
+-- to a dynamic instance when that material is already a MaterialInstanceConstant -
+-- our cube's default material (/Engine/BasicShapes/BasicShapeMaterial) is a plain
+-- base Material, so that conversion silently never happens (confirmed live: the
+-- visual's OverrideMaterials stayed empty, ForegroundFOVEnabled was never set).
+-- And even if it did convert, BasicShapeMaterial almost certainly doesn't
+-- implement ForegroundFOVEnabled in its shader graph at all - it's a generic
+-- engine default, not one of this game's own materials - so setting the
+-- parameter on it would likely be a silent no-op with zero visual effect anyway.
+--
+-- Confirmed live via MCP (comparing both hand PoseableMeshComponents against the
+-- weapon mesh) that ForegroundFOVEnabled=1.0 baked into the material itself (not
+-- bForeground, which is false on both hands - a red herring) is what the game's
+-- own first-person meshes actually rely on. So instead of trying to retrofit our
+-- generic cube's own material, just borrow material slot 0 straight off the live
+-- left hand mesh - it's always present in VR and already has the parameter set
+-- correctly by the game itself.
+local cachedForegroundMaterial = nil
+local function getForegroundMaterial()
+    if not isAlive(cachedForegroundMaterial) then
+        cachedForegroundMaterial = nil
+        pcall(function()
+            local handMesh = hands.getHandComponent(Handed.Left)
+            if isAlive(handMesh) then
+                local materials = handMesh:GetMaterials()
+                if materials ~= nil and materials[1] ~= nil then
+                    cachedForegroundMaterial = materials[1]
+                end
+            end
+        end)
+    end
+    return cachedForegroundMaterial
+end
+
+-- Creates a hidden-by-default Cube visual proxy attached to parentBox (SnapToTarget,
+-- then scaled to BOX_TO_CUBE_SCALE so it visually matches the box's collision
+-- volume). Returns nil on any failure - callers already tolerate a nil visual
+-- (debug display just won't show anything, collision/overlap logic is unaffected).
+local function createDebugVisualCube(ownerPawn, parentBox)
+    if not utils.validate_object(ownerPawn) or not isAlive(parentBox) then return nil end
+    local smClass = getSmClass()
+    if not smClass then return nil end
+    local visual = nil
+    local ok = pcall(function()
+        visual = uevr.api:add_component_by_class(ownerPawn, smClass)
+    end)
+    if not ok or not isAlive(visual) then return nil end
+    pcall(function()
+        visual:SetStaticMesh(getCubeMesh())
+        visual:SetCollisionEnabled(0)
+        visual:K2_AttachToComponent(parentBox, uevrUtils.fname_from_string("None"), 2, 2, 2, true)
+        visual.RelativeScale3D.X = BOX_TO_CUBE_SCALE
+        visual.RelativeScale3D.Y = BOX_TO_CUBE_SCALE
+        visual.RelativeScale3D.Z = BOX_TO_CUBE_SCALE
+        local fovMaterial = getForegroundMaterial()
+        if fovMaterial ~= nil then
+            visual:SetMaterial(0, fovMaterial)
+        end
+        visual:SetHiddenInGame(true)
+        visual:SetVisibility(false, false)
+    end)
+    return visual
+end
+
+-- Debug visuals only exist while debug mode is on (2026-10-15): a hidden cube under the pawn body mesh was shown
+-- again by code that shows the body with propagate-to-children (textured box under the pistol mag, debug off).
+-- Nothing left hidden can be shown by accident.
+local function destroyDebugVisual(visual)
+    if isAlive(visual) then
+        pcall(function() visual:K2_DestroyComponent(visual) end)
+    end
+    return nil
+end
+
+-- Shows/hides a visual proxy while forcing its real (collision-only) box to stay
+-- permanently hidden, since the box's own native debug draw is what has the wrong
+-- render depth in the first place.
+local function setDebugVisualVisible(box, visual, val)
+    if isAlive(box) then
+        pcall(function()
+            box:SetHiddenInGame(true)
+            box:SetVisibility(false, false)
+        end)
+    end
+    if isAlive(visual) then
+        pcall(function()
+            visual:SetHiddenInGame(not val)
+            visual:SetVisibility(val, false)
+        end)
+    end
 end
 
 -- Current active config (applied to boxes; drives UI display)
@@ -84,7 +241,12 @@ local function applyBoxSizes()
     end)
 end
 
--- Called once per session. left_hand_comp = motionControllerActors.left_hand_component
+-- Called on every weapon equip. left_hand_comp = motionControllerActors.left_hand_component
+-- Always destroys and recreates BoxCompLH to fix the level-load GC race:
+-- After a level transition, the old BoxCompLH may still pass isAlive() (not yet GC'd)
+-- but is orphaned from the old world - overlaps never fire. By always recreating,
+-- we guarantee the box is attached to the current pawn/hand in the current world.
+-- This mirrors how update_weapon_collision() handles MagBox.
 function M.init(pawn, left_hand_comp)
     -- print("[MagReload] init() called")
 
@@ -93,17 +255,49 @@ function M.init(pawn, left_hand_comp)
         return
     end
 
-    -- Use isAlive() not utils.validate_object() — validate_object only checks the Lua
-    -- reference and returns true for GC'd UE components, causing init to silently skip.
-    if isAlive(BoxCompLH) then
-        -- print("[MagReload] init() BoxCompLH already alive, skipping creation")
-        return
-    else
-        -- Reference was stale — nil it so creation proceeds cleanly
-        if BoxCompLH ~= nil then
-            print("[MagReload] init() BoxCompLH was dead (GC'd) -- resetting")
+    -- PERF (2026-09-21): reuse BoxCompLH across weapon switches when it is alive AND still
+    -- belongs to the same pawn object. The destroy-and-recreate below exists for the
+    -- level-load GC race (old component alive in GUObjectArray but orphaned from the dead
+    -- world) - a level load always hands us a NEW pawn object, so comparing the owning pawn
+    -- address keeps that protection while dropping the per-equip component churn (destroy
+    -- + add_component + attach + collision setup + debug visual, all on the game thread).
+    -- Same fix the IK tree carries (memory: stalker2-ik-perf-optimizations).
+    -- exists()/isAlive is NOT a liveness test on this backend (old-world objects pass it), so
+    -- the reuse is additionally gated on the engine's own IsValid and on the box still being
+    -- owned by this exact pawn; anything unexpected falls through to destroy-and-recreate.
+    if isAlive(BoxCompLH) and boxOwnerPawnAddr ~= nil and boxOwnerPawnAddr == pawn:get_address()
+       and utils.validate_object(left_hand_comp) then
+        local reused = false
+        pcall(function()
+            if kismet_system_library == nil or not kismet_system_library:IsValid(BoxCompLH) then return end
+            local owner = BoxCompLH:GetOwner()
+            if owner == nil or owner:get_address() ~= pawn:get_address() then return end
+            BoxCompLH:K2_AttachToComponent(left_hand_comp, "Root", 0, 0, 0, true)
+            reused = true
+        end)
+        if reused then
+            return
         end
+    end
+
+    -- Always destroy the existing BoxCompLH before recreating.
+    -- Do NOT skip if isAlive: after a level load the old component can still be alive
+    -- in GUObjectArray (GC is deferred) but orphaned from the destroyed world, causing
+    -- IsOverlappingComponent() to silently return false every tick.
+    if BoxCompLH ~= nil then
+        pcall(function()
+            if isAlive(BoxCompLH_Visual) and BoxCompLH_Visual.K2_DestroyComponent then
+                BoxCompLH_Visual:K2_DestroyComponent(BoxCompLH_Visual)
+            end
+        end)
+        BoxCompLH_Visual = nil
+        pcall(function()
+            if isAlive(BoxCompLH) and BoxCompLH.K2_DestroyComponent then
+                BoxCompLH:K2_DestroyComponent(BoxCompLH)
+            end
+        end)
         BoxCompLH = nil
+        print("[MagReload] init() destroyed old BoxCompLH (recreating for new world/pawn)")
     end
 
     local cls = getBoxClass()
@@ -127,6 +321,7 @@ function M.init(pawn, left_hand_comp)
         BoxCompLH = nil
         return
     end
+    boxOwnerPawnAddr = pawn:get_address()
     -- print("[MagReload] BoxCompLH created OK")
 
     pcall(function()
@@ -147,21 +342,19 @@ function M.init(pawn, left_hand_comp)
     BoxCompLH.RelativeScale3D.Y = cfg.handY
     BoxCompLH.RelativeScale3D.Z = cfg.handZ
 
+    BoxCompLH_Visual = destroyDebugVisual(BoxCompLH_Visual)
+    if debugMode then BoxCompLH_Visual = createDebugVisualCube(pawn, BoxCompLH) end
+
+    setDebugVisualVisible(BoxCompLH, BoxCompLH_Visual, debugMode)
     if debugMode then
-        BoxCompLH:SetHiddenInGame(false)
-        BoxCompLH:SetVisibility(true, false)
         print("[MagReload] Left hand box created (visible, debug mode)")
-    else
-        BoxCompLH:SetHiddenInGame(true)
-        BoxCompLH:SetVisibility(false, false)
-        -- print("[MagReload] Left hand box created (hidden)")
     end
 end
 
 -- Called on every weapon equip.
 -- boxCfg (optional table) overrides current sizes/offsets for this weapon:
 --   { magX, magY, magZ, magOffX, magOffY, magOffZ }
-function M.update_weapon_collision(pawn, weapon_mesh, boxCfg)
+function M.update_weapon_collision(pawn, weapon_mesh, boxCfg, profileSocket)
     -- print("[MagReload] update_weapon_collision() called")
 
     if not utils.validate_object(pawn) then
@@ -214,7 +407,18 @@ function M.update_weapon_collision(pawn, weapon_mesh, boxCfg)
             MagBox = nil
             return
         end
-        -- print("[MagReload] MagBox created OK")
+        -- Enable collision on MagBox so UE registers overlaps with BoxCompLH.
+        -- Both boxes must have GenerateOverlapEvents=true and matching collision
+        -- channels for IsOverlappingComponent() to return correct results.
+        pcall(function()
+            MagBox:SetGenerateOverlapEvents(true)
+            MagBox:SetCollisionObjectType(2)           -- WorldDynamic (matches BoxCompLH)
+            MagBox:SetCollisionResponseToAllChannels(1) -- ECR_Overlap
+            MagBox:SetCollisionEnabled(1)              -- Query Only
+        end)
+        MagBox_Visual = destroyDebugVisual(MagBox_Visual)
+        if debugMode then MagBox_Visual = createDebugVisualCube(pawn, MagBox) end
+        -- print("[MagReload] MagBox created and collision enabled")
     else
         -- print("[MagReload] MagBox already alive, re-attaching")
     end
@@ -226,15 +430,53 @@ function M.update_weapon_collision(pawn, weapon_mesh, boxCfg)
             MagBox:K2_AttachToComponent(weapon_mesh, cfg.magSocket, 2, 2, 2, false)
             -- print("[MagReload] MagBox attached to: " .. cfg.magSocket)
             attached = true
+        elseif profileSocket ~= nil and profileSocket ~= "" and weapon_mesh:DoesSocketExist(profileSocket) then
+            -- Weapon-profile socket (ptm_manual_reload WEAPON_PROFILES magSocket), for weapons that
+            -- have none of the magazine/bullet sockets below. First user: the RPG-7, whose only
+            -- ammo socket (jnt_ammo_move) rides the reload animation, so the static "Muzzle"
+            -- socket - where a rocket physically goes in - is the insert target instead.
+            -- Checked after the saved per-weapon socket so a user override in settings.json wins.
+            MagBox:K2_AttachToComponent(weapon_mesh, profileSocket, 2, 2, 2, false)
+            attached = true
         elseif weapon_mesh:DoesSocketExist("jnt_magazine") then
-            -- Fallback 1
+            -- Fallback 1: standard mag socket
             MagBox:K2_AttachToComponent(weapon_mesh, "jnt_magazine", 2, 2, 2, false)
             -- print("[MagReload] MagBox attached to fallback: jnt_magazine")
             attached = true
+        elseif weapon_mesh:DoesSocketExist("jnt_magazine_master") then
+            -- Fallback 1b: newer socket-naming convention (SK_Skp confirmed via MCP -
+            -- AttachSocketName on its live WeaponAttachmentSM_Wpn_SKP_MagDefault_Full/
+            -- Empty components). Checked before jnt_mag_tab/jnt_clip_base/jnt_bullet
+            -- since those are more specialized/coincidental fallbacks (jnt_bullet in
+            -- particular is meant for tube-fed shotguns' live shells, not box mags,
+            -- and would otherwise false-positive-match on this weapon).
+            MagBox:K2_AttachToComponent(weapon_mesh, "jnt_magazine_master", 2, 2, 2, false)
+            -- print("[MagReload] MagBox attached to fallback: jnt_magazine_master")
+            attached = true
         elseif weapon_mesh:DoesSocketExist("jnt_mag_tab") then
-            -- Fallback 2
+            -- Fallback 2: mag-tab socket (some SMGs)
             MagBox:K2_AttachToComponent(weapon_mesh, "jnt_mag_tab", 2, 2, 2, false)
             -- print("[MagReload] MagBox attached to fallback: jnt_mag_tab")
+            attached = true
+        elseif weapon_mesh:DoesSocketExist("jnt_clip_base") then
+            -- Fallback 3: clip-base socket (SK_m86000 bigmag, SK_svdm, SK_grim0 confirmed via MCP)
+            MagBox:K2_AttachToComponent(weapon_mesh, "jnt_clip_base", 2, 2, 2, false)
+            -- print("[MagReload] MagBox attached to fallback: jnt_clip_base")
+            attached = true
+        elseif weapon_mesh:DoesSocketExist("jnt_bullet") then
+            -- Fallback 4: live shell socket (RAM-2, M860 standard tube-fed)
+            MagBox:K2_AttachToComponent(weapon_mesh, "jnt_bullet", 2, 2, 2, false)
+            -- print("[MagReload] MagBox attached to fallback: jnt_bullet")
+            attached = true
+        elseif weapon_mesh:DoesSocketExist("jnt_bullet_01") then
+            -- Fallback 5: Obrez double-barrel socket naming (underscore + leading zero)
+            MagBox:K2_AttachToComponent(weapon_mesh, "jnt_bullet_01", 2, 2, 2, false)
+            -- print("[MagReload] MagBox attached to fallback: jnt_bullet_01")
+            attached = true
+        elseif weapon_mesh:DoesSocketExist("jnt_clip_base_second") then
+            -- Fallback 4: second clip-base socket (SK_grim0 twin-mag variant)
+            MagBox:K2_AttachToComponent(weapon_mesh, "jnt_clip_base_second", 2, 2, 2, false)
+            -- print("[MagReload] MagBox attached to fallback: jnt_clip_base_second")
             attached = true
         else
             print("[MagReload] WARNING: no mag socket found on weapon: " .. weapon_mesh:get_full_name())
@@ -260,62 +502,55 @@ function M.update_weapon_collision(pawn, weapon_mesh, boxCfg)
     -- Apply size and offset
     applyBoxSizes()
 
-    pcall(function()
-        if isAlive(MagBox) then
-            if debugMode then
-                MagBox:SetHiddenInGame(false)
-                MagBox:SetVisibility(true, false)
-            else
-                MagBox:SetHiddenInGame(true)
-                MagBox:SetVisibility(false, false)
-            end
-        end
-    end)
+    setDebugVisualVisible(MagBox, MagBox_Visual, debugMode)
 end
 
 function M.check_reload_input(state, pawn)
-    if not isAlive(BoxCompLH) then return false end
-    if not isAlive(MagBox) then return false end
-
-    local leftGrip = (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) ~= 0
-    local gripJustPressed = leftGrip and not wasGripHeld
-    wasGripHeld = leftGrip
-
-    -- Only evaluate on the frame grip is first pressed (rising edge)
-    -- This means two-handing (grip pressed at foregrip, no mag overlap) never fires.
-    -- Reload only fires when you deliberately press grip right at the magazine.
-    if not gripJustPressed then return false end
-
-    -- Also skip if TwoHandedStateActive just in case grip pressed during two-hand transition
-    if TwoHandedStateActive then return false end
-
-    -- Cooldown
-    local now = os.clock()
-    if (now - lastReloadTime) < RELOAD_COOLDOWN then return false end
-
-    local overlapping = {}
-    pcall(function()
-        BoxCompLH:GetOverlappingComponents(overlapping)
-    end)
-
-    local magFullName = MagBox:get_full_name()
-    for _, comp in ipairs(overlapping) do
-        if comp and UEVR_UObjectHook.exists(comp) then
-            if comp:get_full_name() == magFullName then
-                lastReloadTime = now
-                if debugMode then print("[MagReload] Reload triggered!") end
-                -- Flag that this X injection came from the mag gesture (not physical X).
-                -- Entry.lua's X→R handler checks consumeGestureFired() to decide whether
-                -- to call SendKeyDown('R') (sets isReloading, attaches hand) or
-                -- SendReloadKey() (no isReloading, no hand attachment).
-                gestureFired = true
-                state.Gamepad.wButtons = state.Gamepad.wButtons | XINPUT_GAMEPAD_X
-                return true
-            end
-        end
-    end
-
+    -- DISABLED: We are bypassing the legacy gesture reload system to implement True Manual Reloads
     return false
+end
+
+-- Called once per engine tick from Entry.lua (before ptmReload.on_pre_engine_tick).
+-- Queries UE's physics overlap between the left-hand box and the mag socket box,
+-- then caches the result so both on_xinput_get_state and tryInterceptReload can
+-- read it without making repeated UObject calls.
+function M.updateOverlapState()
+    handOverlapsMag = false
+    if not isAlive(BoxCompLH) or not isAlive(MagBox) then return end
+    pcall(function()
+        handOverlapsMag = BoxCompLH:IsOverlappingComponent(MagBox)
+    end)
+end
+
+-- Returns the cached overlap result from the most recent updateOverlapState() call.
+-- true  = left hand box is physically overlapping the weapon mag socket box.
+-- false = no overlap (or boxes not yet initialised).
+function M.isHandOverlappingMag()
+    return handOverlapsMag
+end
+
+-- Returns the world location of MagBox (the collision box attached to the weapon mag socket).
+-- ptm_manual_reload uses this for the insertion distance check instead of querying
+-- GetSocketLocation itself, so both systems reference the exact same point in world space
+-- and the socket name does not need to be duplicated in the ptm profile table.
+-- Returns nil if MagBox is not alive.
+function M.getMagBoxLocation()
+    local loc = nil
+    if isAlive(MagBox) then
+        pcall(function() loc = MagBox:K2_GetComponentLocation() end)
+    end
+    return loc
+end
+
+-- The weapon socket MagBox is actually attached to (FName), i.e. whichever tier of the
+-- socket chain in update_weapon_collision won. ptm_manual_reload's shell insert glide
+-- seats shells at this socket. Returns nil if MagBox is not alive.
+function M.getMagBoxSocketName()
+    local name = nil
+    if isAlive(MagBox) then
+        pcall(function() name = MagBox.AttachSocketName end)
+    end
+    return name
 end
 
 -- Return a copy of the current active config (for UI display)
@@ -353,20 +588,21 @@ end
 
 function M.set_debug(val)
     debugMode = val
-    -- Use isAlive() — utils.validate_object() misses GC'd UE objects and the subsequent
-    -- SetHiddenInGame() call crashes with "attempt to call a nil value".
-    if isAlive(BoxCompLH) then
-        BoxCompLH:SetHiddenInGame(not val)
-        BoxCompLH:SetVisibility(val, false)
+    if val then
+        local pawn = uevr.api:get_local_pawn(0)
+        if pawn ~= nil then
+            if not isAlive(BoxCompLH_Visual) and isAlive(BoxCompLH) then BoxCompLH_Visual = createDebugVisualCube(pawn, BoxCompLH) end
+            if not isAlive(MagBox_Visual) and isAlive(MagBox) then MagBox_Visual = createDebugVisualCube(pawn, MagBox) end
+        end
     else
-        print("[MagReload] set_debug: BoxCompLH dead/nil, skipping")
+        BoxCompLH_Visual = destroyDebugVisual(BoxCompLH_Visual)
+        MagBox_Visual = destroyDebugVisual(MagBox_Visual)
     end
-    if isAlive(MagBox) then
-        MagBox:SetHiddenInGame(not val)
-        MagBox:SetVisibility(val, false)
-    else
-        print("[MagReload] set_debug: MagBox dead/nil, skipping")
-    end
+    -- setDebugVisualVisible() itself uses isAlive() and tolerates a dead/nil box or
+    -- visual (utils.validate_object() misses GC'd UE objects, which would otherwise
+    -- crash the subsequent SetHiddenInGame() call with "attempt to call a nil value").
+    setDebugVisualVisible(BoxCompLH, BoxCompLH_Visual, val)
+    setDebugVisualVisible(MagBox, MagBox_Visual, val)
 end
 
 function M.get_debug()

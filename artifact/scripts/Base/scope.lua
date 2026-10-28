@@ -21,6 +21,11 @@ local lastLevelChangeTime = os.clock()  -- Reset on every level change; see leve
 local widget3d_blendmode_set = false
 
 local function diag(_) end  -- diagnostic logging removed
+-- Scope camera lifecycle log (2026-10-17): one line per create / destroy with the reason, to find why a single
+-- scope raise created and destroyed extra cameras. print() never reaches log.txt on this build; log_info does.
+local function scc_log(msg)
+    pcall(function() uevr.params.functions.log_info(string.format("[ScopeSCC] %.2f %s", os.clock(), tostring(msg))) end)
+end
 
 -- Warmup sphere state.
 -- A tiny StaticMeshComponent (Sphere) is spawned immediately when the pawn becomes
@@ -226,16 +231,19 @@ function ScopeController:spawn_scope_plane(world, owner, pos, rt)
 
     local wanted_mat = utils.find_required_object("Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial")
     if wanted_mat then
-        -- Set BlendMode and TwoSided on the shared asset BEFORE creating the DMI.
-        -- The DMI inherits these properties at creation time. Without this the
-        -- BlendMode is non-deterministic: hide_scope_glass() sets it to 2 (Translucent)
-        -- and reset_material_to_standard() sets it to 7 — whichever ran last wins.
-        -- Matches Mutar original which always sets these before CreateDynamicMaterialInstance.
-        wanted_mat.BlendMode = 7
+        -- BlendMode MUST be 0 (Opaque) on this engine build. The old code wrote 7, which on
+        -- UE 5.1-5.3 was BLEND_MAX (harmless fallback) but in UE 5.5 is
+        -- BLEND_TranslucentColoredTransmittance - a real translucent mode with no cooked
+        -- shader permutation for EmissiveMeshMaterial, so every mesh using it (this
+        -- cylinder, the glass-hide DMI, the warmup sphere) silently drew NOTHING.
+        -- Confirmed live 2026-09-08: same cylinder became visible the moment the parent
+        -- material was switched to Opaque via MCP. Never write any other value here.
+        wanted_mat.BlendMode = 0
         wanted_mat.TwoSided = 0
         self.scope_material = self.scope_plane_component:CreateDynamicMaterialInstance(0, wanted_mat, "scope_material")
         if self.scope_material then
-            pcall(function() self.scope_material:SetTextureParameterValue("LinearColor", rt) end)
+            local okTex, errTex = pcall(function() self.scope_material:SetTextureParameterValue("LinearColor", rt) end)
+            if not okTex then print("[Scope] SetTextureParameterValue(LinearColor) failed: " .. tostring(errTex)) end
             local color = StructObject.new(self.flinearColor_c)
             local initIntensity = Config.scopeBrightnessAmplifier or 1.0
             color.R = initIntensity
@@ -689,6 +697,31 @@ function ScopeController:IsWithinActivationDistance()
     return result
 end
 
+
+-- Guarded property write. On the joeyhodge backend / UE 5.5.4 assigning a UPROPERTY that
+-- does not exist on the class (e.g. bCacheVolumetricCloudsShadowMaps, gone from
+-- SceneCaptureComponent2D) throws a Lua error straight out of the caller. Before this
+-- guard existed that throw escaped spawn_scene_capture_component AFTER the component was
+-- created but BEFORE it was stored in self.scene_capture_component, so every deferred
+-- fire leaked a fresh SceneCaptureComponent2D with bCaptureEveryFrame still at its
+-- default (true) and a live TextureTarget: dozens of orphan captures per frame and no
+-- scope image ever shown (confirmed via MCP object search, 2026-09-08).
+local function setp(obj, name, value)
+    local ok, err = pcall(function() obj[name] = value end)
+    if not ok then
+        print("[Scope] property write skipped: " .. tostring(name) .. " (" .. tostring(err) .. ")")
+    end
+    return ok
+end
+
+local function setpp(obj, name, value)
+    local ok, err = pcall(function() obj.PostProcessSettings[name] = value end)
+    if not ok then
+        print("[Scope] PostProcessSettings write skipped: " .. tostring(name) .. " (" .. tostring(err) .. ")")
+    end
+    return ok
+end
+
 function ScopeController:spawn_scene_capture_component(world, owner, pos, fov, rt)
     diag("[Scope-Diag] spawn_scene_capture_component: ENTER")
     -- Use uevrUtils.createSceneCaptureComponent - stable uevr.api path, no D3D12 crash.
@@ -699,51 +732,89 @@ function ScopeController:spawn_scene_capture_component(world, owner, pos, fov, r
         print("[Scope] Failed to spawn scene capture component")
         return
     end
-    diag("[Scope-Diag] before TextureTarget = rt")
-    comp.TextureTarget = rt
-    diag("[Scope-Diag] after TextureTarget = rt")
-    comp.FOVAngle = fov
-    comp.bCacheVolumetricCloudsShadowMaps = true
-    comp.bUseRayTracingIfEnabled = false
-    comp.bAlwaysPersistRenderingState = true
-    comp.bEnableVolumetricCloudsCapture = false
-    comp.bCaptureEveryFrame = 1
-    comp.CaptureSource = 1  -- SCS_SceneColorHDRInSceneCapture: capture after TAA/TSR runs
 
-    -- post processing
-    comp.PostProcessSettings.bOverride_MotionBlurAmount = true
-    comp.PostProcessSettings.MotionBlurAmount = 0.0
-    comp.PostProcessSettings.bOverride_ScreenSpaceReflectionIntensity = true
-    comp.PostProcessSettings.ScreenSpaceReflectionIntensity = 0.0
-    comp.PostProcessSettings.bOverride_AmbientOcclusionIntensity = true
-    comp.PostProcessSettings.AmbientOcclusionIntensity = 0.0
-    comp.PostProcessSettings.bOverride_BloomIntensity = true
-    comp.PostProcessSettings.BloomIntensity = 0.0
-    comp.PostProcessSettings.bOverride_LensFlareIntensity = true
-    comp.PostProcessSettings.LensFlareIntensity = 0.0
-    comp.PostProcessSettings.bOverride_VignetteIntensity = true
-    comp.PostProcessSettings.VignetteIntensity = 0.0
+    -- Order matters: disable per-frame capture FIRST so a failure part-way through
+    -- configuration can never leave an actively-capturing orphan behind.
+    setp(comp, "bCaptureEveryFrame", false)
+    setp(comp, "bCaptureOnMovement", false)
+
+    diag("[Scope-Diag] before TextureTarget = rt")
+    setp(comp, "TextureTarget", rt)
+    diag("[Scope-Diag] after TextureTarget = rt")
+    setp(comp, "FOVAngle", fov)
+    -- Removed in UE 5.5: bCacheVolumetricCloudsShadowMaps (write used to throw here).
+    setp(comp, "bUseRayTracingIfEnabled", false)
+    setp(comp, "bAlwaysPersistRenderingState", true)
+    setp(comp, "bEnableVolumetricCloudsCapture", false)
+    -- SCS_FinalColorHDR (8): capture AFTER the post-process chain, so the scope view carries the
+    -- game's auto-exposure (adapting to what the SCOPE sees, with its own history kept alive by
+    -- bAlwaysPersistRenderingState), tonemapper and colour grading. The previous source,
+    -- SCS_SceneColorHDRNoAlpha (1), was raw pre-tonemap radiance: blown out in daylight, black
+    -- at night, hence the 0.02-1.3 per-scope brightness hacks (reset to 1.0 by the CONFIG.lua
+    -- migration dated 2026-09-08). Also makes the bloom/vignette/motion-blur overrides above
+    -- actually take effect - they are post-process stages the old source never ran.
+    setp(comp, "CaptureSource", 8)
+
+    -- post processing (every override is a plain UPROPERTY on FPostProcessSettings)
+    setpp(comp, "bOverride_MotionBlurAmount", true)
+    setpp(comp, "MotionBlurAmount", 0.0)
+    setpp(comp, "bOverride_ScreenSpaceReflectionIntensity", true)
+    setpp(comp, "ScreenSpaceReflectionIntensity", 0.0)
+    setpp(comp, "bOverride_AmbientOcclusionIntensity", true)
+    setpp(comp, "AmbientOcclusionIntensity", 0.0)
+    setpp(comp, "bOverride_BloomIntensity", true)
+    setpp(comp, "BloomIntensity", 0.0)
+    setpp(comp, "bOverride_LensFlareIntensity", true)
+    setpp(comp, "LensFlareIntensity", 0.0)
+    setpp(comp, "bOverride_VignetteIntensity", true)
+    setpp(comp, "VignetteIntensity", 0.0)
+
+    -- Exposure bias (2026-09-23): pre-tonemap brightness in stops, per scope via Config.scopeExposureBias.
+    setpp(comp, "bOverride_AutoExposureBias", true)
+    setpp(comp, "AutoExposureBias", tonumber(Config.scopeExposureBias) or 0.0)
+
+    -- Internal resolution scale for the capture (2026-09-08). Verified live that the override is
+    -- accepted on this build (read back 75 / true). Cheaper than a full 512x512 render; at this
+    -- disc size the softening is barely visible. NOTE: per-capture ShowFlagSettings (shadows,
+    -- fog) can NOT be set from Lua - the array-of-struct parameter is rejected by both the
+    -- plugin bridge and the Lua binding - so this is the only capture-side cost lever available.
+    local sp = tonumber(Config.scopeCaptureScreenPercentage) or 100.0
+    sp = math.max(25.0, math.min(100.0, sp))
+    if sp < 100.0 then
+        setpp(comp, "bOverride_ScreenPercentage", true)
+        setpp(comp, "ScreenPercentage", sp)
+    end
 
     -- Disable Lumen GI and Lumen Reflections in the secondary (PIP) render pass.
-    -- PostProcessSettings overrides are standard UPROPERTYs reachable via UEVR's
-    -- reflection — same mechanism as BloomIntensity / MotionBlurAmount above.
-    -- ShowFlags bitfields (comp.ShowFlags.X) are NOT accessible this way (C++ bit
-    -- fields, not UPROPERTY members) — those pcalls silently fail.
     -- DynamicGlobalIlluminationMethod: 0=None, 1=SSGI, 2=Plugin, 3=Lumen
     -- ReflectionMethod:                0=None, 1=SSR,  2=Lumen
-    comp.PostProcessSettings.bOverride_DynamicGlobalIlluminationMethod = true
-    comp.PostProcessSettings.DynamicGlobalIlluminationMethod = 0  -- None: disables Lumen GI
-    comp.PostProcessSettings.bOverride_ReflectionMethod = true
-    comp.PostProcessSettings.ReflectionMethod = 0                 -- None: disables Lumen reflections
+    setpp(comp, "bOverride_DynamicGlobalIlluminationMethod", true)
+    setpp(comp, "DynamicGlobalIlluminationMethod", 0)
+    setpp(comp, "bOverride_ReflectionMethod", true)
+    setpp(comp, "ReflectionMethod", 0)
 
     pcall(function() comp:SetAbsolute(false, false, false) end)
-    pcall(function() comp.bUsePawnControlRotation = false end)
+    setp(comp, "bUsePawnControlRotation", false)
 
-    comp:SetVisibility(false)
-    diag("[Scope-Diag] spawn_scene_capture_component: EXIT")
+    pcall(function() comp:SetVisibility(false) end)
+    -- Store BEFORE enabling capture so the lifecycle code in update_scope_state owns it
+    -- from the first captured frame onward.
     self.scene_capture_component = comp
+    self.scc_capture_state = nil  -- let update_scope_state apply the correct capture flags
+    self.scc_inactive_frames = 0  -- a new camera starts its own idle count (the old one ran on while none existed)
+    setp(comp, "bCaptureEveryFrame", true)
+    scc_log("created")
+    diag("[Scope-Diag] spawn_scene_capture_component: EXIT")
 end
 
+-- Live update of the capture's AutoExposureBias override (stops). Also applied at capture spawn.
+-- Defined after setpp (a file-local) so the reference resolves.
+function ScopeController:SetScopeExposureBias(value)
+    if self.scene_capture_component and utils.validate_object(self.scene_capture_component) then
+        setpp(self.scene_capture_component, "bOverride_AutoExposureBias", true)
+        setpp(self.scene_capture_component, "AutoExposureBias", tonumber(value) or 0.0)
+    end
+end
 function ScopeController:spawn_scope(game_engine, pawn)
     local viewport = game_engine.GameViewport
     if viewport == nil then
@@ -768,6 +839,11 @@ function ScopeController:spawn_scope(game_engine, pawn)
     -- Check weapon_mesh first, then WeaponInHandsMesh (where scope attachments actually live).
     local weapon_mesh_for_check = GameState:GetEquippedWeapon()
     local scope_present = false
+    -- Binoculars (2026-09-22): handled by stalker2/binoculars.lua with its own capture + lens
+    -- discs. Never let the scope pipeline (cylinder, capture, glass-hide scan) touch that mesh.
+    if weapon_mesh_for_check and self:is_binoculars(weapon_mesh_for_check) then
+        weapon_mesh_for_check = nil
+    end
     if weapon_mesh_for_check then
         scope_present = (GameState:get_scope_mesh(weapon_mesh_for_check) ~= nil)
         if not scope_present then
@@ -826,11 +902,11 @@ end
 
 
 
--- Helper to reset material to original state (BlendMode 7) for standard scopes
+-- Helper to reset material to original state (BlendMode 0, Opaque) for standard scopes
 function ScopeController:reset_material_to_standard()
     local wanted_mat = utils.find_required_object(emissive_mesh_material_name)
     if wanted_mat then
-        wanted_mat.BlendMode = 7 -- Opaque/Masked usually
+        wanted_mat.BlendMode = 0 -- Opaque (7 is a translucent mode on UE 5.5 - see spawn_scope_plane)
         wanted_mat.TwoSided = 0
     end
 end
@@ -840,28 +916,51 @@ end
 -- or on weapon-swap when the SCC already exists). Safe to call multiple times — skips
 -- slots that already carry our ScopeGlassHideDMI.
 function ScopeController:hide_scope_glass(weapon_mesh)
+    -- FIX (2026-09-08): never hide the glass on a reflex sight. The opaque black DMI is only
+    -- meant for PiP scopes (the cylinder sits in front of it); on a goloscope/colimscope it
+    -- blacks out the whole sight. The deferred PiP fire used to call this unconditionally.
+    if self.is_reflex_sight then return end
     local emissive_mat = utils.find_required_object(emissive_mesh_material_name)
     if not emissive_mat then
         print("[Scope] hide_scope_glass: emissive_mat not found")
         return
     end
-    emissive_mat.BlendMode = 2
-    emissive_mat.TwoSided = 0
-    emissive_mat.MaterialDomain = 0
+    -- Do NOT change BlendMode here. EmissiveMeshMaterial is SHARED with the PiP cylinder's
+    -- DMI; switching the parent to Translucent (2) on UE 5.5 selects a shader permutation that
+    -- was never cooked and makes the cylinder vanish along with the glass. An opaque black
+    -- emissive DMI on the glass slot is enough: the cylinder sits in front of it at the
+    -- OpticCutoutSocket, and while inactive the scope simply shows a dark lens.
     local glass_meshes = GameState:get_all_scope_meshes(weapon_mesh)
     if not glass_meshes then return end
     for _, smesh in ipairs(glass_meshes) do
-        local snm = smesh:GetNumMaterials()
+        -- FIX (2026-09-08): belt-and-braces name guard - never black out a reflex sight's
+        -- glass even if is_reflex_sight is stale for some reason.
+        local mesh_nm = smesh:get_fname():to_string():lower()
+        local is_reflex_named = mesh_nm:find("goloscope") or mesh_nm:find("colimscope")
+                             or mesh_nm:find("deadeye_scope") or mesh_nm:find("margach_scope")
+        local snm = is_reflex_named and 0 or smesh:GetNumMaterials()
         for ss = 0, snm - 1 do
             local sm = smesh:GetMaterial(ss)
             if sm then
-                -- Skip slots already carrying our hide DMI
-                local already = sm:get_fname():to_string():find("ScopeGlassHideDMI")
+                -- Skip slots already carrying our hide / picture DMI
+                local sm_name = sm:get_fname():to_string()
+                local already = sm_name:find("ScopeGlassHideDMI") or sm_name:find("ScopeGlassPicDMI")
                 if not already then
                     local par_ok, par = pcall(function() return sm.Parent end)
                     local par_name = (par_ok and par and uevrUtils.validate_object(par)) and par:get_fname():to_string() or ""
                     if par_name:lower():find("glass") then
-                        local dmi_name = uevrUtils.fname_from_string("ScopeGlassHideDMI")
+                        -- Keep the game's own glass material ALIVE before replacing it (2026-10-17). The game's
+                        -- optic code keeps writing its ADS switches into it; once the slot no longer references
+                        -- it the GC frees it, and the next ADS wrote into freed memory -> "FMallocBinned2 Attempt to
+                        -- realloc an unrecognized pointer" fatal error (user report, ADS with the scope up). PiP Scopes
+                        -- (Nexus 3022) documents the same trap. Restored to the slot in release_glass_keepalive.
+                        self:keep_glass_alive(smesh, ss, sm)
+                        -- Picture on the glass (2026-10-17, Config.pipOnGlass): the same emissive material as the
+                        -- PiP cylinder, showing the PiP render target on the scope's own lens (confirmed live: the
+                        -- glass surface displays it in VR). It stays black (Color 0) while the PiP is inactive;
+                        -- update_glass_picture drives it and hides the cylinder. Off = the old black lens.
+                        local on_glass = Config.pipOnGlass ~= false
+                        local dmi_name = uevrUtils.fname_from_string(on_glass and "ScopeGlassPicDMI" or "ScopeGlassHideDMI")
                         local ok_dmi, dmi = pcall(function()
                             return smesh:CreateDynamicMaterialInstance(ss, emissive_mat, dmi_name)
                         end)
@@ -869,7 +968,17 @@ function ScopeController:hide_scope_glass(weapon_mesh)
                             local zero_color = StructObject.new(self.flinearColor_c)
                             zero_color.R = 0.0; zero_color.G = 0.0; zero_color.B = 0.0; zero_color.A = 0.0
                             pcall(function() dmi:SetVectorParameterValue("Color", zero_color) end)
-                            print("[Scope] Glass lens hidden (slot " .. ss .. ")")
+                            if on_glass then
+                                if utils.validate_object(self.render_target) then
+                                    pcall(function() dmi:SetTextureParameterValue("LinearColor", self.render_target) end)
+                                end
+                                self.glass_pic_dmis = self.glass_pic_dmis or {}
+                                table.insert(self.glass_pic_dmis, { mesh = smesh, dmi = dmi })
+                                self.glass_pic_key = nil
+                                print("[Scope] Glass lens shows the PiP picture (slot " .. ss .. ")")
+                            else
+                                print("[Scope] Glass lens hidden (slot " .. ss .. ")")
+                            end
                         else
                             print("[Scope] WARNING: glass DMI creation failed on slot " .. ss)
                         end
@@ -880,10 +989,222 @@ function ScopeController:hide_scope_glass(weapon_mesh)
     end
 end
 
+-- "ColimScope" family (2026-10-20, live-tested on SM_Wpn_ColimScope_Ru_02_01): a separate, simple case -
+-- the lens made see-through and a plain red dot fixed at it, whatever Config.reflexEnabled says. No parallax, no
+-- aperture culling. The lens is a mini-PiP in flat play: its glass slots show the game's optic picture, so the tube
+-- behind is closed by an inner body section; slots 1 + 4 = glass, 2 = inner tube (same material NAME as the outer
+-- body in slot 0, hence by index), 5 = "mark" (native reticle plate, renders as a textured disc in VR).
+local COLIM_HIDE_SLOTS = {
+    ["SM_Wpn_ColimScope_Ru_02_01"] = { 1, 2, 4, 5 },
+}
+local colimTransparentRT = nil
+
+-- 4x4 render target cleared to (0,0,0,0): the translucent widget material takes its opacity from this texture.
+-- Created through uevrUtils.createRenderTarget2D (see get_render_target) and only after the post-load warmup.
+local function colimTransparentTexture()
+    if colimTransparentRT ~= nil and uevrUtils.validate_object(colimTransparentRT) ~= nil then return colimTransparentRT end
+    colimTransparentRT = nil
+    pcall(function() colimTransparentRT = uevrUtils.createRenderTarget2D({ width = 4, height = 4, format = 2 }) end)
+    return colimTransparentRT
+end
+
+-- Each slot gets a Widget3DPassThrough_Translucent DMI (BlendMode Translucent BAKED into that engine instance - a
+-- runtime BlendMode write on a cooked material is not honoured: it drew opaque black) fed the transparent texture.
+-- The game's own material is kept alive first (keep_glass_alive) and put back by release_glass_keepalive on weapon /
+-- scope change and Reset. Idempotent per slot. true = every slot is ours.
+function ScopeController:hide_reflex_glass(mesh)
+    local mat = utils.find_required_object("MaterialInstanceConstant /Engine/EngineMaterials/Widget3DPassThrough_Translucent.Widget3DPassThrough_Translucent")
+    local tex = colimTransparentTexture()
+    if not mat or not tex then return false end
+    local asset = mesh.StaticMesh and mesh.StaticMesh:get_fname():to_string() or ""
+    local slots = COLIM_HIDE_SLOTS[asset]
+    if slots == nil then
+        -- another ColimScope variant: glass + mark slots by material name
+        slots = {}
+        for slot = 0, mesh:GetNumMaterials() - 1 do
+            local sm = mesh:GetMaterial(slot)
+            local nm = sm and sm:get_fname():to_string():lower() or ""
+            if nm:find("glass", 1, true) or nm:find("mark", 1, true) then table.insert(slots, slot) end
+        end
+    end
+    local clear = StructObject.new(self.flinearColor_c)
+    clear.R = 1.0; clear.G = 1.0; clear.B = 1.0; clear.A = 0.0
+    local all = true
+    for _, slot in ipairs(slots) do
+        local sm = mesh:GetMaterial(slot)
+        if sm and not sm:get_fname():to_string():find("ReflexHideDMI", 1, true) then
+            self:keep_glass_alive(mesh, slot, sm)
+            -- unique name per slot: re-using one name in the same outer threw on the game thread (live test)
+            local dmi = mesh:CreateDynamicMaterialInstance(slot, mat, uevrUtils.fname_from_string("ReflexHideDMI_" .. slot))
+            if dmi then
+                pcall(function() dmi:SetTextureParameterValue("SlateUI", tex) end)
+                pcall(function() dmi:SetScalarParameterValue("OpacityFromTexture", 1.0) end)
+                pcall(function() dmi:SetVectorParameterValue("TintColorAndOpacity", clear) end)
+            else
+                all = false
+            end
+        end
+    end
+    return all
+end
+
+-- The plain dot: a small sphere on the sight's OpticCutoutSocket (its root if the socket is missing), offsets / size /
+-- brightness from Config.redDotProfiles[<asset>] (Debug Dev Config > Red Dot Sight Settings), always visible.
+function ScopeController:update_colim_dot()
+    local mesh = self.scope_mesh
+    if not uevrUtils.validate_object(self.colim_dot) then
+        self.colim_dot = uevrUtils.createStaticMeshComponent("StaticMesh /Engine/EngineMeshes/Sphere.Sphere")
+        if not self.colim_dot then return end
+        self.colim_dot:SetCollisionEnabled(0)
+        self.colim_dot.BoundsScale = 10
+        local mat = utils.find_required_object("Material /Engine/EngineMaterials/Widget3DPassThrough.Widget3DPassThrough")
+        if mat then
+            self.colim_dot_material = self.colim_dot:CreateDynamicMaterialInstance(0, mat, uevrUtils.fname_from_string("ColimDotDMI"))
+        end
+        self.colim_dot_parent = nil
+        self.colim_dot_key = nil
+    end
+    if self.colim_dot_parent ~= mesh then
+        local socket = mesh:DoesSocketExist(uevrUtils.fname_from_string("OpticCutoutSocket")) and "OpticCutoutSocket" or ""
+        self.colim_dot:K2_AttachToComponent(mesh, uevrUtils.fname_from_string(socket), 2, 2, 1, true)
+        self.colim_dot:SetVisibility(true)
+        self.colim_dot:SetHiddenInGame(false)
+        self.colim_dot_parent = mesh
+        self.colim_dot_key = nil
+    end
+    local name = mesh.StaticMesh and uevrUtils.getShortName(mesh.StaticMesh) or ""
+    local p = (Config.redDotProfiles and Config.redDotProfiles[name]) or {}
+    local sx = p.scaleX or p.size or Config.redDotSize or 0.007
+    local sy = p.scaleY or p.size or Config.redDotSize or 0.007
+    local sz = p.scaleZ or p.size or Config.redDotSize or 0.007
+    local ox, oy, oz = p.offsetX or 0.0, p.offsetY or 0.0, p.offsetZ or 0.0
+    local b = p.brightness or Config.redDotBrightness or 150.0
+    local key = string.format("%g|%g|%g|%g|%g|%g|%g", sx, sy, sz, ox, oy, oz, b)
+    if key == self.colim_dot_key then return end
+    self.colim_dot_key = key
+    self.colim_dot:SetWorldScale3D(uevrUtils.vector(sx, sy, sz))
+    self.colim_dot:K2_SetRelativeLocation(uevrUtils.vector(ox, oy, oz), false, self.reusable_hit_result, false)
+    if self.colim_dot_material then
+        local c = StructObject.new(self.flinearColor_c)
+        c.R = b; c.G = 0.0; c.B = 0.0; c.A = 1.0
+        for _, pn in ipairs({ "EmissiveColor", "Color", "BaseColor", "Tint", "TintColorAndOpacity" }) do
+            pcall(function() self.colim_dot_material:SetVectorParameterValue(pn, c) end)
+        end
+    end
+end
+
+function ScopeController:destroy_colim_dot()
+    if self.colim_dot and uevrUtils.validate_object(self.colim_dot) then
+        pcall(function() self.colim_dot:K2_DestroyComponent(self.colim_dot) end)
+    end
+    self.colim_dot = nil
+    self.colim_dot_material = nil
+    self.colim_dot_parent = nil
+    self.colim_dot_key = nil
+end
+
+-- Holds the game's original glass material of a slot we replace: an invisible component of ours carries it in its
+-- material slot, so the GC never frees it while the game's optic code may still write into it (see hide_scope_glass).
+function ScopeController:keep_glass_alive(mesh, slot, original)
+    if original == nil then return end
+    local holder = nil
+    pcall(function()
+        holder = uevrUtils.createStaticMeshComponent("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder",
+            { visible = false, collisionEnabled = false })
+    end)
+    if holder == nil then
+        print("[Scope] WARNING: could not create the glass keep-alive holder")
+        return
+    end
+    pcall(function()
+        holder:SetHiddenInGame(true)
+        holder:SetVisibility(false)
+        holder:SetMaterial(0, original)
+    end)
+    self.glass_keepalive = self.glass_keepalive or {}
+    table.insert(self.glass_keepalive, { mesh = mesh, slot = slot, original = original, holder = holder })
+end
+
+-- Puts the game's own glass back on every slot we replaced (while the scope mesh still exists), then drops the
+-- holders. Called on weapon / scope change and Reset.
+function ScopeController:release_glass_keepalive()
+    local list = self.glass_keepalive
+    self.glass_keepalive = nil
+    if list == nil then return end
+    for _, e in ipairs(list) do
+        if utils.validate_object(e.mesh) and utils.validate_object(e.original) then
+            pcall(function() e.mesh:SetMaterial(e.slot, e.original) end)
+        end
+        if e.holder ~= nil and utils.validate_object(e.holder) then
+            local owner = nil
+            pcall(function() owner = e.holder:GetOwner() end)
+            if owner ~= nil and utils.validate_object(owner) then
+                pcall(function() uevrUtils.destroy_actor(owner) end)
+            else
+                pcall(function() e.holder:K2_DestroyComponent(e.holder) end)
+            end
+        end
+    end
+end
+
+-- Picture on the glass (Config.pipOnGlass): keeps the glass DMIs that hide_scope_glass made bound to the live render
+-- target, at the scope brightness while the PiP is active and black otherwise. Returns true while the glass carries
+-- the picture - the PiP cylinder is hidden then (it stays alive: activation, FOV and offsets still use it).
+function ScopeController:update_glass_picture(active)
+    local list = self.glass_pic_dmis
+    if Config.pipOnGlass == false or list == nil or #list == 0 then return false end
+    local live = {}
+    for _, e in ipairs(list) do
+        if utils.validate_object(e.mesh) and utils.validate_object(e.dmi) then live[#live + 1] = e end
+    end
+    if #live == 0 then
+        self.glass_pic_dmis = nil
+        return false
+    end
+    self.glass_pic_dmis = live
+    local rt = utils.validate_object(self.render_target) and self.render_target or nil
+    local rt_addr = nil
+    if rt then pcall(function() rt_addr = rt:get_address() end) end
+    local b = active and (tonumber(Config.scopeBrightnessAmplifier) or 1.0) or 0.0
+    local key = string.format("%s|%.4f|%d", tostring(rt_addr), b, #live)
+    if key ~= self.glass_pic_key then
+        self.glass_pic_key = key
+        for _, e in ipairs(live) do
+            pcall(function()
+                if rt then e.dmi:SetTextureParameterValue("LinearColor", rt) end
+                local c = StructObject.new(self.flinearColor_c)
+                c.R = b; c.G = b; c.B = b; c.A = 1.0
+                e.dmi:SetVectorParameterValue("Color", c)
+            end)
+        end
+    end
+    return true
+end
+
+-- Roll of the scope camera around its view axis: the cylinder's UV layout needs 90, the scope glass's 90 less
+-- (picture on the glass came out turned 90 degrees, 2026-10-17); Config.pipGlassCaptureRoll trims it per setup.
+function ScopeController:capture_roll()
+    if Config.pipOnGlass ~= false then return tonumber(Config.pipGlassCaptureRoll) or 0.0 end
+    return 90.0
+end
+
 -- New Standalone Function: Scans weapon and applies material fixes INDEPENDENTLY of PIP
+-- True when the equipped WeaponInHandsMesh currently carries the binoculars skeletal asset.
+-- Keyed on the ASSET name: the component itself is recycled across every weapon.
+function ScopeController:is_binoculars(weapon_mesh)
+    if not weapon_mesh or not UEVR_UObjectHook.exists(weapon_mesh) then return false end
+    local name = nil
+    pcall(function()
+        local asset = weapon_mesh.SkeletalMesh or weapon_mesh.SkinnedAsset
+        if asset then name = uevrUtils.getShortName(asset) end
+    end)
+    return name ~= nil and string.find(string.lower(name), "binocular", 1, true) ~= nil
+end
+
 function ScopeController:scan_and_fix_materials(weapon_mesh)
     if not weapon_mesh then return end
-    
+    if self:is_binoculars(weapon_mesh) then return false end -- see is_binoculars / stalker2/binoculars.lua
+
     local found_any = false
 
     -- Helper to process a mesh
@@ -893,8 +1214,10 @@ function ScopeController:scan_and_fix_materials(weapon_mesh)
         -- Bug C fix: prefer the StaticMesh ASSET name (stable across saves),
         -- fall back to the component instance FName only if no asset is found.
         local name = nil
+        local raw_name = nil
         if mesh.StaticMesh and UEVR_UObjectHook.exists(mesh.StaticMesh) then
-            name = mesh.StaticMesh:get_fname():to_string():lower()
+            raw_name = mesh.StaticMesh:get_fname():to_string()
+            name = raw_name:lower()
         end
         -- Fallback to component FName
         if not name or name == "" or name == "none" then
@@ -913,7 +1236,12 @@ function ScopeController:scan_and_fix_materials(weapon_mesh)
              -- Apply the transparency fix and shadow suppression only when enabled.
              -- is_reflex_sight is still set (see below) so PIP scope never activates on reflex sights.
              local mesh_addr = mesh:get_address()
-             if Config.reflexEnabled ~= false then
+             -- "ColimScope" family (case-sensitive; SM_Wpn_ColimScope_Ru_02_01 / _02_03, 2026-10-20): its own simple
+             -- case - lens hidden + plain dot, whatever reflexEnabled says (see hide_reflex_glass / update_colim_dot,
+             -- driven per frame from Update). Never the apply_transparency_fix path (wrong slots, shared BlendMode).
+             if raw_name and raw_name:find("ColimScope", 1, true) then
+                 self.force_reflex_dot = true
+             elseif Config.reflexEnabled ~= false then
                  if mesh_addr ~= self.transparency_fix_applied_addr then
                      -- Dump materials once for diagnostics
                      if not self.has_dumped_scope_mats then
@@ -952,6 +1280,7 @@ function ScopeController:scan_and_fix_materials(weapon_mesh)
     end
     
     self.is_reflex_sight = false -- Reset before scan
+    self.force_reflex_dot = false
     
     -- ROOT CAUSE FIX (confirmed via MCP live inspection):
     -- Scope attachments (goloscope, colimscope, etc.) are children of WeaponInHandsMesh,
@@ -1005,7 +1334,7 @@ function ScopeController:scan_and_fix_materials(weapon_mesh)
     
     if not found_any then
          -- Always reset to standard if no target scope is found
-         print("DEBUG: No transparent scope found. Resetting material.")
+         -- print("DEBUG: No transparent scope found. Resetting material.")
          self:reset_material_to_standard()
     end
     
@@ -1014,6 +1343,7 @@ end
 
 function ScopeController:attach_components_to_weapon(weapon_mesh)
     if not weapon_mesh then return end
+    if self:is_binoculars(weapon_mesh) then return end -- binoculars have their own module
 
     -- Run the material fix logic first (Decoupled)
     local is_transparent_scope = self:scan_and_fix_materials(weapon_mesh)
@@ -1026,6 +1356,7 @@ function ScopeController:attach_components_to_weapon(weapon_mesh)
              if UEVR_UObjectHook.exists(self.scene_capture_component) then
                  if self.scene_capture_component.K2_DestroyComponent then
                      pcall(function() self.scene_capture_component:K2_DestroyComponent(self.scene_capture_component) end)
+                     scc_log("destroyed: scope classified as reflex / transparent")
                  else
                      pcall(function() 
                         self.scene_capture_component:DetachFromParent(true, true)
@@ -1050,7 +1381,7 @@ function ScopeController:attach_components_to_weapon(weapon_mesh)
 
     local parent_mesh = self.scope_mesh
     if parent_mesh == nil then
-        print("[Scope] WARNING: Scope Mesh not found! Falling back to Weapon Mesh")
+        -- print("[Scope] WARNING: Scope Mesh not found! Falling back to Weapon Mesh")
         parent_mesh = weapon_mesh
     end
 
@@ -1101,7 +1432,8 @@ function ScopeController:attach_components_to_weapon(weapon_mesh)
                     false -- no weld
                 )
             end)
-            self.scene_capture_component:K2_SetRelativeRotation(self.temp_vec3:set(0, 0, 90), false, self.reusable_hit_result, false)
+            self.scene_capture_component:K2_SetRelativeRotation(self.temp_vec3:set(0, 0, self:capture_roll()), false, self.reusable_hit_result, false)
+            self.capture_roll_applied = self:capture_roll()
             self.scene_capture_component:K2_SetRelativeLocation(self.temp_vec3:set(0, 0, 0), false, self.reusable_hit_result, false)
             self.scene_capture_component:SetVisibility(false)
             print("[Scope] SceneCapture attached to Muzzle socket (objective lens end)")
@@ -1113,6 +1445,20 @@ function ScopeController:attach_components_to_weapon(weapon_mesh)
         -- Skip the attach now; the deferred fire will call attach_components_to_weapon
         -- again once the cylinder exists and both will be attached together safely.
         diag("[Scope-Diag] attach: SCC exists but cylinder not ready -- deferring SCC attach to deferred fire")
+    end
+
+    -- Belt-and-braces (2026-09-08): a live DMI was observed with an EMPTY parameter set after a
+    -- weapon swap (its LinearColor/Color writes had silently not stuck), which shows the
+    -- engine's grey DefaultTexture grid on the lens. Re-apply both parameters here, on
+    -- every attach, so the lens always points at the live render target.
+    if utils.validate_object(self.scope_material) and utils.validate_object(self.render_target) then
+        pcall(function() self.scope_material:SetTextureParameterValue("LinearColor", self.render_target) end)
+        pcall(function()
+            local c = StructObject.new(self.flinearColor_c)
+            local b = Config.scopeBrightnessAmplifier or 1.0
+            c.R = b; c.G = b; c.B = b; c.A = 1.0
+            self.scope_material:SetVectorParameterValue("Color", c)
+        end)
     end
 
     -- Attach ocular lens cylinder to scope mesh (Indiana-style: KeepRelative, no socket, no weld)
@@ -1235,8 +1581,55 @@ function ScopeController:update_scope_state(pawn, weapon_mesh)
     -- (which brings the weapon close to the HMD) does not accidentally trigger
     -- the PIP cylinder — ADS does NOT set is_scope_active, looking through
     -- the optic lens does.
-    local current_scope_state = self:IsWithinActivationDistance()
-                             and GameState:is_scope_active(pawn)
+    local within_distance = self:IsWithinActivationDistance()
+    local game_scope_active = within_distance and GameState:is_scope_active(pawn)
+    local current_scope_state = within_distance and game_scope_active
+    -- the deferred spawn block only creates the scope camera while this is true (see there)
+    self.scope_view_active = current_scope_state
+    -- remembered for the lifecycle log: which check turned the scope off
+    if current_scope_state then
+        self.scc_off_reason = nil
+    elseif self.scc_off_reason == nil then
+        self.scc_off_reason = (not within_distance) and "eye beyond activation distance" or "game scope-active flag off"
+    end
+
+    -- ADS CRASH GUARD (2026-09-08): the game's own ADS scope rendering must never overlap
+    -- our SceneCaptureComponent2D. With the SCC alive, pressing ADS on a scoped weapon
+    -- crashed the game thread inside a UEVRBackend hook (EXCEPTION_ACCESS_VIOLATION,
+    -- UEVRBackend+0x2461ed, dump UECC-...1794EB02). The old 30-frame inactivity teardown
+    -- assumed ADS moves the scope away from the HMD; in VR it does not. Read the aim flag
+    -- EVERY tick (GameState.isAiming is throttled to every 3 ticks - too slow) and tear the
+    -- SCC down the same frame ADS starts; hold recreation for 30 frames after ADS ends.
+    local aiming = false
+    pcall(function()
+        local ai = pawn.Mesh.AnimScriptInstance
+        local ad = ai.WeaponData.AimingData
+        aiming = (ad.bAiming == true) or ((ad.AimAlpha or 0) > 0.001)
+    end)
+    if aiming then
+        self.adsGuardFrames = 30
+    elseif (self.adsGuardFrames or 0) > 0 then
+        self.adsGuardFrames = self.adsGuardFrames - 1
+    end
+    local adsBlocked = (self.adsGuardFrames or 0) > 0
+    if adsBlocked then
+        current_scope_state = false
+        if self.scene_capture_component ~= nil then
+            pcall(function()
+                if UEVR_UObjectHook.exists(self.scene_capture_component) then
+                    self.scene_capture_component.bCaptureEveryFrame = false
+                    self.scene_capture_component.bCaptureOnMovement = false
+                    self.scene_capture_component:K2_DestroyComponent(self.scene_capture_component)
+                end
+            end)
+            self.scene_capture_component = nil
+            self.scc_capture_state = nil
+            self.scc_inactive_frames = 0
+            self.scc_active_confirm = 0
+            scc_log("destroyed: ADS crash guard (aiming flag / AimAlpha)")
+        end
+        self.pipDeferFrames = 0  -- cancel any pending recreate
+    end
     
     if current_scope_state then
         -- Throttle FOV update to every 3 ticks: FOV only changes during ADS transitions (slow)
@@ -1273,8 +1666,10 @@ function ScopeController:update_scope_state(pawn, weapon_mesh)
             if self.scc_capture_state ~= true then
                 self.scc_capture_state = true
                 pcall(function()
-                    self.scene_capture_component.CaptureEveryFrame = true
-                    self.scene_capture_component.CaptureOnMovement  = true
+                    -- Property names carry the 'b' prefix (the unprefixed spelling used here until
+                    -- 2026-09-23 was a silent no-op inside pcall).
+                    self.scene_capture_component.bCaptureEveryFrame = true
+                    self.scene_capture_component.bCaptureOnMovement  = true
                 end)
             end
         end
@@ -1288,8 +1683,8 @@ function ScopeController:update_scope_state(pawn, weapon_mesh)
             if self.scc_capture_state ~= false then
                 self.scc_capture_state = false
                 pcall(function()
-                    self.scene_capture_component.CaptureEveryFrame = false
-                    self.scene_capture_component.CaptureOnMovement  = false
+                    self.scene_capture_component.bCaptureEveryFrame = false
+                    self.scene_capture_component.bCaptureOnMovement  = false
                 end)
             end
             -- After 30 continuous inactive frames: destroy the SCC entirely
@@ -1300,37 +1695,52 @@ function ScopeController:update_scope_state(pawn, weapon_mesh)
                 self.scene_capture_component = nil
                 self.scc_capture_state = nil
                 self.scc_inactive_frames = 0
-                print("[Scope] SCC destroyed after 30 inactive frames (ADS/idle guard)")
+                scc_log("destroyed: 30 inactive frames (" .. tostring(self.scc_off_reason) .. ")")
             end
         end
     end
 
+    -- picture on the scope glass: drives the glass and hides the cylinder (one visibility write per frame, no toggling)
+    local okGlass, glassShown = pcall(function() return self:update_glass_picture(current_scope_state) end)
+    glassShown = okGlass and glassShown == true
     if self.scope_plane_component ~= nil then
-        self.scope_plane_component:SetVisibility(current_scope_state)
-        self.scope_plane_component:SetHiddenInGame(not current_scope_state)
+        local cylinderShown = current_scope_state and not glassShown
+        self.scope_plane_component:SetVisibility(cylinderShown)
+        self.scope_plane_component:SetHiddenInGame(not cylinderShown)
     end
     if self.scene_capture_component ~= nil then
         self.scene_capture_component:SetVisibility(current_scope_state)
         self.scene_capture_component:SetHiddenInGame(not current_scope_state)
+        -- the capture roll follows the picture-on-glass setting (panel changes apply live)
+        local roll = self:capture_roll()
+        if self.capture_roll_applied ~= nil and self.capture_roll_applied ~= roll then
+            self.capture_roll_applied = roll
+            pcall(function()
+                self.scene_capture_component:K2_SetRelativeRotation(self.temp_vec3:set(0, 0, roll), false, self.reusable_hit_result, false)
+            end)
+        end
+    end
+    -- Per-scope profile (mesh ASSET name, matches currentScopeName in the Entry.lua UI), only while shown
+    local sProf = {}
+    if current_scope_state and self.scope_mesh then
+        local sName = nil
+        pcall(function()
+            if self.scope_mesh.SkeletalMesh then
+                sName = uevrUtils.getShortName(self.scope_mesh.SkeletalMesh)
+            elseif self.scope_mesh.StaticMesh then
+                sName = uevrUtils.getShortName(self.scope_mesh.StaticMesh)
+            else
+                sName = uevrUtils.getShortName(self.scope_mesh)
+            end
+        end)
+        sProf = (sName and Config.scopeProfiles and Config.scopeProfiles[sName]) or {}
     end
     -- PiP reticule dot: show/hide + update offset and scale every frame (identical pattern to reflex UpdateReticulePosition)
     if self.pip_reticule_component ~= nil and utils.validate_object(self.pip_reticule_component) then
-        self.pip_reticule_component:SetVisibility(current_scope_state)
-        self.pip_reticule_component:SetHiddenInGame(not current_scope_state)
-        if current_scope_state then
-            -- Resolve per-scope profile then global fallback (mirrors Entry.lua logic)
-            -- Use the mesh ASSET name (not the component name) to match currentScopeName in the UI
-            local sName = nil
-            if self.scope_mesh then
-                if self.scope_mesh.SkeletalMesh then
-                    sName = uevrUtils.getShortName(self.scope_mesh.SkeletalMesh)
-                elseif self.scope_mesh.StaticMesh then
-                    sName = uevrUtils.getShortName(self.scope_mesh.StaticMesh)
-                else
-                    sName = uevrUtils.getShortName(self.scope_mesh)
-                end
-            end
-            local sProf = (sName and Config.scopeProfiles and Config.scopeProfiles[sName]) or {}
+        local dotShown = current_scope_state
+        self.pip_reticule_component:SetVisibility(dotShown)
+        self.pip_reticule_component:SetHiddenInGame(not dotShown)
+        if dotShown then
             -- Offset (relative to attached scope mesh root)
             local ox = sProf.pipDotOffsetX or Config.pipDotOffsetX or -13.0
             local oy = sProf.pipDotOffsetY or Config.pipDotOffsetY or   0.8
@@ -1551,10 +1961,15 @@ function ScopeController:Update(engine)
             -- validate_object() returns true for the stale component and the deferred
             -- guard blocks re-spawning it, so the dot never reappears.
             self:destroy_pip_reticule()
+            self.glass_pic_dmis = nil -- the old scope's glass materials (picture on the glass) are no longer ours to drive
+            self.glass_pic_key = nil
+            self:release_glass_keepalive() -- the game's own glass back on the old scope (if it still exists)
+            self.colim_hidden_addr = nil   -- ColimScope lens: hide again on whatever sight comes next
             if not new_scope then
                 -- No scope on new weapon — destroy lingering components now.
                 if self.scene_capture_component and UEVR_UObjectHook.exists(self.scene_capture_component) then
                     pcall(function() self.scene_capture_component:K2_DestroyComponent(self.scene_capture_component) end)
+                    scc_log("destroyed: weapon changed to one without a scope")
                 end
                 self.scene_capture_component = nil
                 if self.scope_plane_component and UEVR_UObjectHook.exists(self.scope_plane_component) then
@@ -1587,6 +2002,17 @@ function ScopeController:Update(engine)
         -- H3 perf: pass weapon_mesh into update_scope_state to avoid redundant GetEquippedWeapon()
         self:update_scope_state(c_pawn, weapon_mesh)
 
+        -- FIX (2026-09-08): spawn_scope() runs BEFORE scan_and_fix_materials() on a weapon
+        -- change, and its scope-presence check matches any "*scope*" component - including
+        -- reflex sights (goloscope, colimscope...). So it armed the PiP deferral for reflex
+        -- sights too; the deferred fire then built a cylinder + SceneCapture (immediately
+        -- torn down again by attach_components_to_weapon's reflex early-return) and called
+        -- hide_scope_glass, blacking out the sight glass. Disarm the deferral once the scan
+        -- has identified a reflex sight.
+        if self.is_reflex_sight and self.pipDeferFrames and self.pipDeferFrames > 0 then
+            self.pipDeferFrames = 0
+        end
+
         -- Per-frame deferred creation ticker.
         -- spawn_scope() is only called once (on weapon-change) and only arms the countdown.
         -- This block runs every frame and does the actual countdown + GPU primitive creation.
@@ -1615,6 +2041,8 @@ function ScopeController:Update(engine)
                 -- warmupSphereDone is set true. We block the countdown until then.
                 if not warmupSphereDone then
                     -- Warmup still in progress — keep countdown frozen.
+                elseif (self.adsGuardFrames or 0) > 0 then
+                    -- ADS active or just ended: never create a SceneCapture now (crash guard).
                 elseif GameState.inMenu then
                     -- World is frozen (loading/transition) — don't count down.
                 else
@@ -1645,7 +2073,12 @@ function ScopeController:Update(engine)
                                         self:spawn_pip_reticule()
                                     end
                                 end
-                                if not utils.validate_object(self.scene_capture_component) then
+                                -- The camera only while the scope view is actually up (2026-10-17). Created on
+                                -- equip / script reset with the scope away from the eye, it was destroyed the
+                                -- next frame ("30 inactive frames" - the counter had run on while no view was up)
+                                -- and created again on the raise: two cameras per raise. update_scope_state's
+                                -- re-arm path creates it once the view is active.
+                                if not utils.validate_object(self.scene_capture_component) and self.scope_view_active then
                                     local fov = (c_pawn.Camera and c_pawn.Camera.FieldOfView) or 90.0
                                     self:spawn_scene_capture_component(world, nil, pawn_pos, fov, rt)
                                 end
@@ -1697,7 +2130,21 @@ function ScopeController:Update(engine)
             end
         end
 
-        if self.is_reflex_sight and self.scope_mesh and Config.reflexEnabled ~= false then
+        -- "ColimScope" family: its own simple case (lens hidden once per sight after the post-load warmup, plain dot
+        -- always shown) - never the parallax / aperture reticule below.
+        if self.force_reflex_dot and self.scope_mesh and uevrUtils.validate_object(self.scope_mesh) then
+            local addr = self.scope_mesh:get_address()
+            if self.colim_hidden_addr ~= addr and warmupSphereDone and not GameState.inMenu then
+                local ok, done = pcall(function() return self:hide_reflex_glass(self.scope_mesh) end)
+                if ok and done then self.colim_hidden_addr = addr end
+            end
+            pcall(function() self:update_colim_dot() end)
+        elseif self.colim_dot ~= nil then
+            self:destroy_colim_dot()
+            self.colim_hidden_addr = nil
+        end
+
+        if self.is_reflex_sight and self.scope_mesh and Config.reflexEnabled ~= false and not self.force_reflex_dot then
             self:get_or_create_reticule_component(weapon_mesh)
             
             if self.reticule_mesh_component then
@@ -1722,7 +2169,7 @@ function ScopeController:Update(engine)
             end
         else
             -- Reticule disabled mid-session: destroy existing sphere so it doesn't persist
-            if self.reticule_mesh_component and Config.reflexEnabled == false then
+            if self.reticule_mesh_component and (Config.reflexEnabled == false or self.force_reflex_dot) then
                 self:destroy_reticule_actor()
             end
             -- Hide if not a reflex sight
@@ -1774,9 +2221,13 @@ function ScopeController:Update(engine)
             self:destroy_reticule_actor()    -- Kill the ball immediately
         end
     end
-    -- Pass weapon_mesh so the 1-second heartbeat inside update_scope_state actually fires.
-    -- Previously this was called without weapon_mesh, making the heartbeat re-scan dead code.
-    self:update_scope_state(c_pawn, weapon_mesh)
+    -- No weapon in hand: still run the state update once so any lingering components get
+    -- hidden. When a weapon IS in hand this already ran inside the branch above - calling it
+    -- a second time per tick doubled scopeInternalTick and the SCC inactive/active frame
+    -- counters (halving every threshold) and issued every SetVisibility twice per frame.
+    if not weapon_mesh then
+        self:update_scope_state(c_pawn, nil)
+    end
 end
 
 function ScopeController:Reset()
@@ -1784,6 +2235,10 @@ function ScopeController:Reset()
     self:destroy_reticule_actor()
     self.scope_plane_component = nil
     self:destroy_pip_reticule()
+    self.glass_pic_dmis = nil
+    self.glass_pic_key = nil
+    self:release_glass_keepalive()
+    self.capture_roll_applied = nil
     self.scene_capture_component = nil
     self.render_target = nil
     self.pipDeferFrames = 0     -- Ensure a fresh defer is computed on the next equip cycle
@@ -1791,6 +2246,9 @@ function ScopeController:Reset()
     self.current_weapon = nil
     self.scope_material = nil
     self.is_reflex_sight = false
+    self.force_reflex_dot = false
+    self:destroy_colim_dot()
+    self.colim_hidden_addr = nil
     -- Clear detection / dirty-check state so the next Update() treats everything as new
     self.tracked_main_mesh_addr = nil
     self.reticule_visible = nil
@@ -1858,6 +2316,39 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     scope_controller.pipDeferFrames = 0  -- Discard any countdown started before pawn was ready
                     print("[Scope] Pawn ready after level load -- settle window restarted")
 
+                    -- One-shot sweep (2026-09-08): neutralise SceneCaptureComponent2Ds leaked by
+                    -- earlier script loads (the pre-fix spawn threw mid-configuration and left
+                    -- always-capturing orphans behind; they survive a script reset). They are
+                    -- NOT destroyed - UEVR hooks per-instance vtables and tearing them down
+                    -- risks the dangling-hook crash the warmup keeper exists to avoid - just
+                    -- stopped from capturing. Only mod-created components are adopted, so
+                    -- find_all_of sees exactly these (plus UEVR's own, skipped by RT size).
+                    if not scope_controller.leakSweepDone then
+                        scope_controller.leakSweepDone = true
+                        pcall(function()
+                            local sccs = uevrUtils.find_all_of("Class /Script/Engine.SceneCaptureComponent2D", false) or {}
+                            local n = 0
+                            for _, c in ipairs(sccs) do
+                                pcall(function()
+                                    if c == scope_controller.scene_capture_component or c == warmupSCC then return end
+                                    local rt = c.TextureTarget
+                                    if rt == nil then return end
+                                    local sx = rt.SizeX
+                                    if sx == Config.scopeTextureSize or sx == 64 then
+                                        c.bCaptureEveryFrame = false
+                                        c.bCaptureOnMovement = false
+                                        c.TextureTarget = nil
+                                        n = n + 1
+                                    end
+                                end)
+                            end
+                            if n > 0 then
+                                print("[Scope] Neutralised " .. n .. " leaked SceneCaptureComponent2D(s) from earlier loads")
+                                pcall(function() uevr.params.functions.log_info("[Scope] Neutralised " .. n .. " leaked SceneCaptureComponent2D(s)") end)
+                            end
+                        end)
+                    end
+
                     -- Spawn warmup sphere to exercise the EmissiveMeshMaterial Translucent PSO
                     -- before the scope cylinder creates a DMI from it.
                     --
@@ -1915,7 +2406,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                         -- Restore material state but KEEP the sphere alive
                         pcall(function()
                             local emissiveMat = utils.find_required_object(emissive_mesh_material_name)
-                            if emissiveMat then emissiveMat.BlendMode = 7 end
+                            if emissiveMat then emissiveMat.BlendMode = 0 end  -- Opaque (see spawn_scope_plane)
                         end)
                         warmupSphereDone = true
                         diag("[Scope-Diag] warmup sphere kept alive as hook keeper -- SMC hook chain now valid")
@@ -1942,12 +2433,15 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                                 local comp = uevrUtils.createSceneCaptureComponent({visible=false, collisionEnabled=false})
                                 diag("[Scope-Diag] warmup: hook-keeper SCC created -> " .. tostring(comp ~= nil))
                                 if comp and warmupRT then
-                                    comp.TextureTarget = warmupRT
-                                    comp.bUseRayTracingIfEnabled = false
-                                    comp.bEnableVolumetricCloudsCapture = false
-                                    comp.bAlwaysPersistRenderingState = true
-                                    comp.bCacheVolumetricCloudsShadowMaps = true
-                                    comp.bCaptureEveryFrame = 0  -- hook-keeper: no per-frame cost
+                                    -- Guarded writes: bCacheVolumetricCloudsShadowMaps no longer exists in
+                                    -- UE 5.5 and the raw assignment threw, aborting this pcall before
+                                    -- bCaptureEveryFrame was cleared (leaked an always-capturing keeper).
+                                    setp(comp, "bCaptureEveryFrame", false)  -- hook-keeper: no per-frame cost
+                                    setp(comp, "bCaptureOnMovement", false)
+                                    setp(comp, "TextureTarget", warmupRT)
+                                    setp(comp, "bUseRayTracingIfEnabled", false)
+                                    setp(comp, "bEnableVolumetricCloudsCapture", false)
+                                    setp(comp, "bAlwaysPersistRenderingState", true)
                                     pcall(function() comp:SetAbsolute(false, false, false) end)
                                     pcall(function() comp.bUsePawnControlRotation = false end)
                                     comp:SetVisibility(false)
@@ -1969,6 +2463,9 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         
         if not success then
             print("[Scope] tick error: " .. tostring(err))
+            -- Also surface in UEVR log.txt (Lua print() does not reach it) so silent per-frame
+            -- failures inside Update() are visible without a probe script.
+            pcall(function() uevr.params.functions.log_error("[Scope] tick error: " .. tostring(err)) end)
         end
     end
 )

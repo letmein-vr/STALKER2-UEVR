@@ -12,10 +12,19 @@ local configDefaults = {
     useSnapTurn = true,
     snapAngle = 45,
     smoothTurnSpeed = 50,
+    pawnRotationMode = 4,
+    --movementMethod = 2,
 }
 
 local function getConfigWidgets()
     return spliceableInlineArray {
+         {
+            widgetType = "combo",
+            id = widgetPrefix .. "pawnRotationMode",
+            label = "Movement Orientation",
+            selections = {"Game", "Right Controller", "Left Controller", "Locked Head/HMD", "Follows Head (Simple)", "Follows Head (Advanced)"},
+            initialValue = configDefaults["pawnRotationMode"]
+        },
         {
             widgetType = "checkbox",
             id = widgetPrefix .. "useSnapTurn",
@@ -38,6 +47,13 @@ local function getConfigWidgets()
             range = {1, 200},
             initialValue = configDefaults["smoothTurnSpeed"]
         },
+        -- {
+        --     widgetType = "combo",
+        --     id = widgetPrefix .. "movementMethod",
+        --     label = "Type",
+        --     selections = {"UEVR", "Head/HMD", "Right Controller", "Left Controller"},
+        --     initialValue = configDefaults["movementMethod"]
+        -- },
     }
 end
 
@@ -66,6 +82,14 @@ configui.onUpdate(widgetPrefix .. "smoothTurnSpeed", function(value)
     updateSetting("smoothTurnSpeed", value)
 end)
 
+-- configui.onUpdate(widgetPrefix .. "movementMethod", function(value)
+--     updateSetting("movementMethod", value)
+-- end)
+
+configui.onUpdate(widgetPrefix .. "pawnRotationMode", function(value)
+    updateSetting("pawnRotationMode", value)
+end)
+
 configui.onCreate(widgetPrefix .. "useSnapTurn", function(value)
     --print("Creating useSnapTurn widget")
     configui.setValue(widgetPrefix .. "useSnapTurn", configDefaults["useSnapTurn"], true)
@@ -78,6 +102,14 @@ end)
 
 configui.onCreate(widgetPrefix .. "smoothTurnSpeed", function(value)
     configui.setValue(widgetPrefix .. "smoothTurnSpeed", configDefaults["smoothTurnSpeed"], true)
+end)
+
+-- configui.onCreate(widgetPrefix .. "movementMethod", function(value)
+--     configui.setValue(widgetPrefix .. "movementMethod", configDefaults["movementMethod"], true)
+-- end)
+
+configui.onCreate(widgetPrefix .. "pawnRotationMode", function(value)
+    configui.setValue(widgetPrefix .. "pawnRotationMode", configDefaults["pawnRotationMode"], true)
 end)
 
 

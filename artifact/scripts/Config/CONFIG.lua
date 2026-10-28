@@ -1,9 +1,19 @@
+-- `Config` below is a GLOBAL, and this file also runs Config:load() at module scope, so every
+-- execution builds a fresh table and replaces the global. Lua keys package.loaded by the literal
+-- module string, so requiring this file under two spellings ("Config.CONFIG" vs "Config/CONFIG")
+-- executes it twice: files holding a `local Config` from the first load keep writing to the
+-- orphaned first table while everything reading the global sees the second. That split silently
+-- broke the dev-UI detector sliders (edits landed on one table, hands_Detector.lua applied the
+-- other). This guard makes a second execution return the existing instance instead.
+if Config ~= nil and Config.detectorProfiles ~= nil then return Config end
+
 Config = {
 	dominantHand = 1,
 	sittingExperience = false,
 	recoil = true,
 	hapticFeedback = true,
 	twoHandedAiming = true,
+	handsMode = 1,  -- 1 = glove hands, 2 = IK arms (scripts/hands.lua, libs/ik.lua + data/ik_parameters.json)
     -- Virtual Stock
     virtualGunstock = true,
     -- Compatibility CVars
@@ -38,7 +48,17 @@ Config = {
     grassCullScale = 0.5,               -- fg.CullDistanceScale.Grass 0.0-1.0
     foliageDensity = 0.3,               -- foliage.DensityScale 0.0-1.0
     foliageLODScale = 3.0,              -- foliage.LODDistanceScale 0.0-3.0
-    rendererStabilizerEnabled = false, -- Fake Flashlight fix
+    -- IK Arms mode flashlight (stalker2/ik_flashlight.lua, ported from the old IK codebase): offsets the
+    -- HMD-tracked spotlight in the look direction so it's past the weapon, reversing the shadow direction.
+    -- Positive Forward = light moves ahead (reverses weapon shadow), Up = light moves up, Right = light moves right.
+    flashlightForwardOffset = 0.0,   -- cm
+    flashlightUpOffset = 0.0,        -- cm
+    flashlightRightOffset = 0.0,     -- cm
+    ikFullBody = false,              -- IK Arms mode: show the game's own body/legs under the IK arms (stalker2/ik_full_body.lua)
+    ikFullBodyShoulderSmoothing = 0.35, -- seconds; IK full body: filters the body's walk / jump animation out of the IK shoulders (0 = exact pin)
+    ikFullBodyShoulderHeight = 0.0,  -- cm; IK full body: raises (+) / lowers (-) the IK shoulders relative to the body's
+    ikFullBodyShoulderWidth = 0.0,   -- cm; IK full body: each IK shoulder pushed outward (+) / inward (-)
+    ikFullBodyShoulderForward = 0.0, -- cm; IK full body: IK shoulders pushed forward (+) / back (-)
 
     vrShadowsEnabled = false,
     cutscene2DModeEnabled = false,
@@ -58,10 +78,13 @@ Config = {
 
     -- Holster variables
 	scopeBrightnessAmplifier = 1.0,
+	scopeExposureBias = 0.0,          -- PiP capture AutoExposureBias override (stops, pre-tonemap); per-scope via scopeProfiles.scopeExposureBias
+	scopeBrightnessMigratedToneMapped = false, -- one-shot: reset per-scope brightness after the capture-source change (see migration at end of file)
 	redDotBrightness = 150.0,
 	scopeDiameter = 0.024,
 	scopeMagnifier = 0.7,
 	scopeTextureSize = 512,
+	scopeCaptureScreenPercentage = 50.0, -- internal render scale of the PiP capture (post-process override); 100 = full 512x512
 	cylinderDepth = 0.001,
 	cylinderOffsetY = 0.0,
 	cylinderOffsetZ = 0.0,
@@ -86,6 +109,8 @@ Config = {
     redDotProfiles = {},
     reflexEnabled = true,             -- enables reflex glass material fix AND the red dot reticule
     pipScopesEnabled = true,          -- enables PiP scope rendering (cylinder + SceneCaptureComponent2D)
+    pipOnGlass = true,                -- PiP picture on the scope's own glass instead of the separate cylinder (Base/scope.lua)
+    pipGlassCaptureRoll = 0.0,        -- scope camera roll (degrees) for the picture on the glass (cylinder mode uses 90)
 
     -- Conversation Fix Settings
     enableConversationFix = true,
@@ -96,6 +121,8 @@ Config = {
     weaponHandLocation = {0, 0, 0}, -- X, Y, Z
     reloadHandRotation = {-1.5, 0.6, -180.2}, -- Pitch, Yaw, Roll
     reloadHandLocation = {0, 0, 0}, -- X, Y, Z
+    supportHandBlendTime = 0.12, -- seconds the off hand glides onto/off the weapon (two-handing, reload); 0 = instant snap
+    fingerCurlTime = 0.3, -- seconds the off hand's fingers take to curl into the two-handed grip; 0 = instant
     weaponProfiles = {}, -- Stores settings keyed by weapon name
     scopeProfiles = {}, -- Stores settings keyed by scope mesh name
 
@@ -104,11 +131,140 @@ Config = {
     pickupItemLocation = {0.0, 0.0, 0.0}, -- X, Y, Z offset in cm
     pickupItemRotation = {0.0, 0.0, 0.0}, -- Pitch, Yaw, Roll offset in degrees
     pickupItemProfiles = {},              -- specific offsets per mesh name,
+    bodyZoneOverrides = {},               -- dev-panel edits to the body gesture zones: [set][zoneKey] = {minX..maxZ} (stalker2/body_zone_debug.lua)
+    -- VR binoculars: two PiP lens discs + one scene capture (stalker2/binoculars.lua). Nested table:
+    -- every key must exist here or update_from_table() drops the saved value.
+    binoculars = {
+        enabled = true,
+        captureLocation = { 0.0, 0.0, 0.0 },   -- relative to bone jnt_offset (cm)
+        captureRotation = { 0.0, 0.0, 90.0 },  -- Pitch, Yaw, Roll
+        discLocation = { 0.0, 0.0, 0.0 },      -- relative to jnt_l_lens / jnt_r_lens (cm)
+        discRotation = { 0.0, 90.0, 90.0 },    -- Pitch, Yaw, Roll
+        discDiameter = 0.032,                  -- cylinder scale (100 uu base)
+        discDepth = 0.001,
+        brightness = 1.0,
+        zoomFOVs = { 20.0, 10.0, 5.0 },        -- capture FOV per zoom step, widest first
+        zoomIndex = 1,
+        nearDistance = 20.0,                   -- cm lens->HMD: capture every frame
+        sleepDistance = 60.0,                  -- cm lens->HMD: stop capturing
+        midCaptureInterval = 4,                -- frames between captures in between
+        textureSize = 512,
+        screenPercentage = 50.0,
+        zoomStickThreshold = 20000,
+        haptics = true,
+        discSeparation = 6.8,                  -- cm between discs when a model has no per-eye bones
+        exposureBias = 0.0,                    -- capture AutoExposureBias override (stops, pre-tonemap); per model via profiles
+        profiles = {},                         -- per skeletal-asset tuning: [SK_DevBinocular_0N] = {captureLocation, ..., zoomFOVs}
+    },
+    -- Grip-gesture timing tolerances in seconds (stalker2/gripgesture.lua, tunable in the dev panel)
+    gestureTiming = {
+        gripEarlyGrace = 0.30, -- squeeze started this long BEFORE the hand reached the zone still counts
+        zoneExitGrace = 0.35,  -- squeeze registering this long AFTER the hand left the zone still counts
+        minKeyHold = 0.12,     -- shortest synthetic key press a grip gesture may produce
+        keyPrimeDelay = 0.15,  -- an unbound primer key is tapped this long before the real key (0 = off; 0.08 was too short, 0.15 confirmed in-headset); see stalker2/gesturekeys.lua
+        keyPrimer = "0x87",    -- luakey name of the primer: VK_F24, bound to nothing
+        keyRetry = true,       -- weapon-slot keys: press once more if the equipped weapon did not change
+        keyQuietSticks = true, -- zero sticks/triggers while a gesture key is delivered, so moving doesn't flip the game back to gamepad mode and eat the key
+    },
 
     pickupItemGrabRadius = 15.0,          -- Sphere radius around left hand for picking up items
+    pickupDropKeepsPose = true,           -- dropped items keep the held rotation/offset; false = drop from controller origin (old)
+    pickupGlideTime = 0.15,               -- seconds a grabbed item glides into the hand (physical_pickup.lua); 0 = instant snap
 
     -- Physical Pickup: Add to Inventory (shoulder zone)
     pickupInventoryEnabled = true,        -- When true, releasing item over left shoulder adds it to inventory
+
+    -- Manual Reload master switch. false = legacy reload: the native montage plays through
+    -- with the left hand attached to the weapon's jnt_l_hand socket (X button or the
+    -- reload gesture starts it).
+    enableManualReload = true,
+
+    -- Manual Reload: PTM Proxy Mag Offsets
+    -- Relative to the jnt_l_hand socket on the left hand PMC.
+    ptmMagProxyLocation = {-4.000, 4.000, -1.000}, -- X, Y, Z in cm
+    ptmMagProxyRotation = {-35.000, 0.000, 10.000},  -- Pitch, Yaw, Roll in degrees
+    -- true: parent the held/ejected mag proxy to the left VR hand mesh's jnt_l_hand bone
+    -- (follows the posed hand and any hand-mesh offsets). false: parent it to the left
+    -- MotionControllerComponent (legacy; the socket name is ignored there). The
+    -- ptmMagProxyLocation/Rotation offsets are relative to whichever parent is used,
+    -- so expect to retune them after switching.
+    ptmAttachProxyToHandMesh = true,
+    -- Box-mag insert glide (ptm_manual_reload.lua STATE_INSERTING): on a near-socket release the
+    -- fresh mag eases into a pre-seat pose backed out ptmInsertDepth cm along ptmInsertAxis
+    -- (weapon component space, pointing OUT of the magwell), then slides straight in.
+    -- WEAPON_PROFILES insertAxis/insertDepth override per weapon. 0 glide time = instant snap.
+    ptmInsertGlideTime = 0.16,
+    ptmInsertDepth = 6.0,
+    -- Fresh mag released within this many cm of its seat (the hidden real mag) inserts; further away it drops.
+    ptmInsertDistance = 12.0,
+    ptmInsertAxis = {0.0, 0.0, -1.0},
+    -- Box-mag INSERT fast-forward rate for the rest of the native reload (both meshes). Higher =
+    -- fewer visible sped-up frames after the mag seats. Per weapon: weaponProfiles[name].ptmFinishRate
+    -- (and .ptmInsertGlideTime overrides ptmInsertGlideTime). Tube-fed weapons stay at 15x.
+    ptmFinishRate = 100.0,
+    -- Dev aid for bare-socket seats (Rhino speedloader): seconds the proxy is parked on its seat
+    -- before the reload completes, following weaponProfiles[name].ptmSeatLoc/ptmSeatRot live. 0 = off.
+    ptmSeatPreviewHold = 0.0,
+    -- Rhino (flickToClose profiles): after the speedloader seats, the reload only completes when
+    -- the right hand flicks to the right (closing the cylinder). false = completes on seat (old).
+    ptmFlickToClose = true,
+    ptmFlickCloseSpeed = 150.0,           -- cm/s sideways speed of the gun tip / top that counts as a flick
+
+    -- Physical knife melee (stalker2/knife_melee.lua): a fast swing of the dominant hand
+    -- (down / left / right / forward stab, never up or pull-back) injects a short Right
+    -- Trigger press while the knife is equipped, and the knife melee montages play at animRate.
+    knifeMelee = {
+        enabled  = true,
+        minSpeed = 180.0,   -- cm/s hand speed (relative to the head) needed to count as a swing
+        cooldown = 0.35,    -- seconds between accepted swings
+        animRate = 20.0,    -- char + knife mesh GlobalAnimRateScale while a knife melee montage plays
+        log      = false,   -- trace swings / montages into log.txt (luakey echo channel)
+    },
+
+    -- Equipped items shown on the body (stalker2/body_items.lua): each slot's item sits at the centre of its
+    -- gesture zone plus location (X forward, Y right, Z up, cm) / rotation (pitch, yaw, roll) / scale.
+    -- "mesh" is learned when the item is drawn and saved here; do not edit by hand.
+    bodyItems = {
+        enabled = true,
+        slots = {
+            sidearm  = { enabled = true, location = { 0.0, 0.0, 0.0 }, rotation = { -90.0, 0.0, 0.0 }, scale = 1.0 },
+            detector = { enabled = true, location = { 0.0, 0.0, 0.0 }, rotation = { 0.0, 0.0, 0.0 }, scale = 1.0 },
+            grenade  = { enabled = true, location = { 0.0, -4.0, 4.0 }, rotation = { 0.0, 0.0, 0.0 }, scale = 1.0 },
+            bolt     = { enabled = true, location = { 0.0, 5.0, -6.0 }, rotation = { 0.0, 0.0, 0.0 }, scale = 1.0 },
+            -- manual reload belt pouch (left hip); placement kept per ammo type in byType.<mag|shell|speedloader|rocket>
+            ammo     = { enabled = true, location = { 0.0, 0.0, 0.0 }, rotation = { 0.0, 0.0, 0.0 }, scale = 1.0 },
+        },
+        iconMeshes = {},   -- learned: inventory icon name -> mesh asset path
+        materials = {},    -- learned: mesh asset path -> material asset paths (weapon meshes have none of their own)
+        parts = {},        -- learned: weapon rig path -> its visible static-mesh parts (mesh, socket, transform, materials)
+        dataVersion = 0,
+        debugLog = false,  -- true: write data/body_items_log.txt (state changes only)
+    },
+
+    -- Rack to chamber (stalker2/rack_slide.lua): after an EMPTY manual reload the slide / charging handle must be
+    -- racked with the left hand before the weapon fires. On/off per weapon type (rig folder pt / smg / ar / sr + dmr / shg box-mag).
+    rackToChamber = { pistol = true, smg = true, ar = true, sniper = true, shotgun = true },
+    rackGrabRadius = 12.0,   -- cm: left controller to the slide / handle part when the grip is pressed
+    rackLearned = {},        -- learned per weapon rig: joint -> { idleMax, idleMin, minX } (parent-bone space, cm)
+
+    -- Physical throws (stalker2/physical_throw.lua): with a grenade or the bolt equipped, Right Trigger is
+    -- held back from the game; swing and release it to throw with the hand velocity (relative to the head).
+    physicalThrow = {
+        enabled    = true,
+        speedScale = 3.5,     -- throw speed = hand speed x this
+        floorSpeed = 600.0,   -- cm/s: slowest throw
+        underSpeedScale = 2.0,   -- underarm throw (right grip): hand speed x this
+        underFloorSpeed = 250.0, -- cm/s: slowest underarm throw
+        maxSpeed   = 2500.0,  -- cm/s: fastest throw
+        minSpeed   = 120.0,   -- cm/s hand speed below which a release throws nothing
+        assist     = 0.5,     -- 0..1: pull the throw direction toward where the player looks
+        arc        = 8.0,     -- deg added upward
+        spawnDist  = 20.0,    -- cm from the hand along the throw
+        animRate   = 20.0,    -- char + item mesh GlobalAnimRateScale from the release until the projectile appears
+        catchUp    = true,    -- start the projectile where it would be after the game delay (max 0.15 s)
+        stabilizeCamera = true, -- camera shake / camera animation modifiers off from the release until just after the launch
+        debugLog   = false,   -- data/physical_throw_log.txt
+    },
 
 	-- Gesture enable/disable settings
 	gestures = {
@@ -125,7 +281,8 @@ Config = {
 		reload = true,
 		modeSwitch = true,
 		nightVision = true,
-		weaponCustomization = true  -- Left shoulder (left hand) + left grip = long press T
+		weaponCustomization = true,  -- Left shoulder (left hand) + left grip = long press T
+		escapeCombo = true  -- Right thumbrest touch + Left stick click (L3) = Escape tap
 	},
     -- Weapon Mod Mesh Alignment (Silencer/Sight)
     weaponModMeshOffset = { X = 0.0, Y = 0.0, Z = 0.0 },
@@ -212,6 +369,24 @@ Config = {
         ["jnt_l_hand_index_02"] = {0.0, 40.541, 0.0},
         ["jnt_l_hand_index_03"] = {0.0, 74.886, 0.0}
     },
+    -- Left hand pose while holding the proxy mag during PTM manual reload (STATE_INSERTING)
+    ptmMagGripPose = {
+        ["jnt_l_hand_middle_01"] = {4.5817, 51.4692, 8.374},
+        ["jnt_l_hand_middle_02"] = {-7.2718, 58.668, -5.9066},
+        ["jnt_l_hand_middle_03"] = {-0.0017, 18.6615, -0.0025},
+        ["jnt_l_hand_pinky_01"]  = {5.0183, 55.5751, 9.9387},
+        ["jnt_l_hand_pinky_02"]  = {-2.3861, 61.288, -0.7981},
+        ["jnt_l_hand_pinky_03"]  = {-0.0077, -14.0313, 1.3448},
+        ["jnt_l_hand_ring_01"]   = {7.826, 48.3769, 7.3875},
+        ["jnt_l_hand_ring_02"]   = {-9.0802, 61.4639, 5.7804},
+        ["jnt_l_hand_ring_03"]   = {-0.1015, 10.8169, -0.7777},
+        ["jnt_l_hand_thumb_01"]  = {-31.935, -21.5777, -38.0991},
+        ["jnt_l_hand_thumb_02"]  = {20.7813, 25.6351, -2.595},
+        ["jnt_l_hand_thumb_03"]  = {-2.5784, 27.0653, 1.5038},
+        ["jnt_l_hand_index_01"]  = {1.1249, 14.26, 0.0},
+        ["jnt_l_hand_index_02"]  = {0.0, 81.55, 0.0},
+        ["jnt_l_hand_index_03"]  = {0.0, 27.1368, 0.0}
+    },
     ladderHandPoseLeft = {
         ["jnt_l_hand_middle_01"] = {4.775, 33.8838, -0.011},
         ["jnt_l_hand_middle_02"] = {0.0, 91.148, 0.0},
@@ -276,7 +451,9 @@ end
 function Config:update_from_table(tbl)
 	for k, v in pairs(tbl) do
 		if self[k] ~= nil then
-			if (k == "weaponProfiles" or k == "montageAttachmentList" or k == "scopeProfiles" or k == "attachmentProfiles" or k == "redDotProfiles" or k == "pickupItemProfiles") and type(v) == "table" then
+			-- rackLearned (rack_slide.lua, per weapon rig): its default is {}, so the nested-table branch below
+			-- dropped every saved weapon on load and the rack relearned from scratch each session.
+			if (k == "weaponProfiles" or k == "montageAttachmentList" or k == "scopeProfiles" or k == "attachmentProfiles" or k == "redDotProfiles" or k == "pickupItemProfiles" or k == "bodyZoneOverrides" or k == "rackLearned") and type(v) == "table" then
 				-- Dynamic map, allow adding all keys
 				for profile_k, profile_v in pairs(v) do
 					self[k][profile_k] = profile_v
@@ -326,6 +503,26 @@ if Config.conversationFOVThreshold == 80.0 or Config.conversationFOVThreshold ==
     Config:markDirty()
     Config:save()
     print("[Config] Migrated conversationFOVThreshold to 71.0")
+end
+
+-- Migration (2026-09-08): the PiP SceneCapture now captures FinalColorHDR (post-tonemap, auto-
+-- exposed) instead of raw pre-tonemap scene colour. Every saved per-scope brightness (0.02-1.3)
+-- was compensating for that raw radiance and is now wrong; reset all of them to 1.0 exactly once.
+if Config.scopeBrightnessMigratedToneMapped ~= true then
+    local n = 0
+    Config.scopeBrightnessAmplifier = 1.0
+    if type(Config.scopeProfiles) == "table" then
+        for _, prof in pairs(Config.scopeProfiles) do
+            if type(prof) == "table" and prof.scopeBrightness ~= nil then
+                prof.scopeBrightness = 1.0
+                n = n + 1
+            end
+        end
+    end
+    Config.scopeBrightnessMigratedToneMapped = true
+    Config:markDirty()
+    Config:save()
+    print("[Config] Migrated scope brightness to 1.0 for tonemapped capture (" .. n .. " profiles)")
 end
 
 return Config
