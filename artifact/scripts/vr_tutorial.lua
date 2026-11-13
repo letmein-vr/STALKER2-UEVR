@@ -15,8 +15,10 @@
 --     Y hide at startup; physical buttons: the dispatcher runs before Entry.lua's X/B swap) and the game is paused
 --     (panel option). A paused game is a menu to gamestate.lua, so Entry.lua switches to game aim + static UI as for
 --     the pause menu and restores HMD aim + follow view when the tutorial closes and the game resumes.
---   * UI placement: the page sits at UI_X_Offset / UI_Y_Offset 0.213 / 0 while open (Cronos' pick; the HUD rests at
---     0.425 to the right) and the exact previous values are restored on close or script reset.
+--   * UI placement: the page appears where UI_X_Offset / UI_Y_Offset 0.213 / 0 would put it (Cronos' pick; the HUD
+--     rests at 0.425 to the right), but the offsets are never written: the page moves inside its own widget instead
+--     (pageOffset below). Writing them meant a UEVR config save while the tutorial was open stored the tutorial's
+--     offset as the HUD's (happened 2026-11-13).
 -- Panel: "Stalker 2 VR" > "VR Tutorial" (Entry.lua) - show now, gesture on/off, pause on/off, show again at the next
 -- start. The two options are Config.tutorial.gesture / .pause (settings.json).
 
@@ -109,29 +111,30 @@ local function gestureAllowed()
 	return true
 end
 
--- Place the UI for the tutorial while it is open (see the header)
-local UI_OFFSET_KEYS = { "UI_X_Offset", "UI_Y_Offset" }
-local TUTORIAL_OFFSETS = { UI_X_Offset = "0.213000", UI_Y_Offset = "0.000000" }
-local savedOffsets = nil
+-- Where the page appears, in UEVR UI offset metres (see the header)
+local PAGE_UI_OFFSET_X = 0.213
+local PAGE_UI_OFFSET_Y = 0.0
 
-local function centreUI()
-	if savedOffsets ~= nil then return end
-	local ok = pcall(function()
-		local saved = {}
-		for _, key in ipairs(UI_OFFSET_KEYS) do saved[key] = uevr.params.vr:get_mod_value(key) end
-		savedOffsets = saved
-		for _, key in ipairs(UI_OFFSET_KEYS) do uevr.params.vr.set_mod_value(key, TUTORIAL_OFFSETS[key]) end
+-- UEVR moves the whole UI quad by UI_X_Offset / UI_Y_Offset metres along its right / up axes (OverlayComponent),
+-- and the quad is UI_Size metres tall for the full viewport height. So moving the page by (target - current) metres
+-- is (target - current) / UI_Size viewport heights inside the widget (Slate y points down, UEVR's up axis up).
+-- Read at every page layout, so the HUD offset can change in between.
+local function pageOffset()
+	local ok, x, y = pcall(function()
+		local vr = uevr.params.vr
+		local currentX = tonumber(vr:get_mod_value("UI_X_Offset")) or 0
+		local currentY = tonumber(vr:get_mod_value("UI_Y_Offset")) or 0
+		local size = tonumber(vr:get_mod_value("UI_Size")) or 0
+		if size <= 0 or WidgetLayoutLibrary == nil then return 0, 0 end
+		local world = uevrUtils.get_world()
+		local viewport = WidgetLayoutLibrary:GetViewportSize(world)
+		local scale = WidgetLayoutLibrary:GetViewportScale(world)
+		if viewport == nil or scale == nil or scale <= 0 then return 0, 0 end
+		local height = viewport.Y / scale
+		return (PAGE_UI_OFFSET_X - currentX) / size * height, -(PAGE_UI_OFFSET_Y - currentY) / size * height
 	end)
-	if not ok then savedOffsets = nil end
-end
-
-local function restoreUI()
-	if savedOffsets == nil then return end
-	local saved = savedOffsets
-	savedOffsets = nil
-	for _, key in ipairs(UI_OFFSET_KEYS) do
-		if saved[key] ~= nil then pcall(function() uevr.params.vr.set_mod_value(key, saved[key]) end) end
-	end
+	if not ok then return 0, 0 end
+	return x or 0, y or 0
 end
 
 -- The page host: libs/widget borrows a widget class and replaces its tree. Its own search finds nothing here (the
@@ -154,14 +157,10 @@ local t = tutorial.new({
 	buttons = { start = "A", next = "A", done = "A", back = "X", close = "B", skip = "B", hideAtStartup = "Y" },
 	openGestureDetector = detectEyesGesture,
 	openGestureCondition = gestureAllowed,
-	onOpen = function() centreUI() end,
-	onClose = function() restoreUI() end,
+	pageOffset = pageOffset,
 })
 t:forceInteractionAtStartup(true)
 t:showOnce()
-
--- the lib's own script-reset teardown skips onClose
-uevr.params.sdk.callbacks.on_script_reset(restoreUI)
 
 -- Panel buttons run while UEVR draws its overlay: widgets are made on the next engine tick instead
 local pending = nil

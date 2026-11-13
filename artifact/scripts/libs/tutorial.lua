@@ -588,17 +588,25 @@ local function layoutPage(self, shown)
 	local top = -totalH / 2
 	local navY = top + imageH + NAV_GAP + navH / 2
 	local leftCenter = uevrUtils.vector2D(0, 0.5)
+	-- Stalker 2 addition: the whole layout moves by options.pageOffset(self) (Slate units), so a game script can place
+	-- the page without changing UEVR's saved UI offsets
+	local ox, oy = 0, 0
+	if o.pageOffset ~= nil then
+		local okOffset, x, y = pcall(o.pageOffset, self)
+		if okOffset then ox, oy = tonumber(x) or 0, tonumber(y) or 0 end
+	end
+	local function at(x, y) return uevrUtils.vector2D(x + ox, y + oy) end
 
-	self.image:addToWidget(host, { align = center, alignment = uevrUtils.vector2D(0.5, 0), offset = uevrUtils.vector2D(0, top), zOrder = 1 })
+	self.image:addToWidget(host, { align = center, alignment = uevrUtils.vector2D(0.5, 0), offset = at(0, top), zOrder = 1 })
 
 	local function placeGroup(group, x)
 		for _, item in ipairs(group) do
 			if item.hasIcon then
 				-- the render scale shrinks the icon about its center, so place it by its center
-				item.icon:addToWidget(host, { align = center, offset = uevrUtils.vector2D(x + o.iconSize / 2, navY), zOrder = 2 })
+				item.icon:addToWidget(host, { align = center, offset = at(x + o.iconSize / 2, navY), zOrder = 2 })
 			end
 			if item.labelX ~= nil then
-				item.label:setLayout({ align = center, alignment = leftCenter, offset = uevrUtils.vector2D(x + item.labelX, navY), zOrder = 2 })
+				item.label:setLayout({ align = center, alignment = leftCenter, offset = at(x + item.labelX, navY), zOrder = 2 })
 			end
 			x = x + item.width + ITEM_GAP
 		end
@@ -613,7 +621,7 @@ local function layoutPage(self, shown)
 			-- right edge of the bar, left of any right aligned items
 			local counterX = barW / 2 - (#groups.right > 0 and (groups.right.width + ITEM_GAP) or 0)
 			self.counter:setText(self.page .. " / " .. self.count)
-			self.counter:addToWidget(host, { align = center, alignment = uevrUtils.vector2D(1, 0.5), offset = uevrUtils.vector2D(counterX, navY), zOrder = 2 })
+			self.counter:addToWidget(host, { align = center, alignment = uevrUtils.vector2D(1, 0.5), offset = at(counterX, navY), zOrder = 2 })
 		end
 	end
 
@@ -621,14 +629,14 @@ local function layoutPage(self, shown)
 		local awaiting = self:isAwaitingInteraction()
 		self.prompt:setVisible(awaiting)
 		if awaiting then
-			self.prompt:addToWidget(host, { align = center, offset = uevrUtils.vector2D(0, navY), zOrder = 2 })
+			self.prompt:addToWidget(host, { align = center, offset = at(0, navY), zOrder = 2 })
 			barW = math.max(barW, measureText(self.prompt, o.interactionPrompt, o.fontSize))
 		end
 	end
 
 	if self.backdrop ~= nil then
 		self.backdrop:setSize(uevrUtils.vector2D(barW + o.padding * 2, totalH + o.padding * 2))
-		self.backdrop:addToWidget(host, { align = center, zOrder = 0 })
+		self.backdrop:addToWidget(host, { align = center, offset = at(0, 0), zOrder = 0 })
 	end
 end
 
