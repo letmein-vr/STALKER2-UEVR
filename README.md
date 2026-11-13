@@ -95,9 +95,9 @@ Perform actions by physically reaching to different parts of your body and squee
 ### Cvars Options
 * **Cvars:** Tailor your Cvars to your system - includes options for Volumetrics, Shadows, Lighting/Lumen, Foliage/View Distance, DLSS rain/puddle artifacts and eye adaptation
 
-## Optional Plugins
+## Included Plugins
 
-* **PipelineRefresh.dll:** Download and copy it to the profile `plugins` folder if you encounter DLSS quarter-eye flashing in the right eye. Credit: **Remleo** (https://github.com/Remleo/uevr-plugins/tree/main)
+* **PipelineRefresh.dll:** Required, and included in the profile's `plugins` folder (since 2.7.1). Fixes DLSS quarter-eye flashing in the right eye. Credit: **Remleo** (https://github.com/Remleo/uevr-plugins/tree/main)
 
 ## ⚠️ Known Issues ⚠️
 
