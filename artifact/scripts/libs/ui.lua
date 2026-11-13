@@ -91,6 +91,8 @@ local isInMotionSicknessCausingScene = false
 
 local currentWidgetViewportState = {}
 local currentCustomViewportWidgets = {}
+-- widgets the viewport scan skips, by address (the VR tutorial's host widget; from the Atomic Heart ui.lua)
+local ignoredWidgets = {}
 
 --In some games widgets will act like they are active even though they are not actually open
 --Set this to true to require that the widget's GetOpenState() returns 0 (open) for it to be considered active
@@ -300,7 +302,7 @@ local function updateUIState()
 
         for index, widget in pairs(foundWidgets) do
             --if widget:IsInViewport() then --check not really needed since GetAllWidgetsOfClass with the last param true should only return viewport widgets.also currentCustomViewportWidgets might not be in viewport
-            if requireWidgetOpenState == false or widget:GetOpenState() == 0 then
+            if ignoredWidgets[widget:get_address()] == nil and (requireWidgetOpenState == false or widget:GetOpenState() == 0) then
                 --get the widget data from the configurations
                 local id = widget:get_class():get_full_name()
                 --print(id, widget:IsInteractable(), widget:IsVisible(), widget:HasUserFocus(), widget:GetVisibility(), widget:GetIsEnabled(), widget:GetIsVisible(), widget:GetOpenState())
@@ -448,6 +450,16 @@ function M.removeViewportWidget(widget)
     if index ~= nil then
         table.remove(currentCustomViewportWidgets, index)
     end
+end
+
+function M.ignoreWidget(widget)
+    if uevrUtils.getValid(widget) == nil then return end
+    ignoredWidgets[widget:get_address()] = true
+end
+
+function M.unignoreWidget(widget)
+    if widget == nil then return end
+    ignoredWidgets[widget:get_address()] = nil
 end
 
 function M.getConfigurationWidgets(options)

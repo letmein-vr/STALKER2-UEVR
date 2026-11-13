@@ -475,7 +475,7 @@
             "T_inv_w_kaimanov_body": "SkeletalMesh /Game/_STALKER2/SkeletalMeshes/weapons/pt/pm/SK_pm.SK_pm",
             "T_inv_w_krivenko_body": "SkeletalMesh /Game/_STALKER2/SkeletalMeshes/weapons/pt/udp/SK_udp.SK_udp",
             "T_inv_w_m10_body": "SkeletalMesh /Game/_STALKER2/SkeletalMeshes/weapons/smg/m1000/SK_m1000.SK_m1000",
-            "T_inv_w_pm_monolith_body": "SkeletalMesh /Game/_STALKER2/SkeletalMeshes/weapons/pt/pm/SK_pm.SK_pm",
+            "T_inv_w_pm_monolith_body": "SkeletalMesh /Game/_STALKER2/SkeletalMeshes/weapons/pt/udp/SK_udp.SK_udp",
             "T_inv_w_rhino_body": "SkeletalMesh /Game/_STALKER2/SkeletalMeshes/weapons/pt/udp/SK_udp.SK_udp"
         },
         "materials": {
@@ -2502,7 +2502,7 @@
             },
             "detector": {
                 "enabled": true,
-                "icon": "T_dev_detector_veles",
+                "icon": "T_dev_detector_echo",
                 "location": [
                     0.0,
                     -2.8959999084472656,
@@ -2545,13 +2545,13 @@
             },
             "sidearm": {
                 "enabled": true,
-                "icon": "T_inv_w_pm_monolith_body",
+                "icon": "T_inv_w_udp_body",
                 "location": [
                     0.1379999965429306,
                     -7.035999774932861,
                     0.0
                 ],
-                "mesh": "SkeletalMesh /Game/_STALKER2/SkeletalMeshes/weapons/pt/pm/SK_pm.SK_pm",
+                "mesh": "SkeletalMesh /Game/_STALKER2/SkeletalMeshes/weapons/pt/udp/SK_udp.SK_udp",
                 "rotation": [
                     -90.62100219726563,
                     0.0,
@@ -2679,7 +2679,7 @@
     },
     "conversationFOVThreshold": 71.0,
     "cutscene2DModeEnabled": false,
-    "cylinderDepth": 0.0010000000474974513,
+    "cylinderDepth": 0.001,
     "cylinderOffsetY": 0.0,
     "cylinderOffsetZ": 0.0,
     "cylinderTubeDepth": 0.0010000000474974513,
@@ -2833,6 +2833,7 @@
         "Yaw": 187.5
     },
     "disableDetectorPose": false,
+    "disableReloadAttachment": false,
     "distanceFieldShadowing": false,
     "dominantHand": 1,
     "dynamicGIMethod": 0,
@@ -4964,14 +4965,14 @@
         ]
     },
     "ptmMagProxyLocation": [
-        -7.099999904632568,
-        -3.0999999046325684,
-        3.5999999046325684
+        -7.900000095367432,
+        -1.7999999523162842,
+        2.799999952316284
     ],
     "ptmMagProxyRotation": [
-        -30.100000381469727,
-        172.3000030517578,
-        0.699999988079071
+        -30.899999618530273,
+        175.8000030517578,
+        1.600000023841858
     ],
     "ptmSeatPreviewHold": 0.531000018119812,
     "rackGrabRadius": 11.557000160217285,
@@ -5437,9 +5438,9 @@
     "reflexEnabled": false,
     "refractionEnabled": true,
     "reloadHandLocation": [
-        -15.699999809265137,
-        3.200000047683716,
-        0.4000000059604645
+        -11.899999618530273,
+        3.299999952316284,
+        0.6000000238418579
     ],
     "reloadHandPose": {
         "jnt_l_hand_index_01": [
@@ -5519,18 +5520,19 @@
         ]
     },
     "reloadHandRotation": [
-        -143.5,
-        -14.899999618530273,
-        148.1999969482422
+        -131.1999969482422,
+        -24.899999618530273,
+        156.0
     ],
+    "reloadSocketName": "jnt_l_hand",
     "scopeActivationDistance": 38.25,
-    "scopeBrightnessAmplifier": 2.658494262695314,
+    "scopeBrightnessAmplifier": 1.0,
     "scopeBrightnessMigratedToneMapped": true,
     "scopeCaptureScreenPercentage": 75.0,
-    "scopeDiameter": 0.03099999949336052,
+    "scopeDiameter": 0.024,
     "scopeExpandingFOV": false,
-    "scopeExposureBias": 0.6700000166893005,
-    "scopeMagnifier": 1.5,
+    "scopeExposureBias": 0.0,
+    "scopeMagnifier": 0.7,
     "scopeProfiles": {
         "SM_Wpn_ColimScope_Ru_02_01": {
             "pipDotBrightness": 250.0,
@@ -5651,7 +5653,7 @@
             "pipDotScaleX": 9.999999747378752e-06,
             "pipDotScaleY": 0.0002010000025620684,
             "pipDotScaleZ": 0.00019999999494757503,
-            "scopeBrightness": 2.658494262695314,
+            "scopeBrightness": 3.329140014648438,
             "scopeExposureBias": 0.6700000166893005,
             "scopeMagnifier": 1.5,
             "scopeOffset": 0.0010000000474974513,
@@ -5799,6 +5801,10 @@
     "temporalUpsampling": false,
     "translucencyFix": false,
     "tsrEnabled": false,
+    "tutorial": {
+        "gesture": true,
+        "pause": true
+    },
     "twoHandedAiming": true,
     "twoHandedHandPose": {
         "jnt_l_hand_index_01": [
@@ -5962,25 +5968,25 @@
     "waterReflections": false,
     "waterRefraction": false,
     "weaponHandLocation": [
-        8.5,
-        0.5,
-        -3.700000047683716
+        8.899999618530273,
+        -0.10000000149011612,
+        -5.099999904632568
     ],
     "weaponHandRotation": [
-        -4.400000095367432,
-        -17.299999237060547,
-        -175.0
+        2.5999999046325684,
+        0.6000000238418579,
+        -167.60000610351563
     ],
-    "weaponModCleanupDelay": 1.1959999799728394,
+    "weaponModCleanupDelay": 0.8820000290870667,
     "weaponModMeshOffset": {
-        "X": -4.5,
-        "Y": 3.0,
-        "Z": -4.699999809265137
+        "X": -6.400000095367432,
+        "Y": 2.700000047683716,
+        "Z": 0.8999999761581421
     },
     "weaponModMeshRotation": {
-        "Pitch": 5.199999809265137,
+        "Pitch": 270.79998779296875,
         "Roll": 0.0,
-        "Yaw": -3.799999952316284
+        "Yaw": -349.20001220703125
     },
     "weaponProfiles": {
         "": {

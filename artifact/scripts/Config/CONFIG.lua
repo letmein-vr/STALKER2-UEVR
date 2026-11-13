@@ -174,6 +174,13 @@ Config = {
     -- Physical Pickup: Add to Inventory (shoulder zone)
     pickupInventoryEnabled = true,        -- When true, releasing item over left shoulder adds it to inventory
 
+    -- VR tutorial (scripts/vr_tutorial.lua). Nested table: every key must exist here or update_from_table() drops it.
+    -- Whether it shows at start, the learned gesture and the last page live in data/tutorial_state.json instead.
+    tutorial = {
+        gesture = true, -- left controller at the eyes + left trigger opens it
+        pause = true,   -- pause the game while it is open (the paused game gets the menus' static UI, see Entry.lua)
+    },
+
     -- Manual Reload master switch. false = legacy reload: the native montage plays through
     -- with the left hand attached to the weapon's jnt_l_hand socket (X button or the
     -- reload gesture starts it).

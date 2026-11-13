@@ -2723,6 +2723,20 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
         if invChanged then Config.pickupInventoryEnabled = invVal; changed = true end
     end
 
+    -- 2b. VR Tutorial (scripts/vr_tutorial.lua; it publishes _G.stalkerVRTutorial once loaded)
+    if imgui.collapsing_header("VR Tutorial") then
+        local tut = _G.stalkerVRTutorial
+        local tc = Config.tutorial or { gesture = true, pause = true }
+        Config.tutorial = tc
+        if imgui.button("Show the VR tutorial") and tut ~= nil then tut.requestShow() end
+        local gC, gV = imgui.checkbox("Open it with the left trigger at your eyes", tc.gesture ~= false)
+        if gC then tc.gesture = gV; changed = true end
+        local pC, pV = imgui.checkbox("Pause the game while it is open", tc.pause ~= false)
+        if pC then tc.pause = pV; changed = true end
+        if imgui.button("Show it again at the next start") and tut ~= nil then tut.requestReset() end
+        if tut ~= nil then imgui.text(tut.statusText()) end
+    end
+
     -- 3. Compatibility CVars
     if imgui.collapsing_header("Compatibility CVars") then
 

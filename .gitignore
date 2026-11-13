@@ -35,3 +35,5 @@ out/*
 
 dependencies/steelsdk/*
 cmake-build*
+# Per-player VR tutorial progress (written by scripts/vr_tutorial.lua at runtime)
+artifact/data/tutorial_state.json

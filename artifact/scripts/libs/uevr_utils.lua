@@ -3367,6 +3367,41 @@ function M.getActiveWidgetByClass(className)
 	end
 end
 
+-- From the Atomic Heart uevr_utils (for libs/widget.lua and libs/tutorial.lua, the VR tutorial)
+function M.createWidget(className, playerController)
+	local widget = nil
+	if className ~= nil then
+		if playerController == nil then
+			playerController = uevr.api:get_player_controller(0)
+		end
+---@diagnostic disable-next-line: undefined-field
+		widget = WidgetBlueprintLibrary:Create(M.get_world(), M.get_class(className), playerController)
+	end
+	return widget
+end
+
+-- fs.glob regexes are case sensitive but Windows file names are not, so "png" becomes "[pP][nN][gG]"
+local function anyCasePattern(text)
+	return (text:gsub("%a", function(c) return "[" .. c:lower() .. c:upper() .. "]" end))
+end
+
+-- Files in a folder inside the data folder, as paths relative to data separated by backslashes.
+-- path is an ordinary folder path using / or \, with or without a trailing separator; nil or "" is data itself.
+-- extension matches in any case and nil matches every file. includeSubfolders also returns files in folders
+-- below path. Returns nil when fs.glob is unavailable. (From the Atomic Heart uevr_utils, for libs/tutorial.lua.)
+function M.getFiles(path, extension, includeSubfolders)
+	if fs == nil or fs.glob == nil then return nil end
+	local folder = (path or ""):gsub("[/\\]+", "\\"):gsub("^\\", ""):gsub("\\$", "")
+	local prefix = ""
+	if folder ~= "" then
+		-- folder names are literal, so escape regex characters, then add the separator
+		prefix = folder:gsub("([%^%$%(%)%.%[%]%*%+%?%{%}%|\\])", "\\%1") .. "\\\\"
+	end
+	local name = includeSubfolders and ".*" or "[^\\\\]*"
+	local suffix = extension ~= nil and ("\\." .. anyCasePattern(extension)) or ""
+	return fs.glob(prefix .. name .. suffix) or {}
+end
+
 -- local widget = WidgetBlueprintLibrary:Create(uevrUtils.get_world(), uevrUtils.get_class("WidgetBlueprintGeneratedClass /Game/UI/HUD/Reticle/Reticle_BP.Reticle_BP_C"), playerController)
 
 --options are manualAttachment, relativeTransform, deferredFinish, parent, tag, removeFromViewport, twoSided, drawSize

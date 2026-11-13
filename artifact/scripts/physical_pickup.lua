@@ -589,11 +589,17 @@ local grabbedIsPhysicsProp = false  -- true when holding a BP_DestructibleObject
 -- Grab glide: nil when not gliding, else
 -- {pending, pendingTicks, elapsed, duration, relRot0, relLoc0, relRot1, relLoc1}
 local glide                = nil
--- The held mesh's world pose, captured every frame in the post-stereo callback.
--- Only valid there: on the game thread a hook-driven mesh reads back at its natural
--- (pre-grab) place, so a drop built from game-thread reads lands at the pick-up spot.
+-- The held item's world pose in the hand, captured every frame in the post-stereo callback.
+-- Computed from the left controller and the hook offsets (heldRelRot / heldRelLoc), never
+-- read off the mesh: the hook only moves the mesh to the hand for drawing, and depending on
+-- callback order a read can return its natural (pre-grab) place - the hands-mode drop then
+-- landed back at the pick-up spot (2026-10-28). IK only worked because ik_weapon_sync.lua's
+-- per-frame write dragged the real position along.
 local heldMeshLoc          = nil   -- {X,Y,Z}
 local heldMeshRot          = nil   -- {Pitch,Yaw,Roll}
+-- Held item relative to the left controller (UE space), as last written to the hook offsets
+local heldRelRot           = nil   -- quat {w,x,y,z}
+local heldRelLoc           = nil   -- {x,y,z}
 local pendingDrop          = nil   -- drop pose still being re-applied after release
 local GLIDE_PENDING_FALLBACK_TICKS = 3
 
@@ -651,6 +657,26 @@ local function rotatorToQuat(p, y, r)
         z =  cr * cp * sy - sr * sp * cy,
         w =  cr * cp * cy + sr * sp * sy,
     }
+end
+
+-- FQuat::Rotator (degrees), the inverse of rotatorToQuat
+local function quatToRotator(q)
+    local deg = 180 / math.pi
+    local singularity = q.z * q.x - q.w * q.y
+    local yaw = math.atan(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z)) * deg
+    local pitch, roll
+    if singularity < -0.4999995 then
+        pitch = -90
+        roll = -yaw - 2 * math.atan(q.x, q.w) * deg
+    elseif singularity > 0.4999995 then
+        pitch = 90
+        roll = yaw - 2 * math.atan(q.x, q.w) * deg
+    else
+        pitch = math.asin(2 * singularity) * deg
+        roll = math.atan(-2 * (q.w * q.x + q.y * q.z), 1 - 2 * (q.x * q.x + q.y * q.y)) * deg
+    end
+    roll = (roll + 180) % 360 - 180
+    return {Pitch = pitch, Yaw = yaw, Roll = roll}
 end
 
 -- Shortest-path slerp
@@ -1063,6 +1089,7 @@ local function applyItemOffsets(state)
         math.rad(cPitch),
         math.rad(cYaw),
         math.rad(cRoll)))
+    heldRelRot, heldRelLoc = relativeFromOffsets(cLocX, cLocY, cLocZ, cPitch, cYaw, cRoll)
 end
 
 local function clearGrabState()
@@ -1076,6 +1103,8 @@ local function clearGrabState()
     glide                = nil
     heldMeshLoc          = nil
     heldMeshRot          = nil
+    heldRelRot           = nil
+    heldRelLoc           = nil
 end
 
 -- Sync the UEVR hook offsets to the sliders dynamically, and sync the actor's
@@ -1140,6 +1169,7 @@ local function writeGlideOffsets(state, relRot, relLoc)
     state:set_location_offset(Vector3f.new(loc.x, loc.y, loc.z))
     -- A Vector4f is cast straight onto UEVR_Quaternionf {w,x,y,z}, so pass w first
     state:set_rotation_offset(Vector4f.new(rot.w, rot.x, rot.y, rot.z))
+    heldRelRot, heldRelLoc = relRot, relLoc
 end
 
 -- Fallback when the glide can't start properly: the old snap.
@@ -1270,14 +1300,17 @@ uevrUtils.registerPostCalculateStereoViewCallback(function(device, view_index)
     glideSteppedThisFrame = true
     if glide ~= nil then stepGlide() end
 
-    -- Remember where the held item really is this frame, for the drop
-    local mesh = grabbed.mesh
-    if cachedHookState ~= nil and mesh ~= nil then
+    -- Remember where the held item really is this frame, for the drop: controller pose x hook offsets
+    -- (the controller is at its real pose here; see the heldMeshLoc declaration for why not the mesh)
+    if cachedHookState ~= nil and heldRelRot ~= nil then
         pcall(function()
-            local l = mesh:K2_GetComponentLocation()
-            local r = mesh:K2_GetComponentRotation()
-            heldMeshLoc = {X = l.X, Y = l.Y, Z = l.Z}
-            heldMeshRot = {Pitch = r.Pitch, Yaw = r.Yaw, Roll = r.Roll}
+            local ctrl = controllers.getController(Handed.Left)
+            local hLoc = ctrl:K2_GetComponentLocation()
+            local hRot = ctrl:K2_GetComponentRotation()
+            local hQ = rotatorToQuat(hRot.Pitch, hRot.Yaw, hRot.Roll)
+            local off = qrot(hQ, heldRelLoc.x, heldRelLoc.y, heldRelLoc.z)
+            heldMeshLoc = {X = hLoc.X + off.x, Y = hLoc.Y + off.y, Z = hLoc.Z + off.z}
+            heldMeshRot = quatToRotator(qmul(hQ, heldRelRot))
         end)
     end
 end)
