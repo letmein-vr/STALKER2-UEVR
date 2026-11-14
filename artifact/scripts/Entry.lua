@@ -2733,8 +2733,8 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
         if gC then tc.gesture = gV; changed = true end
         local pC, pV = imgui.checkbox("Pause the game while it is open", tc.pause ~= false)
         if pC then tc.pause = pV; changed = true end
-        if imgui.button("Show it again at the next start") and tut ~= nil then tut.requestReset() end
-        if tut ~= nil then imgui.text(tut.statusText()) end
+        if imgui.button("Start from the first page next time") and tut ~= nil then tut.requestRestart() end
+        imgui.text("Opens only with the gesture (left controller at your eyes + left trigger) or the button above.")
     end
 
     -- 3. Compatibility CVars

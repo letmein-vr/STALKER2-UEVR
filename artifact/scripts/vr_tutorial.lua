@@ -3,24 +3,25 @@
 -- Pages: data/tutorial/intro.png + 1.png .. N.png (counted at runtime), icons data/tutorial/buttons/. They are rendered
 -- from the repo art (screenshots/) by UnrealVRMod\0. Stalker 2 Tutorial\make_pages.ps1.
 --
---   * First start: shown once at the first level, and the intro waits until the player has done the open gesture once
---     (forceInteractionAtStartup). Finishing it ("Done" on the last page) or "Hide at startup" stops the automatic
---     show; data/tutorial_state.json remembers that, the gesture and the last page.
+--   * No automatic show (2026-11-14, xaero): Stalker 2 finishes its loading screen with the world already built and
+--     then waits on a "press a button to continue" screen, which no pawn / menu / pause test tells apart from gameplay,
+--     so a startup show opened on top of that screen. The tutorial opens only on the gesture or the panel button, at
+--     the saved page (page 1 the first time; the intro page is never shown). data/tutorial_state.json keeps the page.
 --   * Any time: left controller up to the eyes + left trigger opens it again at the saved page (within 15 cm in
 --     front of the HMD, from the tracking poses: detectEyesGesture below). The trigger has to be PULLED there: a left trigger that is
 --     already held (weapon wheel, lean) when the hand passes the eyes never opens it. Refused in menus, the
 --     inventory / PDA, conversations, cutscenes, climbing, consumable / guitar animations, while two-handing,
 --     holding a magazine or a picked-up item, and with the binoculars up. A refused pull reaches the game as usual.
---   * While open: every button is kept from the game and the other scripts (A next / start / done, X back, B close,
---     Y hide at startup; physical buttons: the dispatcher runs before Entry.lua's X/B swap) and the game is paused
---     (panel option). A paused game is a menu to gamestate.lua, so Entry.lua switches to game aim + static UI as for
+--   * While open: every button is kept from the game and the other scripts (A next / done, X back, B close; physical
+--     buttons: the dispatcher runs before Entry.lua's X/B swap) and the game is paused
+--     (panel option). The open gesture closes it again on any page (gestureCloses), the same as B. A paused game is a menu to gamestate.lua, so Entry.lua switches to game aim + static UI as for
 --     the pause menu and restores HMD aim + follow view when the tutorial closes and the game resumes.
 --   * UI placement: the page appears where UI_X_Offset / UI_Y_Offset 0.213 / 0 would put it (Cronos' pick; the HUD
 --     rests at 0.425 to the right), but the offsets are never written: the page moves inside its own widget instead
 --     (pageOffset below). Writing them meant a UEVR config save while the tutorial was open stored the tutorial's
 --     offset as the HUD's (happened 2026-11-13).
--- Panel: "Stalker 2 VR" > "VR Tutorial" (Entry.lua) - show now, gesture on/off, pause on/off, show again at the next
--- start. The two options are Config.tutorial.gesture / .pause (settings.json).
+-- Panel: "Stalker 2 VR" > "VR Tutorial" (Entry.lua) - show now, gesture on/off, pause on/off, start from page 1 next
+-- time. The options are Config.tutorial.gesture / .pause (settings.json).
 
 local uevrUtils = require('libs/uevr_utils')
 local tutorial = require('libs/tutorial')
@@ -64,8 +65,8 @@ local function isPausedOrMenu()
 end
 
 -- The open gesture from the runtime's tracking poses, not libs/gestures: that one reads the mod-spawned HMD and hand
--- components (libs/controllers), which are only made once there is a pawn (so never in the main menu, where the
--- first-start intro waits for this gesture), and the HMD component's direction can freeze on this backend (see
+-- components (libs/controllers), which are only made once there is a pawn (so not in the main menu, where the
+-- tutorial can be open from the panel), and the HMD component's direction can freeze on this backend (see
 -- controllers.ensureHMDState). Same test as gestures.lua EYESCRATCH: trigger past 128, hand within 15 cm of the HMD
 -- and in front of it (direction dot > 0.85). Pose space: metres, Y up, the HMD looks down -Z.
 local EYES_DISTANCE = 0.15
@@ -154,13 +155,15 @@ local t = tutorial.new({
 	pauseGame = option("pause"),
 	lockView = false,               -- Entry.lua owns UI_FollowView (menu / cutscene transitions); libs/ui.lua is not set up here
 	disableControllerMouse = false, -- Stalker's ui.lua has no custom states
-	buttons = { start = "A", next = "A", done = "A", back = "X", close = "B", skip = "B", hideAtStartup = "Y" },
+	buttons = { start = "A", next = "A", done = "A", back = "X", close = "B", skip = "B" },
+	labels = { close = "Close (or gesture)" },
+	-- no "Hide at startup": there is no automatic show to hide (the intro is skipped anyway, see the header)
+	navigation = { intro = { { action = "close", align = "right" }, { action = "start", align = "right" } } },
 	openGestureDetector = detectEyesGesture,
 	openGestureCondition = gestureAllowed,
+	gestureCloses = true, -- the open gesture is a toggle: it closes the tutorial on any page too
 	pageOffset = pageOffset,
 })
-t:forceInteractionAtStartup(true)
-t:showOnce()
 
 -- Panel buttons run while UEVR draws its overlay: widgets are made on the next engine tick instead
 local pending = nil
@@ -171,19 +174,12 @@ uevrUtils.registerPreEngineTickCallback(function()
 	pending = nil
 	if action == "show" then
 		t:show(t:getSavedPage() or 1)
-	elseif action == "reset" then
-		t:resetCompleted()
-		t:resetInteraction()
+	elseif action == "restart" then
 		t:resetSavedPage()
 	end
 end)
 
 _G.stalkerVRTutorial = {
 	requestShow = function() pending = "show" end,
-	requestReset = function() pending = "reset" end,
-	statusText = function()
-		local ok, completed = pcall(function() return t:isCompleted() end)
-		if ok and completed then return "Shown at start: no (finished or hidden)" end
-		return "Shown at start: yes"
-	end,
+	requestRestart = function() pending = "restart" end,
 }

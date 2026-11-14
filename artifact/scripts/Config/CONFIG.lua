@@ -175,7 +175,8 @@ Config = {
     pickupInventoryEnabled = true,        -- When true, releasing item over left shoulder adds it to inventory
 
     -- VR tutorial (scripts/vr_tutorial.lua). Nested table: every key must exist here or update_from_table() drops it.
-    -- Whether it shows at start, the learned gesture and the last page live in data/tutorial_state.json instead.
+    -- No automatic show (Stalker 2 waits on a "press a button" screen after loading); only the gesture or the panel opens
+    -- it. Its last page lives in data/tutorial_state.json.
     tutorial = {
         gesture = true, -- left controller at the eyes + left trigger opens it
         pause = true,   -- pause the game while it is open (the paused game gets the menus' static UI, see Entry.lua)
