@@ -419,10 +419,6 @@ local tubeFedSpoofPending       = false
 -- isTubeFed: true while a native reload is parked (montages playing but paused),
 -- waiting for the player to bring a shell to the loading port.
 local tubeFedReloadParked       = false
--- Deferred montage pre-warm: if find_uobject / dynamic discovery fails at init
--- (asset not yet streamed), we retry periodically until this deadline.
-local montagePrewarmDeadline    = 0
-local lastDiscoveryAttempt      = 0   -- os.clock() of last get_objects_by_class scan
 local cachedAnimMontageClass    = nil -- AnimMontage UClass (fetched once per session)
 -- Per-session cache: weaponId -> discovered AnimMontage UObject (or false = confirmed absent)
 local discoveryCache            = {}
@@ -1334,7 +1330,8 @@ end
 -- M860's bigmag which is a distinct WEAPON_PROFILES key entirely). The WEAPON_PROFILES
 -- entry below statically pins charMontage to MagDefault_Tactical_01 (needed to break a
 -- 3-way tie-score in discoverReloadMontage() - see the comment above that entry), but per
--- "Known caveat" in the reload-system skill, that pin is a PERMANENT override for the
+-- "Known caveat" in the reload-system skill (history: M.init() no longer resolves the pin
+-- since 2026-11-14 - see tryInterceptReload), that pin was a PERMANENT override for the
 -- whole session, not just a first-reload fallback - M.init() eagerly resolves
 -- cachedCharMontage from it before any reload happens, so tryInterceptReload()'s passive
 -- auto-intercept (which would otherwise capture whatever montage the engine actually
@@ -1455,7 +1452,6 @@ function M.init(leftHand, weaponName)
     dropProxyReady           = false
     magMeshesCurrentlyHidden = false
     cachedWeaponMeshAddr     = nil
-    montagePrewarmDeadline   = 0
     spoofingTacticalReload   = false
     forceNativeReloadTicks   = 0
     forceNativeReloadDeadline = 0
@@ -1534,9 +1530,7 @@ function M.init(leftHand, weaponName)
             end
         end
 
-        -- Reset per-session discovery caches so a new weapon gets fresh auto-discovery.
-        -- cachedCharMontage is deliberately PRESERVED on the shared WEAPON_PROFILES table
-        -- between equips (find_uobject result is session-stable once loaded).
+        -- activeProfile is a fresh copy, so every montage/mesh cache starts empty per equip.
         activeProfile.cachedMeshAsset = nil
         activeProfile.cachedEmptyMeshAsset = nil
 
@@ -1546,48 +1540,15 @@ function M.init(leftHand, weaponName)
         ghostPlayPending           = false
         ghostPlayStopPending       = false
 
-        -- Attempt immediate montage lookup at init time.
-        -- Path 1: exact find_uobject via static charMontage path (weapons in WEAPON_PROFILES).
-        -- Path 2: dynamic discovery via get_objects_by_class scan (all other weapons).
-        -- If both fail, the auto-intercept path in tryInterceptReload() will populate
-        -- cachedCharMontage the first time the engine fires a native reload montage.
-        -- NOTE: LoadAsset_Blocking removed - it is a synchronous disk stall that freezes
-        -- the game thread and kills FPS. Trust the passive intercept cache instead.
-        if not activeProfile.cachedCharMontage then
-            -- Try static path first (fast single hash lookup, no iteration).
-            if activeProfile.charMontage then
-                local ok, result = pcall(function()
-                    return findUObjectCached(activeProfile.charMontage)
-                end)
-                if ok then
-                    activeProfile.cachedCharMontage = result
-                else
-                    print("[Reload] find_uobject exception during init for " .. weaponName .. " (GC race?) - will retry at eject time.")
-                end
-                if activeProfile.cachedCharMontage then
-                    print("[Reload] Pre-warmed charMontage via static path for " .. weaponName .. ".")
-                end
-            end
-            -- Fall back to dynamic discovery if static path missing or returned nil.
-            -- This is a full GUObjectArray scan so we only do it ONCE at init, not per-tick.
-            if not activeProfile.cachedCharMontage then
-                activeProfile.cachedCharMontage = discoverReloadMontage(weaponName)
-                if activeProfile.cachedCharMontage then
-                    print("[Reload] Pre-warmed charMontage via dynamic discovery for " .. weaponName .. ".")
-                else
-                    -- Still not found - rely on passive auto-intercept to populate it.
-                    -- Schedule a lightweight find_uobject-only retry (no GUObjectArray scan)
-                    -- for weapons with a known static charMontage path.
-                    if activeProfile.charMontage then
-                        montagePrewarmDeadline  = os.clock() + 10.0
-                        lastDiscoveryAttempt    = 0
-                        print("[Reload] charMontage not yet in memory for " .. weaponName .. " - scheduling deferred find_uobject retry.")
-                    end
-                end
-            end
-        else
-            print("[Reload] charMontage already cached for " .. weaponName .. ".")
-        end
+        -- PERF (2026-11-14): NO reload-montage lookup here. The game streams a weapon's
+        -- reload montage in AFTER the equip edge, so on the first equip of each weapon per
+        -- session the old eager find_uobject here MISSED - and a miss walks the whole
+        -- GUObjectArray (~360 ms on the game thread), followed by a discoverReloadMontage()
+        -- scan: the frame hitch on every first weapon switch. cachedCharMontage is resolved
+        -- lazily instead, when it is actually needed (all paths already existed):
+        --   * tryInterceptReload() caches the montage the engine itself plays (free);
+        --   * STATE_HIP_HOLD and INSERT look it up by charMontage / discovery - seconds
+        --     after the equip, when the package is loaded and find_uobject is a hash hit.
 
         print("[Reload] Initialized for weapon: " .. weaponName)
     else
@@ -1671,28 +1632,12 @@ function M.tryInterceptReload(charMontage, montageName)
     -- Passively cache the charMontage UObject handed to us by the engine callback.
     -- This is free (no find_uobject scan) and populates the montage for the tactical
     -- path without any hardcoded asset path in the profile table.
-    -- KNOWN CAVEAT (MCP-confirmed 2026-09-04, on a bigmag-equipped Arev): for any
-    -- weapon with a static `charMontage` pin in WEAPON_PROFILES (sk_skp/sk_gp3a/
-    -- sk_arev/sk_fora230 - added to disambiguate multiple same-scored "_Tactical"
-    -- candidates), M.init() eagerly pre-resolves p.cachedCharMontage from that pin
-    -- BEFORE this function ever runs. That means the `not p.cachedCharMontage` guard
-    -- below is already false by the time a real reload fires, so this passive-cache
-    -- path - which would otherwise capture whichever montage the engine ACTUALLY
-    -- picked for the currently-equipped magazine - never overwrites the pin. In
-    -- effect, the static pin is not just a first-reload fallback: it's a permanent
-    -- override for the rest of the session on that weapon, even if the player later
-    -- equips a bigger-capacity magazine (e.g. a "bigmag"-skinned Arev) that the
-    -- native engine would have chosen a different (MagIncreased/MagHuge) montage
-    -- for. Believed cosmetic-only (AnimNotify_WeaponAction replenishes ammo
-    -- generically, not by literal round-count against the animation, and the pinned
-    -- montage is a real resolvable AnimMontage, not a null reference) - NOT verified
-    -- to be crash-safe under this exact scenario via live in-game testing. If a
-    -- capacity-variant weapon's reload animation looks visibly wrong specifically
-    -- after equipping a magazine upgrade, this is the first place to look. A real
-    -- fix would mean only eager-caching in M.init() when the profile has no known
-    -- capacity variants, letting this passive path govern otherwise - not attempted
-    -- here since it touches shared logic for all 4 pinned weapons and needs live
-    -- verification against a capacity-upgraded weapon before trusting it.
+    -- Since 2026-11-14 M.init() no longer pre-resolves the static `charMontage` pin (that
+    -- eager lookup was the first-equip hitch), so for every weapon - pinned or not - the
+    -- first native reload after an equip fills the cache from whatever the engine actually
+    -- picked for the equipped magazine; the pin is only looked up at HIP_HOLD / INSERT when
+    -- nothing was intercepted. (Before, a pin resolved at init overrode this path for the
+    -- rest of the session, e.g. on a bigmag-equipped Arev - MCP-confirmed 2026-09-04.)
     if charMontage and not p.cachedCharMontage then
         p.cachedCharMontage = charMontage
         print("[Reload][" .. p.id .. "] Cached charMontage from auto-intercept callback.")
@@ -2865,12 +2810,10 @@ function M.on_pre_engine_tick(engine, delta, isReloading)
     -- Covers both the uninitialised (activeProfile=nil, no weapon) and the normal
     -- in-game steady state (weapon equipped, not in a reload cycle).
     -- The ONLY reason to stay alive in STATE_IDLE is:
-    --   • montagePrewarmDeadline > 0  (still trying to resolve the charMontage asset)
     --   • charAnimFastForwardArmed    (one tick after INSERT: set rate to 100×)
     --   • charAnimResetArmed          (0.15s after INSERT: restore rate to 1.0)
     --   • weaponAnimResetArmed        (0.15s after INSERT: restore weapon rate to 1.0)
     if currentState == STATE_IDLE
-       and montagePrewarmDeadline == 0
        and not charAnimFastForwardArmed
        and not charAnimResetArmed
        and not weaponAnimResetArmed
@@ -2903,37 +2846,6 @@ function M.on_pre_engine_tick(engine, delta, isReloading)
         else
             animJumpActive  = false
             animJumpElapsed = 0.0
-        end
-    end
-
-    -- FIX 2: Lightweight deferred charMontage retry.
-    -- ONLY retries find_uobject (fast hash lookup) for weapons that have a known static
-    -- charMontage path. The expensive get_objects_by_class GUObjectArray scan is NOT
-    -- repeated here - it already ran once at init. The auto-intercept path in
-    -- tryInterceptReload() will passively cache the montage from the next native reload.
-    if montagePrewarmDeadline > 0 then
-        if activeProfile and not activeProfile.cachedCharMontage then
-            local now = os.clock()
-            if now < montagePrewarmDeadline then
-                -- Throttled find_uobject retry every 0.5s (no GUObjectArray scan).
-                if activeProfile.charMontage and (now - lastDiscoveryAttempt) >= 0.5 then
-                    lastDiscoveryAttempt = now
-                    activeProfile.cachedCharMontage = findUObjectCached(activeProfile.charMontage)
-                    if activeProfile.cachedCharMontage then
-                        print("[Reload] charMontage resolved via static path for " .. (activeProfile.id or "?") .. " (deferred).")
-                        montagePrewarmDeadline = 0
-                    end
-                end
-            else
-                -- Window expired.
-                if not activeProfile.cachedCharMontage then
-                    print("[Reload] WARNING: charMontage not in memory for " .. (activeProfile.id or "?") .. " after 10s. Tactical reloads rely on auto-intercept cache.")
-                end
-                montagePrewarmDeadline = 0
-            end
-        else
-            -- Already cached or no active profile.
-            montagePrewarmDeadline = 0
         end
     end
 
@@ -3214,7 +3126,6 @@ function M.on_pre_engine_tick(engine, delta, isReloading)
                 p.cachedCharMontage = findUObjectCached(p.charMontage)
                 if p.cachedCharMontage then
                     print("[Reload][HipHold] charMontage found via find_uobject at hip-hold time!")
-                    montagePrewarmDeadline = 0
                 end
             end
             if not p.cachedCharMontage and p.id then
@@ -3222,7 +3133,6 @@ function M.on_pre_engine_tick(engine, delta, isReloading)
                 p.cachedCharMontage = discoverReloadMontage(p.id)
                 if p.cachedCharMontage then
                     print("[Reload][HipHold] charMontage found via discovery at hip-hold time!")
-                    montagePrewarmDeadline = 0
                 else
                     print("[Reload][HipHold] WARNING: charMontage still nil at hip-hold. INSERT may fall back to AnimBP property read.")
                 end
