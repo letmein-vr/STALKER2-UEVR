@@ -3,7 +3,7 @@
 -- Pages: data/tutorial/intro.png + 1.png .. N.png (counted at runtime), icons data/tutorial/buttons/. They are rendered
 -- from the repo art (screenshots/) by UnrealVRMod\0. Stalker 2 Tutorial\make_pages.ps1.
 --
---   * No automatic show (2026-11-14, xaero): Stalker 2 finishes its loading screen with the world already built and
+--   * No automatic show (2026-11-14): Stalker 2 finishes its loading screen with the world already built and
 --     then waits on a "press a button to continue" screen, which no pawn / menu / pause test tells apart from gameplay,
 --     so a startup show opened on top of that screen. The tutorial opens only on the gesture or the panel button, at
 --     the saved page (page 1 the first time; the intro page is never shown). data/tutorial_state.json keeps the page.
