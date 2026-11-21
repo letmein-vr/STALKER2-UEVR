@@ -497,8 +497,50 @@ end
 -- it is - no per-weapon offsets. The pull still reads the controller; only the drawn hand rides the part.
 -- ---------------------------------------------------------------------------------------
 local handAttached = false
+local LEARNED_GRAB_BLEND_S = 0.1   -- the hand glides from where it is onto the learned handle grip
+
+local function worldT(comp, socket)
+    local l, r
+    if socket then
+        l, r = comp:GetSocketLocation(fname(socket)), comp:GetSocketRotation(fname(socket))
+    else
+        l, r = comp:K2_GetComponentLocation(), comp:K2_GetComponentRotation()
+    end
+    return { q = quat.fromRotator(r.Pitch, r.Yaw, r.Roll), t = { x = l.X, y = l.Y, z = l.Z } }
+end
+
+-- Learned grip (reload_learn.lua rack.grip = the game's jnt_l_hand in the rack joint, sampled while its own left
+-- hand pulls the handle): the hand glides onto the handle the way the game holds it. Returns the glove-origin
+-- offset in the grab part, or nil when nothing usable was learned for this part.
+--   hand bone in part   = grip * inverse(part relative on the joint)
+--   glove origin in part = inverse(hand bone in glove origin) * hand bone in part
+local function learnedHandOffset(hands, anchor)
+    local L = rack.learned
+    if type(L) ~= "table" or type(L.grip) ~= "table" or L.joint ~= rack.grabJoint then return nil end
+    local handMesh = hands.getHandComponent(Handed.Left)
+    if handMesh == nil then return nil end
+    local part = rack.grabComponent
+    local rl, rr = part.RelativeLocation, part.RelativeRotation
+    local partRel = { q = quat.fromRotator(rr.Pitch, rr.Yaw, rr.Roll), t = { x = rl.X, y = rl.Y, z = rl.Z } }
+    local boneInPart = tCompose(L.grip, tInverse(partRel))
+    local boneInOrigin = tCompose(worldT(handMesh, "jnt_l_hand"), tInverse(worldT(anchor)))
+    return tCompose(tInverse(boneInOrigin), boneInPart)
+end
+
+-- The learned grip is the game's own technique (the AK: underhand from below the right side, palm up). It is only
+-- taken when the player's hand is turned roughly that way at the grab; a hand that grabs another way (overhand)
+-- keeps its own orientation and spot on the part, with the tuned rack finger pose (Entry getRackGripPose).
+local LEARNED_GRIP_MAX_DEG = 90
+local usingLearnedGrip = false
+
+local function quatAngleDeg(a, b)
+    local d = math.abs(a.w * b.w + a.x * b.x + a.y * b.y + a.z * b.z)
+    if d > 1 then d = 1 end
+    return math.deg(2 * math.acos(d))
+end
 
 local function attachHand()
+    usingLearnedGrip = false
     local ok, err = pcall(function()
         local hands = require("libs/hands")
         local anchor = hands.getHandAttachParent(Handed.Left)
@@ -508,12 +550,30 @@ local function attachHand()
         local gl, gr = anchor:K2_GetComponentLocation(), anchor:K2_GetComponentRotation()
         local partInv = quat.inv(quat.fromRotator(pr.Pitch, pr.Yaw, pr.Roll))
         local loc = quat.rotate(partInv, gl.X - pl.X, gl.Y - pl.Y, gl.Z - pl.Z)
-        local p, y, r = quat.toRotator(quat.mul(partInv, quat.fromRotator(gr.Pitch, gr.Yaw, gr.Roll)))
+        local nowQ = quat.mul(partInv, quat.fromRotator(gr.Pitch, gr.Yaw, gr.Roll))   -- glove origin in the part now
+
+        local learned = learnedHandOffset(hands, anchor)
+        if learned ~= nil then
+            local off = quatAngleDeg(nowQ, learned.q)
+            if off <= LEARNED_GRIP_MAX_DEG then
+                local p, y, r = quat.toRotator(learned.q)
+                hands.attachHandToMeshBlended(Handed.Left, part, "None", { p, y, r },
+                    { learned.t.x, learned.t.y, learned.t.z }, LEARNED_GRAB_BLEND_S)
+                handAttached = true
+                usingLearnedGrip = true
+                return
+            end
+            print(string.format("[RackSlide] Hand %.0f deg off the learned grip - keeping it as grabbed.", off))
+        end
+        local p, y, r = quat.toRotator(nowQ)
         hands.attachHandToMesh(Handed.Left, part, "None", { p, y, r }, { loc.x, loc.y, loc.z })
         handAttached = true
     end)
     if not ok then print("[RackSlide] Hand attach failed: " .. tostring(err)) end
 end
+
+-- true while the hand holds the rack part with the learned (game) grip, so the learned rack fingers apply
+function M.usingLearnedGrip() return handAttached and usingLearnedGrip end
 
 -- Back to the controller with the usual support-hand glide.
 local function detachHand()
@@ -532,7 +592,7 @@ function M.shouldRack(weaponMesh, reloadWasEmpty)
 end
 
 -- Sets up the rack on the held weapon (paused native reload). false = this weapon cannot be racked.
-function M.begin(weaponMesh)
+function M.begin(weaponMesh, learned)
     if rack ~= nil then M.finish(rack.weaponAddr == objAddr(weaponMesh)) end   -- a settle still running
     local info = weaponInfo(weaponMesh)
     if info == nil then return false end
@@ -625,7 +685,7 @@ function M.begin(weaponMesh)
     pcall(function() asset = weaponMesh.SkeletalMesh end)
     rack = {
         weaponAddr = objAddr(weaponMesh), assetAddr = objAddr(asset), wm = weaponMesh, parts = entries,
-        grabComponent = grab.component, driveJoint = info.driveJoint, rest = rest,
+        grabComponent = grab.component, grabJoint = info.grabJoint, learned = learned, driveJoint = info.driveJoint, rest = rest,
         dMax = dMax, dRelease = dRelease, phase = "waiting", d = 0, full = false,
         slam = slam, lockCm = rest - curX, cosmetics = cosmetics, stopA = 0, frameAt = os.clock(),
     }
@@ -853,5 +913,11 @@ uevrUtils.registerPostCalculateStereoViewCallback(function(device, view_index)
         applyOffset(rack.d)
     end
 end)
+
+-- The joint of the part the left hand grabs to rack this weapon (reload_analyzer.lua learns the game's grip on it).
+function M.getGrabJoint(weaponMesh)
+    local info = weaponMesh and weaponInfo(weaponMesh) or nil
+    return info and info.grabJoint or nil
+end
 
 return M

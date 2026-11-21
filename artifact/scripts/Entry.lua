@@ -913,7 +913,11 @@ end
 -- so a fat mag, a shell, etc. can each get their own grip. Tuned from the dev panel
 -- ("Mag/Shell Grip Pose (Manual Reload)"); nil = use the default.
 local magGripPreview = false -- dev-panel "preview on left hand" toggle (applies the pose while idle)
+-- Learned first (2026-11-21): the game's own finger pose while its left hand carries the mag / shell, learned from the
+-- weapon's native reload by reload_analyzer.lua (Config.ptmUseLearnedPoses = false: the tuned poses below).
 local function getMagGripPose()
+    local learned = ptmReload.getLearnedFingers("item")
+    if learned ~= nil and next(learned) ~= nil then return learned end
     local profile = currentWeaponName and Config.weaponProfiles[currentWeaponName]
     if profile and profile.magGripPose then return profile.magGripPose end
     return Config.ptmMagGripPose
@@ -924,6 +928,8 @@ end
 -- "Rack Grip Pose"; nil = the weapon's mag grip pose (the pose the rack used before this existed).
 local rackGripPreview = false -- dev-panel "preview on left hand" toggle
 local function getRackGripPose()
+    local learned = ptmReload.getLearnedFingers("rack")
+    if learned ~= nil and next(learned) ~= nil then return learned end
     local profile = currentWeaponName and Config.weaponProfiles[currentWeaponName]
     if profile and profile.rackGripPose then return profile.rackGripPose end
     return getMagGripPose()
@@ -4037,7 +4043,35 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
 
         -- Manual Reload Settings
         if imgui.tree_node("Manual Reload Settings") then
-            imgui.text("Proxy mag offset relative to jnt_l_hand socket on the left hand PMC.")
+            -- Learned hand poses (reload_analyzer.lua): the first native reload of each reload montage plays out and
+            -- teaches the mag / shell grip, the finger pose and the rack grip. They replace the tuned offsets / poses
+            -- below for every weapon that has learned.
+            local ulC, ulV = imgui.checkbox("Use learned hand poses (from the game's reload animations)##ptmlearn",
+                Config.ptmUseLearnedPoses ~= false)
+            if ulC then Config.ptmUseLearnedPoses = ulV; changed = true end
+            do
+                local analyzer = _G.stalkerReloadAnalyzer
+                local list = analyzer and analyzer.profiles() or {}
+                local n, failed = 0, 0
+                for _, p in pairs(list) do if p.failed then failed = failed + 1 else n = n + 1 end end
+                imgui.text(string.format("Learned reloads: %d (nothing usable: %d)%s", n, failed,
+                    (analyzer and analyzer.isRecording()) and "  - recording now" or ""))
+                local montage = ptmReload.getCurrentReloadMontage()
+                if montage then
+                    local p = analyzer and analyzer.getProfile(montage)
+                    imgui.text("Last reload: " .. montage .. (p == nil and "  (not learned)" or p.failed and ("  (" .. p.failed .. ")")
+                        or string.format("  (item %s, rack %s)", p.item and p.item.bone or "-", p.rack and p.rack.joint or "-")))
+                end
+                if analyzer and imgui.button("Re-learn this weapon's reloads##ptmlearn") then
+                    local rig = nil
+                    pcall(function() rig = uevr.api:get_local_pawn(0).ItemAppearanceComponent.WeaponMeshInHands.SkeletalMesh:get_fname():to_string() end)
+                    for name, p in pairs(list) do if p.rig == rig then analyzer.relearn(name) end end
+                end
+                imgui.same_line()
+                if analyzer and imgui.button("Re-learn all##ptmlearn") then analyzer.relearn(nil) end
+            end
+            imgui.separator()
+            imgui.text("Proxy mag offset relative to jnt_l_hand socket on the left hand PMC (weapons without learned poses).")
             do
                 local variant = ptmReload.getProxyVariant()
                 if variant ~= nil then

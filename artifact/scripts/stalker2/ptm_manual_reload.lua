@@ -26,6 +26,8 @@ local quat      = require("libs/core/quat_math")
 local controllers = require("libs/controllers")
 local bodyItems = require("stalker2.body_items")
 local rackSlide = require("stalker2.rack_slide")
+local reloadAnalyzer = require("stalker2.reload_analyzer")
+local reloadLearn = require("stalker2.reload_learn")
 
 local M = {}
 
@@ -277,8 +279,86 @@ local SHELL_GRAB_SPACING    = 2.5
 local DEFAULT_LOC = {-4.000, 4.000, -1.000}
 local DEFAULT_ROT = {-35.000, 0.000, 10.000}
 
+-- ---------------------------------------------------------------------------------------
+-- Learned hand poses (reload_analyzer.lua / reload_learn.lua). The held mag / shell sits in the hand exactly
+-- where the game's own reload animation holds it (game jnt_l_hand in the item bone), the left fingers take the
+-- game's pose, and the rack hand takes the game's grip on the handle. The profile is the one of the reload
+-- montage being played; before any reload of this weapon was caught, any learned profile of the same rig.
+-- Config.ptmUseLearnedPoses = false falls back to the hand-tuned offsets / poses.
+-- ---------------------------------------------------------------------------------------
+local currentReloadMontageName = nil   -- char montage name of the reload being handled (tryInterceptReload)
+
+local function currentRigName()
+    local name = nil
+    pcall(function()
+        local pawn = uevr.api:get_local_pawn(0)
+        local wm = pawn and pawn.ItemAppearanceComponent and pawn.ItemAppearanceComponent.WeaponMeshInHands
+        name = wm and wm.SkeletalMesh:get_fname():to_string() or nil
+    end)
+    return name
+end
+
+-- Looked up per frame by Entry's finger-pose apply, so the answer is kept for LEARNED_CACHE_S per kind.
+local LEARNED_CACHE_S = 0.5
+local learnedCache = {}   -- [need or "any"] = { at, montage, value }
+
+local function learnedProfile(need)
+    if Config.ptmUseLearnedPoses == false then return nil end
+    local key = need or "any"
+    local c = learnedCache[key]
+    local now = os.clock()
+    if c and now - c.at < LEARNED_CACHE_S and c.montage == currentReloadMontageName then return c.value end
+    local value = nil
+    local rig = currentRigName()
+    if rig ~= nil then
+        local p = currentReloadMontageName and reloadAnalyzer.getProfile(currentReloadMontageName) or nil
+        if p and p.rig == rig and not p.failed and (need == nil or p[need] ~= nil) then
+            value = p
+        else
+            value = reloadAnalyzer.findForRig(rig, need)
+        end
+    end
+    learnedCache[key] = { at = now, montage = currentReloadMontageName, value = value }
+    return value
+end
+
+-- the held item's offset on the hand mesh's jnt_l_hand: part-on-item-bone, then the inverse of the hand-in-bone grip
+local function learnedHeldOffset()
+    local lp = learnedProfile("item")
+    local it = lp and lp.item
+    if it == nil or type(it.grip) ~= "table" then return nil end
+    local ml, mr = it.meshLoc or {0, 0, 0}, it.meshRot or {0, 0, 0}
+    local meshRel = { t = { x = ml[1], y = ml[2], z = ml[3] }, q = quat.fromRotator(mr[1], mr[2], mr[3]) }
+    local rel = reloadLearn.compose(meshRel, reloadLearn.inverse(it.grip))
+    local p, y, r = quat.toRotator(rel.q)
+    return { rel.t.x, rel.t.y, rel.t.z }, { p, y, r }
+end
+
 local function getProxyLoc() return Config.ptmMagProxyLocation or DEFAULT_LOC end
 local function getProxyRot() return Config.ptmMagProxyRotation or DEFAULT_ROT end
+
+-- Offset of the held proxy on its parent: learned when the parent is the hand mesh, else the tuned one.
+local function getHeldOffset(parentIsHandMesh)
+    if parentIsHandMesh then
+        local loc, rot = learnedHeldOffset()
+        if loc then return loc, rot end
+    end
+    return getProxyLoc(), getProxyRot()
+end
+
+-- The left finger pose the game uses with the item ("item") or on the rack handle ("rack"); nil = not learned.
+function M.getCurrentReloadMontage() return currentReloadMontageName end
+
+function M.getLearnedFingers(kind)
+    local lp = learnedProfile(kind == "rack" and "rack" or "item")
+    if lp == nil then return nil end
+    if kind == "rack" then
+        -- the game's rack fingers only fit the game's grip; a hand kept as grabbed uses the tuned rack pose
+        if not rackSlide.usingLearnedGrip() then return nil end
+        return lp.rack and lp.rack.fingers or nil
+    end
+    return lp.fingers
+end
 
 -- State Machine
 local STATE_IDLE           = 0
@@ -718,7 +798,11 @@ local function collectMagMeshes(weaponMesh, profile, quiet)
                     -- confirmed 2026-09-07, same naming-convention gap as magdefault_full/empty
                     -- above - "maghuge_full" doesn't contain "_mag_full" either).
                     or string.find(lower, "maghuge_full",    1, true)
-                    or string.find(lower, "maghuge_empty",   1, true) then
+                    or string.find(lower, "maghuge_empty",   1, true)
+                    -- DLC skin mags put the skin between "_mag" and the state: SM_smg_aku_mag_skin_spitfire_full
+                    -- (2026-11-21: matched nothing, so the reload bailed out with both meshes paused)
+                    or string.find(lower, "_mag[%w_]-_full")
+                    or string.find(lower, "_mag[%w_]-_empty") then
                         table.insert(mags, { addr = objAddr(child), name = name })
                     elseif profile and profile.id and string.find(string.lower(profile.id), "sk_rhino", 1, true) then
                         if (string.find(lower, "sm_bullet", 1, true) and not string.find(lower, "extractor", 1, true))
@@ -1005,8 +1089,7 @@ local function attachProxyToHand(proxy)
     if not isAlive(parent) then return end
     pcall(function()
         proxy:K2_AttachToComponent(parent, uevrUtils.fname_from_string("jnt_l_hand"), 2, 2, 2, true)
-        local loc = getProxyLoc()
-        local rot = getProxyRot()
+        local loc, rot = getHeldOffset(parent ~= leftHandComp)
         proxy.RelativeLocation.X = loc[1]
         proxy.RelativeLocation.Y = loc[2]
         proxy.RelativeLocation.Z = loc[3]
@@ -1156,6 +1239,30 @@ local function doAbort(pawn, weaponMesh)
     currentState         = STATE_IDLE
     print("[Reload] Aborted - reset to IDLE.")
 end
+
+-- Script reset mid-reload (2026-11-21, AKU): the caught native reload keeps both meshes PAUSED (bPauseAnims) and this
+-- module's state is gone with the old Lua state, so nothing ever unpaused them. The game's reload stayed frozen, the
+-- left hand stayed pinned to the frozen weapon pose, and the next reloads played on paused meshes. Hand everything
+-- back to the game here: proxies destroyed, mags shown, rack parts restored, both meshes running at 1x, left-hand
+-- input unlocked.
+uevr.sdk.callbacks.on_script_reset(function()
+    pcall(function()
+        local pawn = uevr.api:get_local_pawn(0)
+        local wm = resolveWeaponMesh(pawn)
+        if currentState ~= STATE_IDLE or tubeFedReloadParked or interceptedCharMontage ~= nil or rackSlide.isActive() then
+            doAbort(pawn, wm)
+        end
+        if pawn and pawn.Mesh then
+            pawn.Mesh.bPauseAnims = false
+            pawn.Mesh.GlobalAnimRateScale = 1.0
+        end
+        if wm then
+            wm.bPauseAnims = false
+            wm.GlobalAnimRateScale = 1.0
+        end
+    end)
+    pcall(function() require("libs/hands").setInputLocked(Handed.Left, false) end)
+end)
 
 -- Public API
 
@@ -1601,9 +1708,22 @@ function M.tryInterceptReload(charMontage, montageName)
         return
     end
 
+    -- Hand-pose learning (reload_analyzer.lua): the first native reload of each montage plays out uncaught and
+    -- is recorded; the manual reload then uses the grip / finger / rack poses learned from it.
+    if reloadAnalyzer.isRecording() then return end
+    if reloadAnalyzer.wantsReload(montageName) then
+        spoofingTacticalReload = false
+        tubeFedSpoofPending = false
+        if reloadAnalyzer.begin(charMontage, montageName) then
+            print("[Reload] Learning hand poses from this native reload: " .. tostring(montageName))
+            return
+        end
+    end
+
     -- Rack to chamber: the game starts its EMPTY reload (MG_fp_m16_reload) or the tactical one
     -- (MG_fp_m16_reload_tactical) from its own chamber state - an empty one needs a rack after the insert.
     reloadWasEmpty = type(montageName) == "string" and string.find(string.lower(montageName), "tactical", 1, true) == nil
+    if type(montageName) == "string" and montageName ~= "" then currentReloadMontageName = montageName end
 
     local pawn = uevr.api:get_local_pawn(0)
     if not pawn then return end
@@ -1716,7 +1836,17 @@ function M.tryInterceptReload(charMontage, montageName)
         magMeshesCurrentlyHidden = true
         print("[Reload][" .. p.id .. "] Auto-intercept: hiding " .. #magMeshes .. " mag mesh(es).")
     else
-        -- No mag meshes found - weapon doesn't support physical reload. Bail out cleanly.
+        -- No mag meshes found - weapon doesn't support physical reload. Bail out cleanly: hand the reload back to the
+        -- game. The pause block above has already paused both meshes; leaving them paused froze the native reload
+        -- with the left hand pinned to it (2026-11-21, skinned AKU mag).
+        pcall(function()
+            if pawn.Mesh then pawn.Mesh.bPauseAnims = false end
+            wm.bPauseAnims = false
+        end)
+        interceptedCharMontage = nil
+        animJumpActive = false
+        spoofingTacticalReload = false
+        diag("no mag meshes on %s - native reload left running", tostring(p.id))
         print("[Reload][" .. p.id .. "] Auto-intercept: no _mag_full/_mag_empty children - skipping.")
         return
     end
@@ -2086,7 +2216,8 @@ end
 local function completeOrRack(pawn, weaponMesh, p)
     -- box mags only: tube-fed / Rhino reloads never rack (shotgun folder holds pump + box-mag guns alike)
     local boxMag = not (p and (p.isTubeFed or isRhinoProfile(p)))
-    if boxMag and rackSlide.shouldRack(weaponMesh, reloadWasEmpty) and rackSlide.begin(weaponMesh) then
+    local learned = learnedProfile("rack")
+    if boxMag and rackSlide.shouldRack(weaponMesh, reloadWasEmpty) and rackSlide.begin(weaponMesh, learned and learned.rack) then
         setMagMeshesHidden(magMeshes, false, weaponMesh)
         magMeshesCurrentlyHidden = false
         magMeshes = {}
@@ -2564,7 +2695,7 @@ local function beginGrabGlide()
         g.fromLoc   = {x = pl.X, y = pl.Y, z = pl.Z}
         g.fromQuat  = quat.fromRotator(pr.Pitch, pr.Yaw, pr.Roll)
         g.fromScale = {x = ps.X, y = ps.Y, z = ps.Z}
-        local tl, tr = getProxyLoc(), getProxyRot()
+        local tl, tr = getHeldOffset(getProxyParent() ~= leftHandComp)
         g.toLoc  = {x = tl[1], y = tl[2], z = tl[3]}
         g.toQuat = quat.fromRotator(tr[1], tr[2], tr[3])
     end)

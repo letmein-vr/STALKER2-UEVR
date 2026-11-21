@@ -197,6 +197,10 @@ Config = {
     -- ptmMagProxyLocation/Rotation offsets are relative to whichever parent is used,
     -- so expect to retune them after switching.
     ptmAttachProxyToHandMesh = true,
+    -- Learned manual-reload hand poses (stalker2/reload_analyzer.lua): the held mag / shell grip, the finger pose
+    -- and the rack grip come from the game's own reload animations. false = the tuned offsets / poses
+    -- (ptmMagProxyLocation/Rotation, ptmMagGripPose, weaponProfiles[w].magGripPose / rackGripPose).
+    ptmUseLearnedPoses = true,
     -- Box-mag insert glide (ptm_manual_reload.lua STATE_INSERTING): on a near-socket release the
     -- fresh mag eases into a pre-seat pose backed out ptmInsertDepth cm along ptmInsertAxis
     -- (weapon component space, pointing OUT of the magwell), then slides straight in.
