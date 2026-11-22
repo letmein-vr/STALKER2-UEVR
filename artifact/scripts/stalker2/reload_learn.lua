@@ -220,32 +220,38 @@ local function looseCarry(rec, frames, hk)
                           and angle(g[e + 1].q, g[e].q) <= LOOSE_STEP_DEG do
                         e = e + 1
                     end
-                    local dur = frames[e].t - frames[k].t
+                    -- Trim the grab / release transients off the ends (the hand closing on the mag moves it a few cm in
+                    -- the hand for a frame or two: AR416 MG_fp_m16_reload*), then judge the remaining core [s, f].
+                    local s, f = k, e
+                    local m = math.floor((k + e) / 2)
+                    while s < m and dist(g[s].t, g[m].t) > LOOSE_SPREAD_CM do s = s + 1 end
+                    while f > m and dist(g[f].t, g[m].t) > LOOSE_SPREAD_CM do f = f - 1 end
+                    local dur = frames[f].t - frames[s].t
                     local lo, hi = math.huge, 0
-                    for i = k, e do
+                    for i = s, f do
                         local d = dist(frames[i].bones[b].t, seat.t)
                         lo, hi = math.min(lo, d), math.max(hi, d)
                     end
                     local travel = hi - lo
                     -- the hand must move with it (a hand parked on the fore-end next to a moving mag is no carry)
                     local handTravel = 0
-                    for i = k + 1, e do handTravel = math.max(handTravel, dist(frames[i][hk].t, frames[k][hk].t)) end
+                    for i = s + 1, f do handTravel = math.max(handTravel, dist(frames[i][hk].t, frames[s][hk].t)) end
                     -- ... and hold it: the hand-in-bone offset spreads far less than the bone travels
-                    local mid = g[math.floor((k + e) / 2)]
+                    local mid = g[math.floor((s + f) / 2)]
                     local spread = 0
-                    for i = k, e do spread = math.max(spread, dist(g[i].t, mid.t)) end
+                    for i = s, f do spread = math.max(spread, dist(g[i].t, mid.t)) end
                     if dur >= LOOSE_MIN_S and travel >= CARRY_MIN_TRAVEL_CM and handTravel >= CARRY_MIN_TRAVEL_CM
                        and spread <= math.min(LOOSE_SPREAD_CM, 0.5 * travel) then
-                        local endT = frames[e].t
-                        local cand = { bone = b, w = { s = k, e = e, travel = travel, dur = dur }, endT = endT, mag = isMagBone(rec, b) }
+                        local endT = frames[f].t
+                        local cand = { bone = b, w = { s = s, e = f, travel = travel, dur = dur }, endT = endT, mag = isMagBone(rec, b) }
                         if better(cand, best) then
                             -- steadiest frame (smallest neighbour-to-neighbour change) in the hold share of the carry
-                            local last = math.max(k + 1, math.min(e - 1, k + math.floor((e - k) * LOOSE_HOLD_SHARE)))
-                            local pick, score = math.max(k, math.min(e, k + 1)), math.huge
-                            for i = k + 1, last do
+                            local last = math.max(s + 1, math.min(f - 1, s + math.floor((f - s) * LOOSE_HOLD_SHARE)))
+                            local pick, score = math.max(s, math.min(f, s + 1)), math.huge
+                            for i = s + 1, last do
                                 if g[i - 1] and g[i + 1] then
-                                    local s = dist(g[i + 1].t, g[i - 1].t) + angle(g[i + 1].q, g[i - 1].q) / 10
-                                    if s < score then pick, score = i, s end
+                                    local sc = dist(g[i + 1].t, g[i - 1].t) + angle(g[i + 1].q, g[i - 1].q) / 10
+                                    if sc < score then pick, score = i, sc end
                                 end
                             end
                             cand.grip = pick

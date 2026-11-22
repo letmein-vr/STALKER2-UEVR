@@ -913,6 +913,7 @@ end
 -- so a fat mag, a shell, etc. can each get their own grip. Tuned from the dev panel
 -- ("Mag/Shell Grip Pose (Manual Reload)"); nil = use the default.
 local magGripPreview = false -- dev-panel "preview on left hand" toggle (applies the pose while idle)
+local learnedHeldPreviewWasOn = false -- Manual Reload Settings "Preview mag + pose in hand" was on last panel frame
 -- Learned first (2026-11-21): the game's own finger pose while its left hand carries the mag / shell, learned from the
 -- weapon's native reload by reload_analyzer.lua (Config.ptmUseLearnedPoses = false: the tuned poses below).
 local function getMagGripPose()
@@ -4069,6 +4070,62 @@ uevr.lua.add_script_panel("Stalker 2 VR", function()
                 end
                 imgui.same_line()
                 if analyzer and imgui.button("Re-learn all##ptmlearn") then analyzer.relearn(nil) end
+
+                -- Per-weapon correction on top of the learned mag / shell grip (ptm_manual_reload learnedHeldOffset):
+                -- for grips that are right in the game but wrong in VR. Hold a mag from the pouch to see it move.
+                -- Kept per magazine (the learned mag mesh): normal / increased mags each get their own values.
+                local adjKey = ptmReload.getHeldAdjustKey()
+                if currentWeaponName and imgui.tree_node("Learned mag grip adjust (this magazine)##ptmlearnadj") then
+                    if not Config.weaponProfiles[currentWeaponName] then Config.weaponProfiles[currentWeaponName] = {} end
+                    local wp = Config.weaponProfiles[currentWeaponName]
+                    local all = wp.learnedHeldAdjust or {}
+                    local adj = adjKey and all[adjKey]
+                    if adj == nil then
+                        -- start from the old per-weapon values (if any), else from the learned grip
+                        adj = { loc = { (all.loc or {})[1] or 0, (all.loc or {})[2] or 0, (all.loc or {})[3] or 0 },
+                                rot = { (all.rot or {})[1] or 0, (all.rot or {})[2] or 0, (all.rot or {})[3] or 0 } }
+                    end
+                    imgui.text("Magazine: " .. tostring(adjKey or "none learned - grab a mag from the pouch first"))
+                    -- Dev preview: the mag / shell sits in the left hand with the learned grip + this adjust and the
+                    -- learned finger pose, without holding the grip (only while no reload runs).
+                    local previewOn = ptmReload.isHeldPreviewOn()
+                    local pvC, pvV = imgui.checkbox("Preview mag + pose in hand (no reload running)##ptmlearnadj", previewOn)
+                    if pvC then
+                        local on = ptmReload.setHeldPreview(pvV)
+                        magGripPreview = on
+                        if not on then
+                            hands.invalidatePoseCache(1 - Config.dominantHand)
+                            hands.setInitialTransform(1 - Config.dominantHand)
+                        end
+                    elseif magGripPreview and learnedHeldPreviewWasOn and not previewOn then
+                        -- a reload / weapon switch took the preview mag away: drop the forced pose too
+                        magGripPreview = false
+                        hands.invalidatePoseCache(1 - Config.dominantHand)
+                        hands.setInitialTransform(1 - Config.dominantHand)
+                    end
+                    learnedHeldPreviewWasOn = ptmReload.isHeldPreviewOn()
+                    local adjChanged = false
+                    local labels = {
+                        { "Loc X (hand axis)", adj.loc, 1, 0.1 }, { "Loc Y (hand axis)", adj.loc, 2, 0.1 },
+                        { "Loc Z (hand axis)", adj.loc, 3, 0.1 },
+                        { "Pitch (mag)", adj.rot, 1, 0.5 }, { "Yaw (mag)", adj.rot, 2, 0.5 }, { "Roll (mag)", adj.rot, 3, 0.5 },
+                    }
+                    for _, l in ipairs(labels) do
+                        local c, v = imgui.drag_float(l[1] .. "##ptmlearnadj", l[2][l[3]] or 0, l[4])
+                        if c then l[2][l[3]] = v; adjChanged = true end
+                    end
+                    if imgui.button("Reset to learned##ptmlearnadj") then
+                        adj = { loc = {0, 0, 0}, rot = {0, 0, 0} }   -- explicit zero, so old per-weapon values don't apply
+                        adjChanged = true
+                    end
+                    if adjChanged and adjKey then
+                        all[adjKey] = adj
+                        wp.learnedHeldAdjust = all
+                        changed = true
+                        pcall(ptmReload.refreshHeldOffset)
+                    end
+                    imgui.tree_pop()
+                end
             end
             imgui.separator()
             imgui.text("Proxy mag offset relative to jnt_l_hand socket on the left hand PMC (weapons without learned poses).")

@@ -7859,6 +7859,20 @@
         },
         "SK_ThreeLine": {
             "disableReloadAttachment": false,
+            "learnedHeldAdjust": {
+                "SM_ThreeLine_SM_bullet": {
+                    "loc": [
+                        -4.699999809265137,
+                        -1.399999976158142,
+                        3.0999999046325684
+                    ],
+                    "rot": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            },
             "leftHandPose": {
                 "jnt_l_hand_index_01": [
                     25.43359428008008,
@@ -7990,6 +8004,20 @@
         },
         "SK_Toz34": {
             "disableReloadAttachment": false,
+            "learnedHeldAdjust": {
+                "SM_wpn_toz34_SM_bullet1": {
+                    "loc": [
+                        -1.399999976158142,
+                        3.5,
+                        1.7000000476837158
+                    ],
+                    "rot": [
+                        -1.0,
+                        24.0,
+                        0
+                    ]
+                }
+            },
             "leftHandPose": {
                 "jnt_l_hand_index_01": [
                     7.404478188142413,
@@ -13792,6 +13820,20 @@
         },
         "SK_obrez": {
             "disableReloadAttachment": false,
+            "learnedHeldAdjust": {
+                "SM_wpn_obrez_SM_bullet_01": {
+                    "loc": [
+                        1.0,
+                        -0.4000000059604645,
+                        -0.4000000059604645
+                    ],
+                    "rot": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            },
             "leftHandPose": {
                 "jnt_l_hand_index_01": [
                     1.1510000228881836,
@@ -14130,6 +14172,42 @@
         },
         "SK_pm": {
             "disableReloadAttachment": false,
+            "learnedHeldAdjust": {
+                "SM_pt_pm_increased_full": {
+                    "loc": [
+                        4.5,
+                        -2.5999999046325684,
+                        -1.399999976158142
+                    ],
+                    "rot": [
+                        51.5,
+                        -3.5,
+                        -2.5
+                    ]
+                },
+                "SM_pt_pm_mag_full": {
+                    "loc": [
+                        1.7999999523162842,
+                        -2.0,
+                        -2.4000000953674316
+                    ],
+                    "rot": [
+                        34.5,
+                        5.0,
+                        8.0
+                    ]
+                },
+                "loc": [
+                    5.400000095367432,
+                    -2.799999952316284,
+                    -2.0999999046325684
+                ],
+                "rot": [
+                    51.5,
+                    0,
+                    0
+                ]
+            },
             "leftHandPose": {
                 "jnt_l_hand_index_01": [
                     -3.411778929193714,
@@ -14321,7 +14399,7 @@
                 2.0
             ],
             "ptmMagProxyRotation": [
-                30.5,
+                32.5,
                 0.0,
                 24.0
             ],

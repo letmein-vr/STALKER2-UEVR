@@ -287,6 +287,12 @@ local DEFAULT_ROT = {-35.000, 0.000, 10.000}
 -- Config.ptmUseLearnedPoses = false falls back to the hand-tuned offsets / poses.
 -- ---------------------------------------------------------------------------------------
 local currentReloadMontageName = nil   -- char montage name of the reload being handled (tryInterceptReload)
+-- Returns the held weapon's weaponProfiles[w].learnedHeldAdjust = { loc = {x,y,z}, rot = {p,y,r} } or nil; set once
+-- getWeaponTuning exists (further down).
+local heldAdjustProvider = nil
+-- Dev preview (Manual Reload Settings > "Preview mag + pose in hand"): a mag / shell copy held in the left hand while
+-- no reload runs, so the learned grip adjust can be tuned without holding the grip. nil when off.
+local previewProxy = nil
 
 local function currentRigName()
     local name = nil
@@ -330,6 +336,17 @@ local function learnedHeldOffset()
     local ml, mr = it.meshLoc or {0, 0, 0}, it.meshRot or {0, 0, 0}
     local meshRel = { t = { x = ml[1], y = ml[2], z = ml[3] }, q = quat.fromRotator(mr[1], mr[2], mr[3]) }
     local rel = reloadLearn.compose(meshRel, reloadLearn.inverse(it.grip))
+    -- Per-weapon hand correction on top of the learned grip (Manual Reload Settings > "Learned mag grip adjust"), for
+    -- grips that are right in the game but wrong in VR (the PTM's palm-under-the-mag grip pushes the mag through
+    -- the fingers): rotation about the mag's own origin, location along the hand bone's axes.
+    local adj = heldAdjustProvider and heldAdjustProvider() or nil
+    if type(adj) == "table" then
+        local ar, al = adj.rot or {}, adj.loc or {}
+        rel = {
+            q = quat.mul(rel.q, quat.fromRotator(ar[1] or 0, ar[2] or 0, ar[3] or 0)),
+            t = { x = rel.t.x + (al[1] or 0), y = rel.t.y + (al[2] or 0), z = rel.t.z + (al[3] or 0) },
+        }
+    end
     local p, y, r = quat.toRotator(rel.q)
     return { rel.t.x, rel.t.y, rel.t.z }, { p, y, r }
 end
@@ -919,6 +936,19 @@ end
 
 local aggregateChildren = {}
 
+-- The dev preview mag, destroyed by reference: UEVR_UObjectHook.exists can read false for components the mod created,
+-- and destroyProxy's isAlive gate would then leak it. Only called while its pawn is the one it was made on.
+local previewPawnAddr = nil
+local function dropPreviewMag()
+    if previewProxy ~= nil then
+        local c = previewProxy
+        pcall(function() c:SetHiddenInGame(true) end)
+        pcall(function() c:K2_DestroyComponent(c) end)
+    end
+    previewProxy = nil
+    previewPawnAddr = nil
+end
+
 local function destroyProxy(proxy, pawn)
     if isAlive(proxy) then
         local children = aggregateChildren[proxy]
@@ -1183,6 +1213,7 @@ uevrUtils.registerPostCalculateStereoViewCallback(function(device, view_index)
 end)
 
 local function doAbort(pawn, weaponMesh)
+    dropPreviewMag()   -- dev preview mag
     if ejectProxy    then ejectProxy    = destroyProxy(ejectProxy,    pawn) end
     if droppingProxy then droppingProxy = destroyProxy(droppingProxy, pawn) end
     if heldProxy     then heldProxy     = destroyProxy(heldProxy,     pawn) end
@@ -1247,6 +1278,7 @@ end
 -- input unlocked.
 uevr.sdk.callbacks.on_script_reset(function()
     pcall(function()
+        dropPreviewMag()   -- dev preview mag
         local pawn = uevr.api:get_local_pawn(0)
         local wm = resolveWeaponMesh(pawn)
         if currentState ~= STATE_IDLE or tubeFedReloadParked or interceptedCharMontage ~= nil or rackSlide.isActive() then
@@ -1274,6 +1306,8 @@ end)
 -- activeProfile is only replaced on a detected weapon change, and a load can bring back the same weapon name on a
 -- recycled component, so its caches are dropped here; they are looked up again on their next use.
 function M.onLevelChange()
+    previewProxy = nil   -- dev preview mag: gone with the level (never touch it)
+    previewPawnAddr = nil
     endEjectHideWindow()
     rackSlide.onLevelChange()
     rackGrabRequested = false
@@ -1478,6 +1512,7 @@ end
 -- Creates a profile for ANY weapon - no hardcoded whitelist required.
 -- WEAPON_PROFILES overrides are merged in if available (charMontage fallback).
 function M.init(leftHand, weaponName)
+    dropPreviewMag()   -- dev preview mag
     -- A weapon switch mid-reload bypasses doAbort() entirely (Entry.lua calls this
     -- unconditionally on equip), so any state we forced onto the OUTGOING weapon/
     -- character mesh must be restored here too, or it's left corrupted forever:
@@ -2063,6 +2098,83 @@ end
 local function getWeaponTuning()
     if lastInitWeaponName == nil or Config.weaponProfiles == nil then return nil end
     return Config.weaponProfiles[lastInitWeaponName]
+end
+
+-- The learned mag grip adjust is kept per MAGAZINE (the learned item mesh, e.g. SM_pt_pm_mag_full vs the increased
+-- mag): weaponProfiles[w].learnedHeldAdjust[<mesh>] = { loc, rot }. Tactical and empty reloads with the same mag share
+-- it. A plain { loc, rot } at the top (the first, per-weapon version) still applies to mags without their own entry.
+local function heldAdjustKey()
+    local lp = learnedProfile("item")
+    local mesh = lp and lp.item and lp.item.mesh
+    if type(mesh) ~= "string" then return nil end
+    return mesh:match("([^%./]+)$")
+end
+M.getHeldAdjustKey = heldAdjustKey
+
+heldAdjustProvider = function()
+    local wp = getWeaponTuning()
+    local a = wp and wp.learnedHeldAdjust
+    if type(a) ~= "table" then return nil end
+    local key = heldAdjustKey()
+    if key and type(a[key]) == "table" then return a[key] end
+    if a.loc or a.rot then return a end
+    return nil
+end
+
+local function destroyPreview() dropPreviewMag() end
+
+-- Dev panel preview on / off. Only while no reload runs (the reload owns the hand and the held mag then).
+-- Returns whether the preview is on.
+function M.setHeldPreview(on)
+    destroyPreview()
+    if not on then return false end
+    if not enabled or currentState ~= STATE_IDLE or activeProfile == nil then return false end
+    local pawn = uevr.api:get_local_pawn(0)
+    if pawn == nil then return false end
+    local proxy = spawnMagProxy(pawn, activeProfile, true, resolveWeaponMesh(pawn))
+    if proxy == nil then return false end
+    attachProxyToHand(proxy)
+    previewProxy = proxy
+    previewPawnAddr = objAddr(pawn)
+    return true
+end
+
+function M.isHeldPreviewOn() return previewProxy ~= nil end
+
+-- Dev panel: the learned mag grip adjust changed - re-place the mag / shell held right now.
+local function writeHeldOffset(proxy, loc, rot)
+    return pcall(function()
+        proxy:K2_SetRelativeLocationAndRotation(uevrUtils.vector(loc[1], loc[2], loc[3]),
+            uevrUtils.rotator(rot[1], rot[2], rot[3]), false, reusable_hit_result, false)
+    end)
+end
+
+-- The preview mag is this module's own component: written by reference (UEVR_UObjectHook.exists can read false for
+-- components the mod created, which silently skipped it - 2026-11-22 "sliders don't move the preview"), every tick
+-- while the preview is on, so the dev panel sliders apply live.
+local function updatePreviewOffset()
+    if previewProxy == nil then return end
+    -- a new pawn (death, load, rebuild) took the old one's components with it: forget, never touch
+    local pawn = nil
+    pcall(function() pawn = uevr.api:get_local_pawn(0) end)
+    if objAddr(pawn) ~= previewPawnAddr then previewProxy = nil; previewPawnAddr = nil; return end
+    local loc, rot = getHeldOffset(true)
+    if not writeHeldOffset(previewProxy, loc, rot) then previewProxy = nil end   -- gone (level / pawn rebuilt)
+end
+
+function M.refreshHeldOffset()
+    local parent = getProxyParent()
+    local onHand = parent ~= nil and parent ~= leftHandComp
+    local loc, rot = getHeldOffset(onHand)
+    local n = 0
+    for _, proxy in ipairs({ heldProxy, ejectProxy, shellProxy }) do
+        if proxy ~= nil and (grabGlide == nil or grabGlide.proxy ~= proxy) and writeHeldOffset(proxy, loc, rot) then n = n + 1 end
+    end
+    updatePreviewOffset()
+    pcall(function()
+        uevr.params.functions.log_info(string.format("[Reload] grip adjust: %d held + preview %s, on hand mesh %s, loc %.1f %.1f %.1f rot %.1f %.1f %.1f",
+            n, tostring(previewProxy ~= nil), tostring(onHand), loc[1], loc[2], loc[3], rot[1], rot[2], rot[3]))
+    end)
 end
 
 local function getFinishRate()
@@ -2929,6 +3041,9 @@ end
 
 function M.on_pre_engine_tick(engine, delta, isReloading)
     syncReloadInputLock()   -- before every early-out: a disabled / idle tick still releases the lock
+    -- the dev preview mag leaves as soon as a reload (or the disable switch) takes over the hand
+    if previewProxy ~= nil and (currentState ~= STATE_IDLE or not enabled) then destroyPreview() end
+    if previewProxy ~= nil then updatePreviewOffset() end
     if currentState ~= diagLastState then
         diag("state %s -> %s (weapon %s)", stateName(diagLastState), stateName(currentState),
             tostring(activeProfile and activeProfile.id))

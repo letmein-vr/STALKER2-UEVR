@@ -65,9 +65,11 @@ local function load()
         local t = json.load_file(DATA_FILE)
         if type(t) == "table" and type(t.profiles) == "table" then profiles = t.profiles end
     end)
-    -- failed learns are retried once per session (a record can fail for reasons that are gone now)
+    -- A saved failure is kept: it is a genuine "nothing to learn" (frozen / paused recordings are discarded, never
+    -- saved), and dropping it made every session hand one reload of that montage back to the flat animation just to
+    -- fail again (2.8: AR416 MG_fp_m16_reload*). Re-learn in Manual Reload Settings retries it.
     for name, p in pairs(profiles) do
-        if type(p) ~= "table" or p.failed then profiles[name] = nil end
+        if type(p) ~= "table" then profiles[name] = nil end
     end
 end
 
