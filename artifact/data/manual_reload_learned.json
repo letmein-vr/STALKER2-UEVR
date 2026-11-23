@@ -13642,6 +13642,12 @@
    "rig": "SK_m1000",
    "version": 1
   },
+  "MG_fp_m10_reload_increased_one_hand": {
+   "failed": "nothing learned (no carried item, no rack); longest holds: jnt_level_selector 0.24s/0.0cm@0.91, jnt_safety 0.24s/0.0cm@0.91, jnt_stock 0.24s/0.0cm@0.91, jnt_wire_frame_stock 0.24s/0.0cm@0.91",
+   "montage": "MG_fp_m10_reload_increased_one_hand",
+   "rig": "SK_m1000",
+   "version": 1
+  },
   "MG_fp_m10_reload_tactical": {
    "fingers": {
     "jnt_l_hand_index_01": [

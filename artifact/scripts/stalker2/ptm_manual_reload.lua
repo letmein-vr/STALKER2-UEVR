@@ -1264,8 +1264,13 @@ local function doAbort(pawn, weaponMesh)
     weaponAnimResetArmed = false
     dropVelocity   = 0
     dropProxyReady = false
-    diag("ABORT from %s (weapon %s)\n%s", stateName(currentState), tostring(activeProfile and activeProfile.id),
-        debug.traceback("", 2))
+    -- The traceback is built only for the diagnostics, and only where the UEVR build provides Lua's debug library: the
+    -- shipped build (UEVR.zip, backend feb07446) has no global `debug`, so building it unconditionally threw here,
+    -- before the state below was reset, and left the reload half-active (fire / left grip blocked). Player log 2026-11-23.
+    if RELOAD_DIAG then
+        local trace = (type(debug) == "table" and type(debug.traceback) == "function") and debug.traceback("", 2) or ""
+        diag("ABORT from %s (weapon %s)\n%s", stateName(currentState), tostring(activeProfile and activeProfile.id), trace)
+    end
     activeProfile        = nil
     currentState         = STATE_IDLE
     print("[Reload] Aborted - reset to IDLE.")
